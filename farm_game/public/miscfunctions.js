@@ -74,9 +74,9 @@ function start(){
         paused = false;
         levels[currentLevel_y][currentLevel_x].level_name_popup = true;
 
-    //turn off the title screen
-    title_screen = false;
-    hideMainMenu();
+        //turn off the title screen
+        title_screen = false;
+        hideMainMenu();
     });
 
 
@@ -308,18 +308,59 @@ function selectDifficulty(difficulty){
 let controlsContainer = null;
 let controlRows = [];
 
-function renderControlButtons(x, y) {
+function renderControlButtons(container) {
     const controlItems = [
-        { label: 'Interact:', key: () => Controls_Interact_button_key, controlIndex: 1 },
-        { label: 'Eat:', key: () => Controls_Eat_button_key, controlIndex: 2 },
-        { label: 'Up:', key: () => Controls_Up_button_key, controlIndex: 3 },
-        { label: 'Down:', key: () => Controls_Down_button_key, controlIndex: 4 },
-        { label: 'Left:', key: () => Controls_Left_button_key, controlIndex: 5 },
-        { label: 'Right:', key: () => Controls_Right_button_key, controlIndex: 6 },
-        { label: 'Special:', key: () => Controls_Special_button_key, controlIndex: 7 },
-        { label: 'Quest:', key: () => Controls_Quest_button_key, controlIndex: 8 }
+        { label: 'Interact:', key: () => Controls_Interact_button_key || 'z', controlIndex: 1 },
+        { label: 'Eat:', key: () => Controls_Eat_button_key || 'e', controlIndex: 2 },
+        { label: 'Up:', key: () => Controls_Up_button_key || 'w', controlIndex: 3 },
+        { label: 'Down:', key: () => Controls_Down_button_key || 's', controlIndex: 4 },
+        { label: 'Left:', key: () => Controls_Left_button_key || 'a', controlIndex: 5 },
+        { label: 'Right:', key: () => Controls_Right_button_key || 'd', controlIndex: 6 },
+        { label: 'Special:', key: () => Controls_Special_button_key || 'x', controlIndex: 7 },
+        { label: 'Quest:', key: () => Controls_Quest_button_key || 'q', controlIndex: 8 }
     ];
     
+    // If container is provided, use it as parent (for pause menu, etc.)
+    if (container) {
+        container.innerHTML = '';
+        
+        for (let i = 0; i < controlItems.length; i++) {
+            const item = controlItems[i];
+            const row = document.createElement('div');
+            row.className = 'control-row';
+            row.style.display = 'flex';
+            row.style.gap = '10px';
+            row.style.alignItems = 'center';
+            row.style.justifyContent = 'space-between';
+            row.style.width = '100%';
+            row.style.padding = '4px 0';
+            
+            const label = document.createElement('span');
+            label.className = 'control-label';
+            label.textContent = item.label;
+            label.style.minWidth = '70px';
+            row.appendChild(label);
+            
+            const button = document.createElement('button');
+            button.className = 'control-button';
+            button.style.minWidth = '60px';
+            const keyValue = item.key();
+            button.textContent = keyValue ? String(keyValue) : '?';
+            button.addEventListener('click', () => {
+                if (control_set === 0) {
+                    control_set = item.controlIndex;
+                    key = item.key();
+                    lastKey = key;
+                }
+            });
+            row.appendChild(button);
+            
+            container.appendChild(row);
+        }
+        return;
+    }
+    
+    // Otherwise use the global container for game canvas (original behavior)
     if (!controlsContainer) {
         controlsContainer = document.createElement('div');
         controlsContainer.className = 'controls-container';
@@ -600,26 +641,6 @@ function showPaused(){
                 fxSlider.value(fxSliderDOM.value);
             };
         }
-        
-        // Update control key displays in case they changed
-        const controlRows = pauseMenu.querySelectorAll('.pause-control-row');
-        const controlItems = [
-            Controls_Interact_button_key,
-            Controls_Eat_button_key,
-            Controls_Up_button_key,
-            Controls_Down_button_key,
-            Controls_Left_button_key,
-            Controls_Right_button_key,
-            Controls_Special_button_key,
-            Controls_Quest_button_key
-        ];
-        
-        controlRows.forEach((row, index) => {
-            const keyDisplay = row.querySelector('span:last-child');
-            if (keyDisplay && controlItems[index]) {
-                keyDisplay.textContent = controlItems[index];
-            }
-        });
     }
 }
 
@@ -684,7 +705,7 @@ function ensurePauseMenuContainer() {
     
     pauseMenu.appendChild(sliderSection);
     
-    // Controls section
+    // Controls section - using renderControlButtons
     const controlsSection = document.createElement('div');
     controlsSection.className = 'pause-controls-section';
     controlsSection.id = 'pause-controls-container';
@@ -693,48 +714,10 @@ function ensurePauseMenuContainer() {
     controlsTitle.textContent = 'Controls';
     controlsSection.appendChild(controlsTitle);
     
-    // Add control rows with current key bindings
-    const controlItems = [
-        { label: 'Interact:', key: () => Controls_Interact_button_key },
-        { label: 'Eat:', key: () => Controls_Eat_button_key },
-        { label: 'Up:', key: () => Controls_Up_button_key },
-        { label: 'Down:', key: () => Controls_Down_button_key },
-        { label: 'Left:', key: () => Controls_Left_button_key },
-        { label: 'Right:', key: () => Controls_Right_button_key },
-        { label: 'Special:', key: () => Controls_Special_button_key },
-        { label: 'Quest:', key: () => Controls_Quest_button_key }
-    ];
-    
-    for (let i = 0; i < controlItems.length; i++) {
-        const item = controlItems[i];
-        const row = document.createElement('div');
-        row.className = 'pause-control-row';
-        row.style.display = 'flex';
-        row.style.gap = '10px';
-        row.style.alignItems = 'center';
-        row.style.justifyContent = 'space-between';
-        row.style.width = '100%';
-        row.style.padding = '4px 0';
-        row.style.fontFamily = 'pixelFont, monospace';
-        row.style.fontSize = '12px';
-        row.style.color = 'rgb(255, 255, 255)';
-        
-        const label = document.createElement('span');
-        label.textContent = item.label;
-        label.style.minWidth = '70px';
-        row.appendChild(label);
-        
-        const keyDisplay = document.createElement('span');
-        keyDisplay.textContent = item.key();
-        keyDisplay.style.color = 'rgb(255, 255, 200)';
-        keyDisplay.style.minWidth = '60px';
-        keyDisplay.style.textAlign = 'right';
-        row.appendChild(keyDisplay);
-        
-        controlsSection.appendChild(row);
-    }
-    
     pauseMenu.appendChild(controlsSection);
+    
+    // Render control buttons once
+    renderControlButtons(controlsSection);
     
     // Quit button
     const quitBtn = document.createElement('button');
@@ -1225,11 +1208,20 @@ function saveOptions(){
 }
 
 function loadAll(){
+    // Initialize days to 0 if not already set
+    if (typeof days === 'undefined' || isNaN(days)) {
+        days = 0;
+    }
+    
     if(localData.get('player') != null ){
         player.load(localData.get('player'));
     }
     if(localData.get('Day_curLvl_Dif') != null){
-        days = localData.get('Day_curLvl_Dif').days;
+        days = localData.get('Day_curLvl_Dif').days || 0;
+        // Ensure days is a valid number
+        if (isNaN(days)) {
+            days = 0;
+        }
         currentLevel_x = localData.get('Day_curLvl_Dif').currentLevel_x;
         currentLevel_y = localData.get('Day_curLvl_Dif').currentLevel_y;
         dificulty = localData.get('Day_curLvl_Dif').dificulty;

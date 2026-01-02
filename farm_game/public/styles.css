@@ -141,15 +141,16 @@ button {
 /* Quests UI styles */
 .quests-container {
     position: absolute;
-    top: 12.5%;
+    top: -200px;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgb(187, 132, 75);
     border: 5px solid rgb(149, 108, 65);
     border-radius: 4px;
     padding: 15px;
-    min-width: 20dvw;
-    max-width: 25dvh;
+    min-width: 40dvw;
+    max-width: 45dvh;
+    min-height: 40dvh;
     display: flex;
     flex-direction: column;
     gap: 15px;
