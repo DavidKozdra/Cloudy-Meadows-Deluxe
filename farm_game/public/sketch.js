@@ -437,41 +437,7 @@ function render_ui() {
 function mouseReleased() {
     if(!title_screen){
         if(mouseButton == LEFT){
-            if(player.show_quests){
-                if(mouseY >= (canvasHeight/8)+30 && mouseY <= (canvasHeight/8)+(60*6)+35){
-                    let width = 6*22;
-                    for(let i = questSlider.value(); i < (player.quests.length > 6 ? 6 + questSlider.value(): player.quests.length); i++){
-                        width = max(width, (player.quests[i].name.length*17));
-                        if(!player.quests[i].done){
-                            width = max(width, (player.quests[i].goals[player.quests[i].current_Goal].name.length*12));
-                        }
-                    }
-                    if(mouseX >= (canvasWidth/2)-(width/2) && mouseX <= (canvasWidth/2)+(width/2)){
-                        let currentX = min((player.quests.length > 5 ? 5:player.quests.length-1), round((mouseY-((canvasHeight/8)+30)-30)/60))+questSlider.value()
-                        if(currentX == player.current_quest){
-                            player.current_quest = undefined;
-                        }
-                        else{
-                            player.current_quest = currentX;
-                        }
-                        if(player.quests[player.current_quest] != undefined && player.quests[player.current_quest].done){
-                            if(player.quests[player.current_quest].reward_item != 0){
-                                if(checkForSpace(player, item_name_to_num(player.quests[player.current_quest].reward_item.name))){
-                                    addItem(player, item_name_to_num(player.quests[player.current_quest].reward_item.name), player.quests[player.current_quest].reward_item.amount)
-                                    player.quests[player.current_quest].reward_item = 0;
-                                    if(player.quests[player.current_quest].reward_coins > 0){
-                                        addMoney(player.quests[player.current_quest].reward_coins);
-                                        player.money_anim = 255;
-                                        player.money_anim_amount += player.quests[player.current_quest].reward_coins;
-                                        player.quests[player.current_quest].reward_coins = 0;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else{
+            if(!player.show_quests){
                 if(keyIsDown(special_key)){ //16 == shift
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
                         if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){

@@ -1,7 +1,7 @@
 
 // Helper function to add money and dispatch event
 function addMoney(amount) {
-    if (amount > 0) {
+    if (amount > 0 && typeof player !== 'undefined' && player) {
         player.coins += amount;
         player.money_anim = 255;
         player.money_anim_amount += amount;
@@ -11,11 +11,25 @@ function addMoney(amount) {
             detail: { amount: amount, totalCoins: player.coins }
         }));
         
-        // Update quest UI if it's showing
+        // Update quest UI if it's showing - only update relevant parts
         if (player.show_quests && questsContainer) {
-            showQuests();
+            // Just update the quest content, not rebuild everything
+            updateQuestContent();
         }
     }
+}
+
+function updateQuestContent(){
+    const questsList = questsContainer.querySelector('.quests-list');
+    if (!questsList) return;
+    
+    const buttons = questsList.querySelectorAll('.quest-item');
+    buttons.forEach(btn => {
+        const questIndex = parseInt(btn.getAttribute('data-quest-index'));
+        const questContent = btn.querySelector('.quest-content');
+        questContent.innerHTML = '';
+        player.quests[questIndex].render(questContent, player.current_quest === questIndex ? 'yellow' : null);
+    });
 }
 
 function start(){
@@ -389,6 +403,8 @@ function showCredits(){
 }
 
 let questsContainer = null;
+let lastQuestSliderValue = -1;
+let lastSelectedQuest = -1;
 
 function showQuests(){
     if (!questsContainer) {
@@ -426,42 +442,60 @@ function showQuests(){
         const closeInstruction = document.createElement('div');
         closeInstruction.className = 'quests-close-instruction';
         questsContainer.appendChild(closeInstruction);
+        
+        // Disable canvas pointer events to prevent click interception
+        const canvas = document.querySelector('canvas');
+        if(canvas){
+            canvas.style.pointerEvents = 'none';
+        }
     }
 
-    // Update quests list
-    const questsList = questsContainer.querySelector('.quests-list');
-    questsList.innerHTML = '';
+    // Only update if slider position changed or quest was selected
+    const currentSliderValue = questSlider.value();
+    if (currentSliderValue !== lastQuestSliderValue || lastSelectedQuest !== player.current_quest) {
+        lastQuestSliderValue = currentSliderValue;
+        lastSelectedQuest = player.current_quest;
+        
+        // Update quests list
+        const questsList = questsContainer.querySelector('.quests-list');
+        questsList.innerHTML = '';
 
-    // Render visible quests
-    const startIndex = questSlider.value();
-    const endIndex = Math.min(player.quests.length > 6 ? 6 + startIndex : player.quests.length, player.quests.length);
-    
-    for(let i = startIndex; i < endIndex; i++){
-        const questButton = document.createElement('button');
-        questButton.className = 'quest-item';
-        questButton.setAttribute('data-quest-index', i);
-   
+        // Render visible quests
+        const startIndex = currentSliderValue;
+        const endIndex = Math.min(player.quests.length > 6 ? 6 + startIndex : player.quests.length, player.quests.length);
         
-        // Add click handler
-        questButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const questIndex = parseInt(e.currentTarget.getAttribute('data-quest-index'));
-            player.current_quest = questIndex;
-            showQuests(); // Refresh to update highlight
-            console.log('Selected quest index:', questIndex , player.current_quest, e.element);
-            e.element.classList.add('quest-current');
-        });
-        
-        const questContent = document.createElement('div');
-        questContent.className = 'quest-content';
-        
-        // Let the quest render into the DOM element
-        questContent.innerHTML = '';
-        player.quests[i].render(questContent, player.current_quest === i ? 'yellow' : null);
-        
-        questButton.appendChild(questContent);
-        questsList.appendChild(questButton);
+        for(let i = startIndex; i < endIndex; i++){
+            const questButton = document.createElement('button');
+            questButton.className = 'quest-item';
+            questButton.setAttribute('data-quest-index', i);
+            
+            if (player.current_quest === i) {
+                questButton.classList.add('quest-current');
+            }
+            
+            // Add click handler
+            questButton.addEventListener('click', (e) => {
+                console.log('Quest button clicked');
+                e.preventDefault();
+                e.stopPropagation();
+                const questIndex = parseInt(e.currentTarget.getAttribute('data-quest-index'));
+                console.log('Setting current quest to:', questIndex);
+                player.current_quest = questIndex;
+                lastSelectedQuest = questIndex;
+                // Update UI immediately without full refresh
+                updateQuestButtonHighlight();
+            });
+            
+            const questContent = document.createElement('div');
+            questContent.className = 'quest-content';
+            
+            // Let the quest render into the DOM element
+            questContent.innerHTML = '';
+            player.quests[i].render(questContent, player.current_quest === i ? 'yellow' : null);
+            
+            questButton.appendChild(questContent);
+            questsList.appendChild(questButton);
+        }
     }
 
     // Update close instruction
@@ -487,12 +521,18 @@ function showQuests(){
     }
 
     questsContainer.style.display = 'flex';
-    
-    // Disable canvas pointer events to prevent click interception
-    const canvas = document.querySelector('canvas');
-    if(canvas){
-        canvas.style.pointerEvents = 'none';
-    }
+}
+
+function updateQuestButtonHighlight(){
+    const buttons = document.querySelectorAll('.quest-item');
+    buttons.forEach(btn => {
+        const questIndex = parseInt(btn.getAttribute('data-quest-index'));
+        if (questIndex === player.current_quest) {
+            btn.classList.add('quest-current');
+        } else {
+            btn.classList.remove('quest-current');
+        }
+    });
 }
 
 function clear_data_render() {
