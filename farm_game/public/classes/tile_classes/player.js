@@ -637,8 +637,7 @@ var currentMappingIndex = 0;  // Track which control we're currently mapping
 
 // Add keydown listener for capturing keys during remapping
 document.addEventListener('keydown', (e) => {
-    console.log('GLOBAL KEYDOWN:', e.key, 'keymapping flag:', keymapping, 'currentMappingIndex:', currentMappingIndex);
-    
+
     if (keymapping) {
         e.preventDefault();
         console.log('✓ Key pressed during mapping:', e.key, 'keyCode:', e.keyCode, 'controlIndex:', currentMappingIndex);
@@ -651,8 +650,6 @@ document.addEventListener('keydown', (e) => {
                 keyCode: e.keyCode
             }
         }));
-    } else {
-        console.log('✗ keymapping is false, ignoring key');
     }
 });
 
