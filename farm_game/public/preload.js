@@ -669,10 +669,126 @@ function preload() {
 
 }
 
+// Fullscreen functionality
+function setupFullscreen() {
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const gameContainer = document.getElementById('game-container');
+    
+    // Check if button exists before adding listeners
+    if (!fullscreenBtn) {
+        console.error('Fullscreen button not found');
+        return;
+    }
+    
+    // Toggle fullscreen on button click
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    
+    // Also allow F11 key (but prevent default browser fullscreen)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F11') {
+            e.preventDefault();
+            toggleFullscreen();
+        }
+    });
+    
+    // Update button text and resize canvas when fullscreen changes
+    document.addEventListener('fullscreenchange', () => {
+        updateFullscreenButton();
+        resizeCanvasForFullscreen();
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+        updateFullscreenButton();
+        resizeCanvasForFullscreen();
+    });
+    document.addEventListener('mozfullscreenchange', () => {
+        updateFullscreenButton();
+        resizeCanvasForFullscreen();
+    });
+    document.addEventListener('msfullscreenchange', () => {
+        updateFullscreenButton();
+        resizeCanvasForFullscreen();
+    });
+}
+
+function toggleFullscreen() {
+    const elem = document.documentElement;
+    
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+        !document.mozFullScreenElement && !document.msFullscreenElement) {
+        // Enter fullscreen
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+            elem.mozRequestFullScreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
+    } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function resizeCanvasForFullscreen() {
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                         document.mozFullScreenElement || document.msFullscreenElement;
+    
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+    
+    if (isFullscreen) {
+        // Calculate scale to fill screen while maintaining aspect ratio
+        const scaleX = window.innerWidth / canvasWidth;
+        const scaleY = window.innerHeight / canvasHeight;
+        const scale = Math.max(scaleX, scaleY) * .8; // Use max to fill screen completely
+        
+        // Apply CSS transform to scale canvas
+        canvas.style.width = (canvasWidth * scale) + 'px';
+        canvas.style.height = (canvasHeight * scale) + 'px';
+        canvas.style.position = 'absolute';
+        canvas.style.left = '50%';
+        canvas.style.top = '50%';
+        canvas.style.transform = 'translate(-50%, -50%)';
+    } else {
+        // Restore original canvas size
+        canvas.style.width = canvasWidth + 'px';
+        canvas.style.height = canvasHeight + 'px';
+        canvas.style.position = '';
+        canvas.style.left = '';
+        canvas.style.top = '';
+        canvas.style.transform = '';
+    }
+}
+
+function updateFullscreenButton() {
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    if (!fullscreenBtn) return; // Guard against null
+    
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                         document.mozFullScreenElement || document.msFullscreenElement;
+    
+    fullscreenBtn.textContent = isFullscreen ? '⛶' : '⛶'; // Can use different icons if desired
+    fullscreenBtn.title = isFullscreen ? 'Exit Fullscreen (F11)' : 'Toggle Fullscreen (F11)';
+}
+
 function setup() {
     
     let canvas = createCanvas(canvasWidth, canvasHeight);
     canvas.parent('game-container');
+    
+    // Setup fullscreen functionality
+    setupFullscreen();
+    
     for (let i = 0; i < cloudCount; i++) {
         clouds[i] = new Cloud()
     }

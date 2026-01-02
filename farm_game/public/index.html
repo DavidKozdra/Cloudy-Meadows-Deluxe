@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -58,10 +58,58 @@
             overflow: hidden;
         }
         
+        body:fullscreen,
+        body:-webkit-full-screen,
+        body:-moz-full-screen,
+        body:-ms-fullscreen {
+            overflow: hidden;
+        }
+        
+        body:fullscreen #game-container,
+        body:-webkit-full-screen #game-container,
+        body:-moz-full-screen #game-container,
+        body:-ms-fullscreen #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        body:fullscreen canvas,
+        body:-webkit-full-screen canvas,
+        body:-moz-full-screen canvas,
+        body:-ms-fullscreen canvas {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
         #game-container {
             position: relative;
             /* transform: scale(1.5); - Removed: causes mouse coordinate mismatch */
             /* transform-origin: center center; */
+        }
+        
+        #fullscreen-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s;
+        }
+        
+        #fullscreen-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.8);
+            transform: scale(1.1);
         }
     </style>
     <link rel="stylesheet" href="styles.css">
@@ -70,6 +118,7 @@
 </head>
   <body>
     <div id="game-container"></div>
+    <button id="fullscreen-btn" title="Toggle Fullscreen (F11)">⛶</button>
     <div id="travelOverlay">
       <img src="images/tiles/air_ship.gif" alt="Airship">
     </div>
