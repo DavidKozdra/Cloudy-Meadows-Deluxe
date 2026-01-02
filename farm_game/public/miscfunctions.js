@@ -7,6 +7,22 @@ window.addEventListener('unhandledrejection', event => {
     }
 });
 
+// Helper function to update canvas pointer-events based on visible menus
+function updateCanvasPointerEvents() {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+    
+    const mainMenuVisible = document.getElementById('main-menu-container')?.style.display !== 'none';
+    const difficultyMenuVisible = document.getElementById('difficulty-menu')?.style.display !== 'none';
+    const optionsMenuVisible = document.getElementById('options-menu')?.style.display !== 'none';
+    const creditsMenuVisible = document.getElementById('credits-menu')?.style.display !== 'none';
+    const pauseMenuVisible = document.getElementById('pause-menu')?.style.display !== 'none';
+    const questsVisible = document.querySelector('.quests-container')?.style.display !== 'none';
+    
+    const anyMenuVisible = mainMenuVisible || difficultyMenuVisible || optionsMenuVisible || creditsMenuVisible || pauseMenuVisible || questsVisible;
+    canvas.style.pointerEvents = anyMenuVisible ? 'none' : 'auto';
+}
+
 // Helper function to add money and dispatch event
 function addMoney(amount) {
     if (amount > 0 && typeof player !== 'undefined' && player) {
@@ -41,6 +57,8 @@ function updateQuestContent(){
 }
 
 function start(){
+
+
     triggerMenuFadeOut(() => {
         startButton.hide();
         optionsButton.hide();
@@ -55,7 +73,13 @@ function start(){
         }
         paused = false;
         levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+
+    //turn off the title screen
+    title_screen = false;
+    hideMainMenu();
     });
+
+
 }
 
 
@@ -72,9 +96,13 @@ function showTitle(){
     image(title_screen_img, canvasWidth / 2, (canvasHeight / 2) - 40);
     pop();
 
-    // Show DOM-based menu
+    if(title_screen){
+            // Show DOM-based menu
     showMainMenu();
 
+    }else{
+        hideMainMenu();
+    }
     if(paused){
         showTitleOptions();
     }
@@ -96,43 +124,56 @@ function showTitle(){
 function showMainMenu(){
     let container = document.getElementById('main-menu-container');
     if (!container) {
+        // Create structure once
         container = document.createElement('div');
         container.id = 'main-menu-container';
-        document.body.appendChild(container);
-    }
-    if (container.innerHTML === '') {
         container.className = 'main-menu';
-        container.innerHTML = `
-            <img src="images/ui/Title_Screen.gif" alt="Title" class="main-menu-title-image">
-            <button id="start-btn" class="main-menu-button">Start</button>
-            <button id="options-btn" class="main-menu-button">Options</button>
-            <button id="credits-btn" class="main-menu-button">Credits</button>
-        `;
+        document.body.appendChild(container);
         
-        // Attach event listeners
-        document.getElementById('start-btn').addEventListener('click', start);
-        document.getElementById('options-btn').addEventListener('click', () => {
+        const titleImg = document.createElement('img');
+        titleImg.src = 'images/ui/Title_Screen.gif';
+        titleImg.alt = 'Title';
+        titleImg.className = 'main-menu-title-image';
+        container.appendChild(titleImg);
+        
+        const startBtn = document.createElement('button');
+        startBtn.id = 'start-btn';
+        startBtn.className = 'main-menu-button';
+        startBtn.textContent = 'Start';
+        startBtn.addEventListener('click', start);
+        container.appendChild(startBtn);
+        
+        const optionsBtn = document.createElement('button');
+        optionsBtn.id = 'options-btn';
+        optionsBtn.className = 'main-menu-button';
+        optionsBtn.textContent = 'Options';
+        optionsBtn.addEventListener('click', () => {
             paused = !paused;
             creditsOn = false;
         });
-        document.getElementById('credits-btn').addEventListener('click', () => {
+        container.appendChild(optionsBtn);
+        
+        const creditsBtn = document.createElement('button');
+        creditsBtn.id = 'credits-btn';
+        creditsBtn.className = 'main-menu-button';
+        creditsBtn.textContent = 'Credits';
+        creditsBtn.addEventListener('click', () => {
             creditsOn = !creditsOn;
             paused = false;
         });
+        container.appendChild(creditsBtn);
     }
-    // Disable canvas pointer events when menu is open
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'none';
-    
     container.style.display = 'flex';
+    updateCanvasPointerEvents();
 }
 
 function hideMainMenu(){
     const container = document.getElementById('main-menu-container');
     if (container) container.style.display = 'none';
-    // Re-enable canvas pointer events
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'auto';
+
+
+    updateCanvasPointerEvents();
+
 }
 
 function showDificulty(){
@@ -152,93 +193,101 @@ function showDificulty(){
 function showDifficultyMenu(){
     let difficultyMenu = document.getElementById('difficulty-menu');
     if (!difficultyMenu) {
+        // Create structure once
         difficultyMenu = document.createElement('div');
         difficultyMenu.id = 'difficulty-menu';
         difficultyMenu.className = 'difficulty-menu';
         document.body.appendChild(difficultyMenu);
+        
+        const title = document.createElement('h2');
+        title.className = 'difficulty-title';
+        title.textContent = 'Select Your Difficulty';
+        difficultyMenu.appendChild(title);
+        
+        const container = document.createElement('div');
+        container.className = 'difficulty-container';
+        container.id = 'difficulty-container';
+        difficultyMenu.appendChild(container);
+        
+        const difficulties = [
+            {
+                id: 'easy',
+                title: 'Easy',
+                features: [
+                    { label: 'Money Loss', icon: 'checkmark.png' },
+                    { label: 'Food Rot', icon: 'x.png' },
+                    { label: 'Perma Death', icon: 'x.png' }
+                ],
+                difficulty: 0
+            },
+            {
+                id: 'medium',
+                title: 'Medium',
+                features: [
+                    { label: 'Money Loss', icon: 'checkmark.png' },
+                    { label: 'Food Rot', icon: 'checkmark.png' },
+                    { label: 'Perma Death', icon: 'x.png' }
+                ],
+                difficulty: 1
+            },
+            {
+                id: 'hard',
+                title: 'Hard',
+                features: [
+                    { label: 'Money Loss', icon: 'x.png' },
+                    { label: 'Food Rot', icon: 'x.png' },
+                    { label: 'Perma Death', icon: 'checkmark.png' }
+                ],
+                difficulty: 2
+            }
+        ];
+        
+        for (const diff of difficulties) {
+            const card = document.createElement('div');
+            card.className = `difficulty-card difficulty-card-${diff.id}`;
+            
+            const cardTitle = document.createElement('h3');
+            cardTitle.className = 'difficulty-card-title';
+            cardTitle.textContent = diff.title;
+            card.appendChild(cardTitle);
+            
+            for (const feature of diff.features) {
+                const featureDiv = document.createElement('div');
+                featureDiv.className = 'difficulty-feature';
+                
+                const label = document.createElement('span');
+                label.textContent = feature.label;
+                featureDiv.appendChild(label);
+                
+                const img = document.createElement('img');
+                img.src = `images/ui/${feature.icon}`;
+                img.alt = feature.label;
+                img.className = 'feature-icon';
+                featureDiv.appendChild(img);
+                
+                card.appendChild(featureDiv);
+            }
+            
+            const btn = document.createElement('button');
+            btn.className = 'difficulty-select-btn';
+            btn.textContent = 'Select';
+            btn.dataset.difficulty = diff.difficulty;
+            btn.addEventListener('click', () => {
+                selectDifficulty(diff.difficulty);
+            });
+            card.appendChild(btn);
+            
+            container.appendChild(card);
+        }
     }
-    
-    difficultyMenu.innerHTML = `
-        <h2 class="difficulty-title">Select Your Difficulty</h2>
-        <div class="difficulty-container">
-            <!-- Easy -->
-            <div class="difficulty-card difficulty-card-easy">
-                <h3 class="difficulty-card-title">Easy</h3>
-                <div class="difficulty-feature">
-                    <span>Money Loss</span>
-                    <img src="images/ui/checkmark.png" alt="Yes" class="feature-icon">
-                </div>
-                <div class="difficulty-feature">
-                    <span>Food Rot</span>
-                    <img src="images/ui/x.png" alt="No" class="feature-icon">
-                </div>
-                <div class="difficulty-feature">
-                    <span>Perma Death</span>
-                    <img src="images/ui/x.png" alt="No" class="feature-icon">
-                </div>
-                <button class="difficulty-select-btn" data-difficulty="0">Select</button>
-            </div>
-
-            <!-- Medium -->
-            <div class="difficulty-card difficulty-card-medium">
-                <h3 class="difficulty-card-title">Medium</h3>
-                <div class="difficulty-feature">
-                    <span>Money Loss</span>
-                    <img src="images/ui/checkmark.png" alt="Yes" class="feature-icon">
-                </div>
-                <div class="difficulty-feature">
-                    <span>Food Rot</span>
-                    <img src="images/ui/checkmark.png" alt="Yes" class="feature-icon">
-                </div>
-                <div class="difficulty-feature">
-                    <span>Perma Death</span>
-                    <img src="images/ui/x.png" alt="No" class="feature-icon">
-                </div>
-                <button class="difficulty-select-btn" data-difficulty="1">Select</button>
-            </div>
-
-            <!-- Hard -->
-            <div class="difficulty-card difficulty-card-hard">
-                <h3 class="difficulty-card-title">Hard</h3>
-                <div class="difficulty-feature">
-                    <span>Money Loss</span>
-                    <img src="images/ui/x.png" alt="No" class="feature-icon">
-                </div>
-                <div class="difficulty-feature">
-                    <span>Food Rot</span>
-                    <img src="images/ui/x.png" alt="No" class="feature-icon">
-                </div>
-                <div class="difficulty-feature">
-                    <span>Perma Death</span>
-                    <img src="images/ui/checkmark.png" alt="Yes" class="feature-icon">
-                </div>
-                <button class="difficulty-select-btn" data-difficulty="2">Select</button>
-            </div>
-        </div>
-    `;
-    
-    // Attach event listeners to difficulty buttons
-    const difficultyButtons = difficultyMenu.querySelectorAll('.difficulty-select-btn');
-    difficultyButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const difficulty = parseInt(e.target.getAttribute('data-difficulty'));
-            selectDifficulty(difficulty);
-        });
-    });
-    
-    // Disable canvas pointer events when menu is open
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'none';
-    
     difficultyMenu.style.display = 'flex';
+    updateCanvasPointerEvents();
 }
 
 function hideDifficultyMenu(){
     const difficultyMenu = document.getElementById('difficulty-menu');
     if (difficultyMenu) difficultyMenu.style.display = 'none';
-    // Re-enable canvas pointer events
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'auto';
+    updateCanvasPointerEvents();
 }
 
 function selectDifficulty(difficulty){
@@ -360,116 +409,171 @@ function showOptions(){
 function showTitleOptions(){
     let optionsMenu = document.getElementById('options-menu');
     if (!optionsMenu) {
+        // Create structure once
         optionsMenu = document.createElement('div');
         optionsMenu.id = 'options-menu';
         optionsMenu.className = 'title-options-menu';
         document.body.appendChild(optionsMenu);
+        
+        const title = document.createElement('h2');
+        title.className = 'options-title';
+        title.textContent = 'Options';
+        optionsMenu.appendChild(title);
+        
+        // Audio section
+        const audioSection = document.createElement('div');
+        audioSection.className = 'options-section';
+        
+        const musicRow = document.createElement('div');
+        musicRow.className = 'slider-row';
+        const musicIcon = document.createElement('img');
+        musicIcon.src = 'images/ui/Music_Note.png';
+        musicIcon.alt = 'Music';
+        musicIcon.className = 'options-icon';
+        const musicLabel = document.createElement('label');
+        musicLabel.htmlFor = 'music-slider-title';
+        musicLabel.textContent = 'Music';
+        const musicSlider = document.createElement('input');
+        musicSlider.id = 'music-slider-title';
+        musicSlider.type = 'range';
+        musicSlider.min = '0';
+        musicSlider.max = '1';
+        musicSlider.step = '0.01';
+        musicSlider.className = 'options-slider';
+        musicSlider.addEventListener('input', () => {
+            window.musicSlider.value(musicSlider.value);
+        });
+        musicRow.appendChild(musicIcon);
+        musicRow.appendChild(musicLabel);
+        musicRow.appendChild(musicSlider);
+        audioSection.appendChild(musicRow);
+        
+        const fxRow = document.createElement('div');
+        fxRow.className = 'slider-row';
+        const fxIcon = document.createElement('img');
+        fxIcon.src = 'images/ui/fx.png';
+        fxIcon.alt = 'FX';
+        fxIcon.className = 'options-icon';
+        const fxLabel = document.createElement('label');
+        fxLabel.htmlFor = 'fx-slider-title';
+        fxLabel.textContent = 'Sound';
+        const fxSlider = document.createElement('input');
+        fxSlider.id = 'fx-slider-title';
+        fxSlider.type = 'range';
+        fxSlider.min = '0';
+        fxSlider.max = '1';
+        fxSlider.step = '0.01';
+        fxSlider.className = 'options-slider';
+        fxSlider.addEventListener('input', () => {
+            window.fxSlider.value(fxSlider.value);
+        });
+        fxRow.appendChild(fxIcon);
+        fxRow.appendChild(fxLabel);
+        fxRow.appendChild(fxSlider);
+        audioSection.appendChild(fxRow);
+        optionsMenu.appendChild(audioSection);
+        
+        // Controls section
+        const controlsSection = document.createElement('div');
+        controlsSection.className = 'options-section';
+        const controlsTitle = document.createElement('h3');
+        controlsTitle.className = 'options-section-title';
+        controlsTitle.textContent = 'Controls';
+        controlsSection.appendChild(controlsTitle);
+        const controlsContainer = document.createElement('div');
+        controlsContainer.id = 'title-controls-container';
+        controlsContainer.className = 'title-controls-container';
+        controlsSection.appendChild(controlsContainer);
+        optionsMenu.appendChild(controlsSection);
+        
+        // Buttons section
+        const buttonGroup = document.createElement('div');
+        buttonGroup.className = 'options-button-group';
+        const resetBtn = document.createElement('button');
+        resetBtn.id = 'reset-controls-btn';
+        resetBtn.className = 'options-button';
+        resetBtn.textContent = 'Reset Controls';
+        resetBtn.addEventListener('click', () => {
+            resetControls();
+        });
+        buttonGroup.appendChild(resetBtn);
+        const clearBtn = document.createElement('button');
+        clearBtn.id = 'clear-data-btn';
+        clearBtn.className = 'options-button options-button-danger';
+        clearBtn.textContent = 'Clear Save';
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all data? This cannot be undone!')) {
+                clear_anim = true;
+                try {
+                    localData.clear();
+                } catch (e) {
+                    console.warn('Failed to clear data:', e);
+                }
+            }
+        });
+        buttonGroup.appendChild(clearBtn);
+        optionsMenu.appendChild(buttonGroup);
+        
+        const backBtn = document.createElement('button');
+        backBtn.id = 'back-btn';
+        backBtn.className = 'options-back-button';
+        backBtn.textContent = 'Back';
+        backBtn.addEventListener('click', () => {
+            paused = false;
+            hideTitleOptions();
+        });
+        optionsMenu.appendChild(backBtn);
     }
     
-    const controlItems = [
-        { label: 'Interact:', key: () => Controls_Interact_button_key },
-        { label: 'Eat:', key: () => Controls_Eat_button_key },
-        { label: 'Up:', key: () => Controls_Up_button_key },
-        { label: 'Down:', key: () => Controls_Down_button_key },
-        { label: 'Left:', key: () => Controls_Left_button_key },
-        { label: 'Right:', key: () => Controls_Right_button_key },
-        { label: 'Special:', key: () => Controls_Special_button_key },
-        { label: 'Quest:', key: () => Controls_Quest_button_key }
-    ];
-    
-    let controlsHtml = '';
-    controlItems.forEach(item => {
-        controlsHtml += `
-            <div class="title-control-row">
-                <span class="title-control-label">${item.label}</span>
-                <span class="title-control-key">${item.key()}</span>
-            </div>
-        `;
-    });
-    
-    optionsMenu.innerHTML = `
-        <h2 class="options-title">Options</h2>
-        
-        <div class="options-section">
-            <div class="slider-row">
-                <img src="images/ui/Music_Note.png" alt="Music" class="options-icon">
-                <label for="music-slider-title">Music</label>
-                <input id="music-slider-title" type="range" min="0" max="1" step="0.01" class="options-slider">
-            </div>
-            <div class="slider-row">
-                <img src="images/ui/fx.png" alt="FX" class="options-icon">
-                <label for="fx-slider-title">Sound</label>
-                <input id="fx-slider-title" type="range" min="0" max="1" step="0.01" class="options-slider">
-            </div>
-        </div>
-
-        <div class="options-section">
-            <h3 class="options-section-title">Controls</h3>
-            <div id="title-controls-container" class="title-controls-container">
-                ${controlsHtml}
-            </div>
-        </div>
-
-        <div class="options-button-group">
-            <button id="reset-controls-btn" class="options-button">Reset Controls</button>
-            <button id="clear-data-btn" class="options-button options-button-danger">Clear Save</button>
-        </div>
-
-        <button id="back-btn" class="options-back-button">Back</button>
-    `;
-    
-    // Sync sliders with p5.js sliders
+    // Update sliders and controls content
     const musicSliderDOM = document.getElementById('music-slider-title');
     const fxSliderDOM = document.getElementById('fx-slider-title');
+    const controlsContainer = document.getElementById('title-controls-container');
     
     if (musicSliderDOM) {
         musicSliderDOM.value = musicSlider.value();
-        musicSliderDOM.oninput = () => {
-            musicSlider.value(musicSliderDOM.value);
-        };
     }
-    
     if (fxSliderDOM) {
         fxSliderDOM.value = fxSlider.value();
-        fxSliderDOM.oninput = () => {
-            fxSlider.value(fxSliderDOM.value);
-        };
     }
     
-    // Attach event listeners
-    document.getElementById('reset-controls-btn').addEventListener('click', () => {
-        resetControls();
-    });
-    
-    document.getElementById('clear-data-btn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear all data? This cannot be undone!')) {
-            clear_anim = true;
-            try {
-                localData.clear();
-            } catch (e) {
-                console.warn('Failed to clear data:', e);
-            }
-        }
-    });
-    
-    document.getElementById('back-btn').addEventListener('click', () => {
-        paused = false;
-        hideTitleOptions();
-    });
-    
-    // Disable canvas pointer events when menu is open
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'none';
+    // Update controls list
+    if (controlsContainer) {
+        controlsContainer.innerHTML = '';
+        const controlItems = [
+            { label: 'Interact:', key: () => Controls_Interact_button_key },
+            { label: 'Eat:', key: () => Controls_Eat_button_key },
+            { label: 'Up:', key: () => Controls_Up_button_key },
+            { label: 'Down:', key: () => Controls_Down_button_key },
+            { label: 'Left:', key: () => Controls_Left_button_key },
+            { label: 'Right:', key: () => Controls_Right_button_key },
+            { label: 'Special:', key: () => Controls_Special_button_key },
+            { label: 'Quest:', key: () => Controls_Quest_button_key }
+        ];
+        
+        controlItems.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'title-control-row';
+            const label = document.createElement('span');
+            label.className = 'title-control-label';
+            label.textContent = item.label;
+            const key = document.createElement('span');
+            key.className = 'title-control-key';
+            key.textContent = item.key();
+            row.appendChild(label);
+            row.appendChild(key);
+            controlsContainer.appendChild(row);
+        });
+    }
     
     optionsMenu.style.display = 'flex';
+    updateCanvasPointerEvents();
 }
 
 function hideTitleOptions(){
     const optionsMenu = document.getElementById('options-menu');
     if (optionsMenu) optionsMenu.style.display = 'none';
-    // Re-enable canvas pointer events
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'auto';
+    updateCanvasPointerEvents();
 }
 
 function showPaused(){
@@ -477,6 +581,7 @@ function showPaused(){
     const pauseMenu = document.getElementById('pause-menu');
     if (pauseMenu) {
         pauseMenu.style.display = 'flex';
+        updateCanvasPointerEvents();
         
         // Update sliders
         const musicSliderDOM = document.getElementById('pause-music-slider');
@@ -523,6 +628,7 @@ function hidePaused() {
     if (pauseMenu) {
         pauseMenu.style.display = 'none';
     }
+    updateCanvasPointerEvents();
 }
 
 function ensurePauseMenuContainer() {
@@ -658,49 +764,59 @@ function showCredits(){
 function showCreditsMenu(){
     let creditsMenu = document.getElementById('credits-menu');
     if (!creditsMenu) {
+        // Create structure once
         creditsMenu = document.createElement('div');
         creditsMenu.id = 'credits-menu';
         creditsMenu.className = 'credits-menu';
         document.body.appendChild(creditsMenu);
+        
+        const title = document.createElement('h2');
+        title.className = 'credits-title';
+        title.textContent = 'Credits';
+        creditsMenu.appendChild(title);
+        
+        const content = document.createElement('div');
+        content.className = 'credits-content';
+        
+        const credits = [
+            'Christian Rodriguez - Lead programmer',
+            'David Kozdra - Code Art and sound',
+            'Patrick Mayer - Misc',
+            'Christian "Sealand" Rodriguez - Music',
+            'Ethan Davis - Dialogue and Testing',
+            'and thanks to our play testers'
+        ];
+        
+        credits.forEach((credit, idx) => {
+            const line = document.createElement('div');
+            line.className = 'credits-line';
+            if (idx === 1) {
+                line.innerHTML = `David Kozdra - Code Art and sound<br><a href="https://davidkozdra.com" target="_blank" class="credits-link">davidkozdra.com</a> | <a href="https://zoda39089.itch.io/" target="_blank" class="credits-link">itch.io page</a>`;
+            } else {
+                line.textContent = credit;
+            }
+            content.appendChild(line);
+        });
+        creditsMenu.appendChild(content);
+        
+        const backBtn = document.createElement('button');
+        backBtn.id = 'credits-back-btn';
+        backBtn.className = 'credits-back-button';
+        backBtn.textContent = 'Back';
+        backBtn.addEventListener('click', () => {
+            creditsOn = false;
+            hideCreditsMenu();
+        });
+        creditsMenu.appendChild(backBtn);
     }
-    
-    creditsMenu.innerHTML = `
-        <h2 class="credits-title">Credits</h2>
-        <div class="credits-content">
-            <div class="credits-line">Christian Rodriguez - Lead programmer</div>
-            <div class="credits-line">
-                David Kozdra - Code Art and sound
-                <br>
-                <a href="https://davidkozdra.com" target="_blank" class="credits-link">davidkozdra.com</a> | 
-                <a href="https://zoda39089.itch.io/" target="_blank" class="credits-link">itch.io page</a>
-            </div>
-            <div class="credits-line">Patrick Mayer - Misc</div>
-            <div class="credits-line">Christian "Sealand" Rodriguez - Music</div>
-            <div class="credits-line">Ethan Davis - Dialogue and Testing</div>
-            <div class="credits-line">and thanks to our play testers</div>
-        </div>
-        <button id="credits-back-btn" class="credits-back-button">Back</button>
-    `;
-    
-    // Attach event listener to back button
-    document.getElementById('credits-back-btn').addEventListener('click', () => {
-        creditsOn = false;
-        hideCreditsMenu();
-    });
-    
-    // Disable canvas pointer events when menu is open
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'none';
-    
     creditsMenu.style.display = 'flex';
+    updateCanvasPointerEvents();
 }
 
 function hideCreditsMenu(){
     const creditsMenu = document.getElementById('credits-menu');
     if (creditsMenu) creditsMenu.style.display = 'none';
-    // Re-enable canvas pointer events
-    const canvas = document.querySelector('canvas');
-    if (canvas) canvas.style.pointerEvents = 'auto';
+    updateCanvasPointerEvents();
 }
 
 let questsContainer = null;
@@ -731,6 +847,7 @@ function showQuests(){
             questsContainer.style.display = 'none';
             questSlider.hide();
             questCloseButton.hide();
+            updateCanvasPointerEvents();
         });
         headerWrapper.appendChild(closeButton);
         
@@ -858,6 +975,7 @@ function showQuests(){
     }
 
     questsContainer.style.display = 'flex';
+    updateCanvasPointerEvents();
 }
 
 function updateQuestButtonHighlight(){
