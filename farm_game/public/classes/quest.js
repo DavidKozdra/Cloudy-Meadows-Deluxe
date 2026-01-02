@@ -270,9 +270,7 @@ class Quest {
                         
                         // Always give coin reward regardless of inventory space
                         if(this.reward_coins > 0){
-                            player.coins += this.reward_coins;
-                            player.money_anim = 255;
-                            player.money_anim_amount += this.reward_coins;
+                            addMoney(this.reward_coins);
                             this.reward_coins = 0;
                         }
                     }

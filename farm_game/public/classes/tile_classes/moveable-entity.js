@@ -54,7 +54,7 @@ class MoveableEntity extends Entity {
         }
         if (this.looking(x, y) != undefined && this.looking(x, y).name == 'cart_s') {
             if (this.inv[this.hand].price != 0 && this.inv[this.hand] != 0) {
-                player.coins += this.inv[this.hand].price;
+                addMoney(this.inv[this.hand].price);
                 moneySound.play();
                 this.inv[this.hand].amount -= 1;
                 if (this.inv[this.hand].amount == 0) {

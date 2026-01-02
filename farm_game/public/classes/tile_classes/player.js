@@ -487,10 +487,9 @@ class Player extends MoveableEntity {
                 if(keyIsDown(special_key)){
                     current_amount = this.inv[this.hand].amount;
                 }
-                player.coins += this.inv[this.hand].price * current_amount;
+                const moneyGained = this.inv[this.hand].price * current_amount;
+                addMoney(moneyGained);
                 moneySound.play();
-                this.money_anim = 255;
-                this.money_anim_amount += this.inv[this.hand].price*current_amount;
                 this.inv[this.hand].amount -= current_amount;
                 if(this.quests != undefined && this.quests.length > 0){
                 if(this.current_quest != undefined && this.quests[this.current_quest].goals[this.quests[this.current_quest].current_Goal] != undefined){

@@ -1,4 +1,23 @@
 
+// Helper function to add money and dispatch event
+function addMoney(amount) {
+    if (amount > 0) {
+        player.coins += amount;
+        player.money_anim = 255;
+        player.money_anim_amount += amount;
+        
+        // Dispatch money gained event
+        window.dispatchEvent(new CustomEvent('moneyGained', {
+            detail: { amount: amount, totalCoins: player.coins }
+        }));
+        
+        // Update quest UI if it's showing
+        if (player.show_quests && questsContainer) {
+            showQuests();
+        }
+    }
+}
+
 function start(){
     triggerMenuFadeOut(() => {
         startButton.hide();
@@ -224,7 +243,6 @@ function renderControlButtons(x, y) {
 }
 
 function hideControls() {
-    console.log('Hiding controls');
     if (controlsContainer) {
         controlsContainer.style.display = 'none';
         // toggle labels as well
@@ -422,9 +440,7 @@ function showQuests(){
         const questButton = document.createElement('button');
         questButton.className = 'quest-item';
         questButton.setAttribute('data-quest-index', i);
-        if(player.current_quest === i){
-            questButton.classList.add('quest-current');
-        }
+   
         
         // Add click handler
         questButton.addEventListener('click', (e) => {
@@ -433,6 +449,8 @@ function showQuests(){
             const questIndex = parseInt(e.currentTarget.getAttribute('data-quest-index'));
             player.current_quest = questIndex;
             showQuests(); // Refresh to update highlight
+            console.log('Selected quest index:', questIndex , player.current_quest, e.element);
+            e.element.classList.add('quest-current');
         });
         
         const questContent = document.createElement('div');

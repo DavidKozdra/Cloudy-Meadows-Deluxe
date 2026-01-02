@@ -801,6 +801,18 @@ function setup() {
     questCloseButton.style('line-height', '1');
     questCloseButton.hide();
 
+    // Setup money gained event listener for quest updates
+    window.addEventListener('moneyGained', (e) => {
+        // Update all active quests when money is gained
+        if (player && player.quests) {
+            for (let i = 0; i < player.quests.length; i++) {
+                if (!player.quests[i].done && !player.quests[i].failed) {
+                    player.quests[i].update();
+                }
+            }
+        }
+    });
+
     // Register all animated GIF images for pause control
     animatedGifs = [
         sprinkler_tile_img,

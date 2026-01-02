@@ -460,7 +460,7 @@ function mouseReleased() {
                                     addItem(player, item_name_to_num(player.quests[player.current_quest].reward_item.name), player.quests[player.current_quest].reward_item.amount)
                                     player.quests[player.current_quest].reward_item = 0;
                                     if(player.quests[player.current_quest].reward_coins > 0){
-                                        player.coins += player.quests[player.current_quest].reward_coins;
+                                        addMoney(player.quests[player.current_quest].reward_coins);
                                         player.money_anim = 255;
                                         player.money_anim_amount += player.quests[player.current_quest].reward_coins;
                                         player.quests[player.current_quest].reward_coins = 0;
