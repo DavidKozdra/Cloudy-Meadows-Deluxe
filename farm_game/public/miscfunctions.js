@@ -6,7 +6,7 @@ function start(){
         creditsButton.hide();
         resetControlsButton.hide();
         clearButton.hide();
-        hideControlButtons();
+        hideControls();
         title_screen = false;
         if(localData.get('Day_curLvl_Dif') == null){
             dificulty_screen = true;
@@ -58,7 +58,7 @@ function showTitle(){
         fxSlider.hide();
         resetControlsButton.hide();
         clearButton.hide();
-        hideControlButtons();
+        hideControls();
 
     }
     if(creditsOn){
@@ -223,10 +223,17 @@ function renderControlButtons(x, y) {
     }
 }
 
-function hideControlButtons() {
+function hideControls() {
+    console.log('Hiding controls');
     if (controlsContainer) {
         controlsContainer.style.display = 'none';
+        // toggle labels as well
+        for (let i = 0; i < controlRows.length; i++) {
+            controlRows[i].row.classList.remove('highlighted');
+        }
     }
+
+    
 }
 
 function showOptions(){

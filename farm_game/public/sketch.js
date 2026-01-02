@@ -422,14 +422,7 @@ function render_ui() {
         musicSlider.hide();
         fxSlider.hide();
         QuitButton.hide()
-        Controls_Interact_button.hide();
-        Controls_Eat_button.hide();
-        Controls_Up_button.hide();
-        Controls_Down_button.hide();
-        Controls_Left_button.hide();
-        Controls_Right_button.hide();
-        Controls_Special_button.hide();
-        Controls_Quest_button.hide();
+          hideControls();
     }
 }
 
