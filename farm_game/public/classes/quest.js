@@ -179,8 +179,18 @@ class Quest {
                 this.goals[this.current_Goal].update()
                 if(this.goals[this.current_Goal].done){
                     this.current_Goal += 1;
+                    // Dispatch goal completion event
+                    window.dispatchEvent(new CustomEvent('questGoalCompleted', {
+                        detail: { quest: this, goalIndex: this.current_Goal - 1 }
+                    }));
+                    
                     if(this.current_Goal > this.goals.length-1 && !this.done){
                         this.done = true;
+                        
+                        // Dispatch quest completion event
+                        window.dispatchEvent(new CustomEvent('questCompleted', {
+                            detail: { quest: this }
+                        }));
                         
                         // Give item reward if inventory has space
                         if(this.reward_item != 0){

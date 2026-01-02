@@ -136,8 +136,11 @@ function draw() {
         }
         
         if (!paused){
-            if(player.quests[player.current_quest] != undefined){
-                player.quests[player.current_quest].update();
+            // Update all active quests (event-based system)
+            for(let i = 0; i < player.quests.length; i++){
+                if(player.quests[i] != undefined && !player.quests[i].done && !player.quests[i].failed){
+                    player.quests[i].update();
+                }
             }
             if (millis() - lastTimeMili > 300) { //300 for 2 min 1 day, 150 for 1 min 1 day
                 if (timephase == 0) {
