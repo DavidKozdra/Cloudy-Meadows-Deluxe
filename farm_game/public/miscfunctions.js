@@ -144,7 +144,9 @@ function showMainMenu(){
         const startBtn = document.createElement('button');
         startBtn.id = 'start-btn';
         startBtn.className = 'main-menu-button';
-        startBtn.textContent = 'Start';
+        // Check if there's any saved data (keys that can be deleted)
+        const hasSavedGame = localData.keys() > 0;
+        startBtn.textContent = hasSavedGame ? 'Continue' : 'Start';
         startBtn.addEventListener('click', start);
         container.appendChild(startBtn);
         
