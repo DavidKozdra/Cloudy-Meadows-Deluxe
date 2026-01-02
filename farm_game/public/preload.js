@@ -671,7 +671,8 @@ function preload() {
 
 function setup() {
     
-    createCanvas(canvasWidth, canvasHeight);
+    let canvas = createCanvas(canvasWidth, canvasHeight);
+    canvas.parent('game-container');
     for (let i = 0; i < cloudCount; i++) {
         clouds[i] = new Cloud()
     }
@@ -681,6 +682,7 @@ function setup() {
     
 
     startButton = createButton('Start');
+    startButton.parent('game-container');
     startButton.position(canvasWidth/2-250/2, canvasHeight/2+120);
     startButton.mousePressed(start);
     startButton.style('width', '250px');
@@ -690,6 +692,7 @@ function setup() {
    
     
     optionsButton = createButton('Options');
+    optionsButton.parent('game-container');
     optionsButton.position(canvasWidth/2-250/2, canvasHeight/2+160);
     optionsButton.mousePressed(() => {
         paused = !paused;
@@ -702,6 +705,7 @@ function setup() {
     optionsButton.style('cursor', 'pointer');
 
     creditsButton = createButton('Credits');
+    creditsButton.parent('game-container');
     creditsButton.position(canvasWidth/2-250/2, canvasHeight/2+200);
     creditsButton.mousePressed(() => {
         creditsOn = !creditsOn;
@@ -714,6 +718,7 @@ function setup() {
     creditsButton.style('cursor', 'pointer');
 
     robotPlayButton = createButton('Play');
+    robotPlayButton.parent('game-container');
     robotPlayButton.position(((11*canvasWidth)/16) - 55, canvasHeight/8 - 5);
     robotPlayButton.mousePressed(() => {
         temp_move_bool = true;
@@ -725,6 +730,7 @@ function setup() {
     robotPlayButton.hide();
 
     robotPauseButton = createButton('Pause');
+    robotPauseButton.parent('game-container');
     robotPauseButton.position(((11*canvasWidth)/16) + 19, canvasHeight/8 - 5);
     robotPauseButton.mousePressed(() => {
         temp_move_bool = false;
@@ -736,6 +742,7 @@ function setup() {
     robotPauseButton.hide();
 
     robotBoomButton = createButton('Boom');
+    robotBoomButton.parent('game-container');
     robotBoomButton.position(((14*canvasWidth)/16) - 30, canvasHeight/8 - 5);
     robotBoomButton.mousePressed(() => {
         if(checkForSpace(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name))){
@@ -756,21 +763,26 @@ function setup() {
     robotBoomButton.hide();
 
     musicSlider = createSlider(0, 1, ((localData.get('Options') != null ? localData.get('Options').musicVolume:0.5)), 0.01);
+    musicSlider.parent('game-container');
     musicSlider.position((canvasWidth/2)-10, (canvasHeight/2)-85);
-    musicSlider.input(saveOptions)
+    musicSlider.input(saveOptions);
     musicSlider.hide();
+    
     fxSlider = createSlider(0, 1, ((localData.get('Options') != null ? localData.get('Options').fxVolume:0.5)), 0.01);
+    fxSlider.parent('game-container');
     fxSlider.position((canvasWidth/2)-10, (canvasHeight/2)-5);
-    fxSlider.input(saveOptions)
+    fxSlider.input(saveOptions);
     fxSlider.hide();
 
     questSlider = createSlider(0, 1, 0, 1);
-    questSlider.position((canvasWidth/2)+(3*22), canvasHeight/8)
+    questSlider.parent('game-container');
+    questSlider.position((canvasWidth/2)+(3*22), canvasHeight/8);
     questSlider._rotate(90);
     questSlider.size((65*6)+45);
     questSlider.hide();
 
     questCloseButton = createButton('×');
+    questCloseButton.parent('game-container');
     questCloseButton.position(0, 0);
     questCloseButton.mousePressed(() => {
         player.show_quests = false;
@@ -804,6 +816,7 @@ function setup() {
     ];
 
     clearButton = createButton('Clear Save Data');
+    clearButton.parent('game-container');
     clearButton.position((canvasWidth/2)+165, (canvasHeight/2)+200);
     clearButton.mousePressed(() => {
         clear_anim = true;
@@ -814,10 +827,10 @@ function setup() {
     clearButton.style('background','url()');
     clearButton.style("font-family","pixelFont");
     clearButton.style('cursor', 'pointer');
-
     clearButton.hide();
 
     QuitButton = createButton('Save and Quit');
+    QuitButton.parent('game-container');
     QuitButton.position((canvasWidth/2)-125, (canvasWidth/2)+95);
     QuitButton.style('width', '250px');
     QuitButton.style('background','url()');
@@ -828,7 +841,7 @@ function setup() {
         paused = false;
         startButton.show();
         creditsButton.show();
-        optionsButton.show()
+        optionsButton.show();
         clearButton.hide();
         QuitButton.hide();
         saveAll();
@@ -836,6 +849,7 @@ function setup() {
     QuitButton.hide();
 
     dif0button = createButton('');
+    dif0button.parent('game-container');
     dif0button.position((canvasWidth/4)-90, (canvasWidth/2)-150);
     dif0button.style('width','180px');
     dif0button.style('height','300px');
@@ -844,13 +858,14 @@ function setup() {
     dif0button.mousePressed(() => {
         dificulty = 0;
         dificulty_screen = false;
-        dif0button.hide()
-        dif1button.hide()
-        dif2button.hide()
+        dif0button.hide();
+        dif1button.hide();
+        dif2button.hide();
     });
     dif0button.hide();
 
     dif1button = createButton('');
+    dif1button.parent('game-container');
     dif1button.position(((2*canvasWidth)/4)-90, (canvasWidth/2)-150);
     dif1button.style('width','180px');
     dif1button.style('height','300px');
@@ -859,13 +874,14 @@ function setup() {
     dif1button.mousePressed(() => {
         dificulty = 1;
         dificulty_screen = false;
-        dif0button.hide()
-        dif1button.hide()
-        dif2button.hide()
+        dif0button.hide();
+        dif1button.hide();
+        dif2button.hide();
     });
     dif1button.hide();
 
     dif2button = createButton('');
+    dif2button.parent('game-container');
     dif2button.position(((3*canvasWidth)/4)-90, (canvasWidth/2)-150);
     dif2button.style('width','180px');
     dif2button.style('height','300px');
@@ -874,13 +890,14 @@ function setup() {
     dif2button.mousePressed(() => {
         dificulty = 2;
         dificulty_screen = false;
-        dif0button.hide()
-        dif1button.hide()
-        dif2button.hide()
+        dif0button.hide();
+        dif1button.hide();
+        dif2button.hide();
     });
     dif2button.hide();
 
     Controls_Interact_button = createButton('');
+    Controls_Interact_button.parent('game-container');
     Controls_Interact_button.position(((4*canvasWidth)/5)+70, canvasHeight/2-120);
     Controls_Interact_button.mousePressed(() => {
         if(control_set == 0){
@@ -898,6 +915,7 @@ function setup() {
     Controls_Interact_button.hide();
 
     Controls_Eat_button = createButton('');
+    Controls_Eat_button.parent('game-container');
     Controls_Eat_button.position(((4*canvasWidth)/5)+70, canvasHeight/2-95);
     Controls_Eat_button.mousePressed(() => {
         if(control_set == 0){
@@ -915,6 +933,7 @@ function setup() {
     Controls_Eat_button.hide();
 
     Controls_Up_button = createButton('');
+    Controls_Up_button.parent('game-container');
     Controls_Up_button.position(((4*canvasWidth)/5)+70, canvasHeight/2-70);
     Controls_Up_button.mousePressed(() => {
         if(control_set == 0){
@@ -944,6 +963,7 @@ function setup() {
     Controls_Left_button.style('height', '20px');
     Controls_Left_button.style('background','url()');
     Controls_Left_button.style("font-family","pixelFont");
+    Controls_Left_button.parent('game-container');
     Controls_Left_button.style('cursor', 'pointer');
     //Controls_Left.style("border","none");
     Controls_Left_button.hide();
@@ -960,6 +980,7 @@ function setup() {
     Controls_Down_button.style('width', '90px');
     Controls_Down_button.style('height', '20px');
     Controls_Down_button.style('background','url()');
+    Controls_Down_button.parent('game-container');
     Controls_Down_button.style("font-family","pixelFont");
     Controls_Down_button.style('cursor', 'pointer');
     //Controls_Down.style("border","none");
@@ -977,6 +998,7 @@ function setup() {
     Controls_Right_button.style('width', '90px');
     Controls_Right_button.style('height', '20px');
     Controls_Right_button.style('background','url()');
+    Controls_Right_button.parent('game-container');
     Controls_Right_button.style("font-family","pixelFont");
     Controls_Right_button.style('cursor', 'pointer');
     //Controls_Right.style("border","none");
@@ -994,6 +1016,7 @@ function setup() {
     Controls_Special_button.style('width', '90px');
     Controls_Special_button.style('height', '20px');
     Controls_Special_button.style('background','url()');
+    Controls_Special_button.parent('game-container');
     Controls_Special_button.style("font-family","pixelFont");
     Controls_Special_button.style('cursor', 'pointer');
     //Controls_Special.style("border","none");

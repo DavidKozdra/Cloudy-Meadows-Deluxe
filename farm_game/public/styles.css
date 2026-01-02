@@ -3,6 +3,21 @@
     src: url('pixelFont.ttf');
 }
 
+#game-container {
+    position: relative;
+}
+
+canvas {
+    display: block;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: pixelFont, monospace;
+}
+
 .but{
     background-color: black;
 }
@@ -14,7 +29,7 @@ button {
 
 /* Fast travel transition overlay */
 #travelOverlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
@@ -23,6 +38,7 @@ button {
     display: none;
     z-index: 9999;
     opacity: 0;
+    pointer-events: none;
 }
 
 #travelOverlay.active {
@@ -55,7 +71,7 @@ button {
 
 /* Menu fade transition overlay */
 #menuOverlay {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
@@ -64,6 +80,7 @@ button {
     display: none;
     z-index: 9998;
     opacity: 0;
+    pointer-events: none;
 }
 
 #menuOverlay.active {
