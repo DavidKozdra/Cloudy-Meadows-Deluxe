@@ -40,6 +40,7 @@ function start(){
         resetControlsButton.hide();
         clearButton.hide();
         hideControls();
+        hidePaused();
         title_screen = false;
         if(localData.get('Day_curLvl_Dif') == null){
             dificulty_screen = true;
@@ -49,17 +50,6 @@ function start(){
     });
 }
 
-/*
-button types   
-wasd and <- up v -> down
-12345678
-
-interact 
-eat secoundary interact 
-
-inventory quick move 
-
-*/
 
 
 function showTitle(){
@@ -298,31 +288,183 @@ function showOptions(){
 }
 
 function showPaused(){
-    push()
-    stroke(149, 108, 65);
-    strokeWeight(5);
-    fill(187, 132, 75);
-    rectMode(CENTER);
-    rect(canvasWidth/2, (canvasHeight/2)-30, 400, 400);
-    fill(255);
-    stroke(0);
-    strokeWeight(2);
-    textFont(player_2);
-    textAlign(CENTER, CENTER);
-    textSize(30);
-    text('Paused', canvasWidth/2, (canvasHeight/5)-20);
-    musicSlider.show();
-    fxSlider.show();
-    QuitButton.show();
-    musicSlider.position((canvasWidth/2)-10, (canvasHeight/5)+25);
-    fxSlider.position((canvasWidth/2)-10, (canvasHeight/5)+65);
+    ensurePauseMenuContainer();
+    const pauseMenu = document.getElementById('pause-menu');
+    if (pauseMenu) {
+        pauseMenu.style.display = 'flex';
+        
+        // Update sliders
+        const musicSliderDOM = document.getElementById('pause-music-slider');
+        const fxSliderDOM = document.getElementById('pause-fx-slider');
+        
+        if (musicSliderDOM) {
+            musicSliderDOM.value = musicSlider.value();
+            musicSliderDOM.oninput = () => {
+                musicSlider.value(musicSliderDOM.value);
+                saveOptions();
+            };
+        }
+        
+        if (fxSliderDOM) {
+            fxSliderDOM.value = fxSlider.value();
+            fxSliderDOM.oninput = () => {
+                fxSlider.value(fxSliderDOM.value);
+                saveOptions();
+            };
+        }
+        
+        // Update control key displays in case they changed
+        const controlRows = pauseMenu.querySelectorAll('.pause-control-row');
+        const controlItems = [
+            Controls_Interact_button_key,
+            Controls_Eat_button_key,
+            Controls_Up_button_key,
+            Controls_Down_button_key,
+            Controls_Left_button_key,
+            Controls_Right_button_key,
+            Controls_Special_button_key,
+            Controls_Quest_button_key
+        ];
+        
+        controlRows.forEach((row, index) => {
+            const keyDisplay = row.querySelector('span:last-child');
+            if (keyDisplay && controlItems[index]) {
+                keyDisplay.textContent = controlItems[index];
+            }
+        });
+    }
+}
 
-    image(music_note_img, (canvasWidth/2)-65, (canvasHeight/5));
-    image(fx_img, (canvasWidth/2)-65, (canvasHeight/5)+40);
+function hidePaused() {
+    const pauseMenu = document.getElementById('pause-menu');
+    if (pauseMenu) {
+        pauseMenu.style.display = 'none';
+    }
+}
 
-    renderControlButtons(((2*canvasWidth)/5)-60, canvasHeight/2-102);
-
-    pop()
+function ensurePauseMenuContainer() {
+    if (document.getElementById('pause-menu')) return;
+    
+    const pauseMenu = document.createElement('div');
+    pauseMenu.id = 'pause-menu';
+    document.body.appendChild(pauseMenu);
+    
+    // Title
+    const title = document.createElement('h2');
+    title.className = 'pause-title';
+    title.textContent = 'Paused';
+    pauseMenu.appendChild(title);
+    
+    // Sliders section
+    const sliderSection = document.createElement('div');
+    sliderSection.className = 'pause-menu-section';
+    
+    // Music slider
+    const musicRow = document.createElement('div');
+    musicRow.className = 'pause-slider-row';
+    const musicIcon = document.createElement('img');
+    musicIcon.className = 'pause-slider-icon';
+    musicIcon.src = 'images/ui/music_note.png';
+    musicIcon.alt = 'Music';
+    const musicSliderDOM = document.createElement('input');
+    musicSliderDOM.id = 'pause-music-slider';
+    musicSliderDOM.type = 'range';
+    musicSliderDOM.min = '0';
+    musicSliderDOM.max = '1';
+    musicSliderDOM.step = '0.01';
+    musicRow.appendChild(musicIcon);
+    musicRow.appendChild(musicSliderDOM);
+    sliderSection.appendChild(musicRow);
+    
+    // FX slider
+    const fxRow = document.createElement('div');
+    fxRow.className = 'pause-slider-row';
+    const fxIcon = document.createElement('img');
+    fxIcon.className = 'pause-slider-icon';
+    fxIcon.src = 'images/ui/fx_note.png';
+    fxIcon.alt = 'FX';
+    const fxSliderDOM = document.createElement('input');
+    fxSliderDOM.id = 'pause-fx-slider';
+    fxSliderDOM.type = 'range';
+    fxSliderDOM.min = '0';
+    fxSliderDOM.max = '1';
+    fxSliderDOM.step = '0.01';
+    fxRow.appendChild(fxIcon);
+    fxRow.appendChild(fxSliderDOM);
+    sliderSection.appendChild(fxRow);
+    
+    pauseMenu.appendChild(sliderSection);
+    
+    // Controls section
+    const controlsSection = document.createElement('div');
+    controlsSection.className = 'pause-controls-section';
+    controlsSection.id = 'pause-controls-container';
+    const controlsTitle = document.createElement('div');
+    controlsTitle.className = 'pause-controls-title';
+    controlsTitle.textContent = 'Controls';
+    controlsSection.appendChild(controlsTitle);
+    
+    // Add control rows with current key bindings
+    const controlItems = [
+        { label: 'Interact:', key: () => Controls_Interact_button_key },
+        { label: 'Eat:', key: () => Controls_Eat_button_key },
+        { label: 'Up:', key: () => Controls_Up_button_key },
+        { label: 'Down:', key: () => Controls_Down_button_key },
+        { label: 'Left:', key: () => Controls_Left_button_key },
+        { label: 'Right:', key: () => Controls_Right_button_key },
+        { label: 'Special:', key: () => Controls_Special_button_key },
+        { label: 'Quest:', key: () => Controls_Quest_button_key }
+    ];
+    
+    for (let i = 0; i < controlItems.length; i++) {
+        const item = controlItems[i];
+        const row = document.createElement('div');
+        row.className = 'pause-control-row';
+        row.style.display = 'flex';
+        row.style.gap = '10px';
+        row.style.alignItems = 'center';
+        row.style.justifyContent = 'space-between';
+        row.style.width = '100%';
+        row.style.padding = '4px 0';
+        row.style.fontFamily = 'pixelFont, monospace';
+        row.style.fontSize = '12px';
+        row.style.color = 'rgb(255, 255, 255)';
+        
+        const label = document.createElement('span');
+        label.textContent = item.label;
+        label.style.minWidth = '70px';
+        row.appendChild(label);
+        
+        const keyDisplay = document.createElement('span');
+        keyDisplay.textContent = item.key();
+        keyDisplay.style.color = 'rgb(255, 255, 200)';
+        keyDisplay.style.minWidth = '60px';
+        keyDisplay.style.textAlign = 'right';
+        row.appendChild(keyDisplay);
+        
+        controlsSection.appendChild(row);
+    }
+    
+    pauseMenu.appendChild(controlsSection);
+    
+    // Quit button
+    const quitBtn = document.createElement('button');
+    quitBtn.id = 'pause-quit-btn';
+    quitBtn.className = 'pause-quit-button';
+    quitBtn.textContent = 'Save and Quit';
+    quitBtn.addEventListener('click', () => {
+        console.log('Saving and quitting to title screen...');
+        title_screen = true;
+        paused = false;
+        hidePaused();
+        startButton.show();
+        creditsButton.show();
+        optionsButton.show();
+        clearButton.hide();
+        QuitButton.hide();
+        saveAll();
+    });
+    pauseMenu.appendChild(quitBtn);
 }
 
 function showCredits(){

@@ -365,3 +365,119 @@ button {
     padding : 10px;
     position: relative;
 }
+
+/* Pause menu styles */
+#pause-menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgb(187, 132, 75);
+    border: 5px solid rgb(149, 108, 65);
+    border-radius: 4px;
+    padding: 30px;
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    z-index: 2000;
+    pointer-events: auto;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.pause-title {
+    font-family: pixelFont, monospace;
+    font-size: 30px;
+    color: rgb(255, 255, 255);
+    text-shadow: 3px 3px 0 rgb(0, 0, 0);
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.pause-menu-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+}
+
+.pause-menu-label {
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: rgb(255, 255, 255);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.pause-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+    width: 100%;
+}
+
+.pause-slider-icon {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.3));
+}
+
+.pause-slider-row input[type="range"] {
+    width: 200px;
+    cursor: pointer;
+    accent-color: rgb(255, 255, 0);
+}
+
+.pause-controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.pause-controls-title {
+    font-family: pixelFont, monospace;
+    font-size: 13px;
+    color: rgb(255, 255, 200);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+    margin-bottom: 5px;
+    text-align: center;
+    width: 100%;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+    padding-bottom: 5px;
+}
+
+.pause-quit-button {
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: rgb(255, 255, 255);
+    background-color: rgb(100, 70, 40);
+    border: 3px solid rgb(149, 108, 65);
+    border-radius: 3px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    margin-top: 10px;
+}
+
+.pause-quit-button:hover {
+    background-color: rgb(130, 90, 50);
+    border-color: rgb(200, 150, 100);
+}
+
+.pause-quit-button:active {
+    transform: translateY(2px);
+}

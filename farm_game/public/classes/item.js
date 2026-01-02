@@ -7,6 +7,18 @@ class Item {
 		this.class = 'Item';
 	}
 
+	static get SIZE() { return 64; } // Item icon size
+	static get HALF_SIZE() { return 32; }
+	static get TOOLTIP_OFFSET() { return 7; }
+	static get TOOLTIP_CHAR_WIDTH_SHORT() { return 6; }
+	static get TOOLTIP_CHAR_WIDTH_LONG() { return 8; }
+	
+	// Check if mouse is hovering over item at position
+	static isMouseOver(x, y) {
+		return mouseX >= x && mouseX <= x + Item.SIZE && 
+		       mouseY >= y && mouseY <= y + Item.SIZE;
+	}
+
 	render(x, y) {
 		push();
 		image(all_imgs[this.png], x, y);
@@ -21,17 +33,22 @@ class Item {
 		textFont(player_2);
 		stroke(0)
 		strokeWeight(1);
-		text(amountS, x + 51 - (amountS.length*2), y + 51 + (amountS.length));
+		
+		// Render amount in bottom-right corner
+		text(amountS, x + Item.SIZE - Item.HALF_SIZE/2.5 - (amountS.length*2), 
+		     y + Item.SIZE - Item.HALF_SIZE/2.5 + (amountS.length));
 
-		if(mouseX >= x && mouseX <= x+64 && mouseY >= y && mouseY <= y+64){
+		// Show tooltip on hover
+		if(Item.isMouseOver(x, y)){
 			fill(0);
-			amountS = str(this.name)
+			const nameStr = str(this.name);
+			const tooltipWidth = nameStr.length * (nameStr.length > 5 ? Item.TOOLTIP_CHAR_WIDTH_LONG : Item.TOOLTIP_CHAR_WIDTH_SHORT);
 			rectMode(CENTER)
-			rect(x+32,y-7,((amountS.length)*((amountS.length > 5) ? 8:6)),7);
+			rect(x + Item.HALF_SIZE, y - Item.TOOLTIP_OFFSET, tooltipWidth, Item.TOOLTIP_OFFSET);
 			textSize(8);
 			textFont(player_2);
 			fill(255);
-			text(this.name, x+32, y-7);
+			text(this.name, x + Item.HALF_SIZE, y - Item.TOOLTIP_OFFSET);
 		}
 
 		pop();
@@ -94,6 +111,11 @@ class Backpack extends Item {
 	}
 
 	bag_render(){
+        const chest = UI_BOUNDS.chestGrid;
+        const cellSize = chest.cellSize;
+        const gridLeft = (canvasWidth/4) + 10;
+        const gridTop = (canvasHeight/4) + 40;
+        
         push()
         stroke(149, 108, 65);
         strokeWeight(5);
@@ -113,9 +135,9 @@ class Backpack extends Item {
         fill(149, 108, 65);
         for(let i = 0; i < this.inv.length; i++){
             for(let j = 0; j < this.inv[i].length; j++){
-                rect((canvasWidth/4)+10+(j*90), (canvasHeight/4)+40+(i*90), 74, 74)
+                rect(gridLeft + (j * cellSize), gridTop + (i * cellSize), 74, 74)
                 if(this.inv[i][j] != 0){
-                    this.inv[i][j].render((j * 90)+(canvasWidth/4)+15, (i * 90)+(canvasWidth/4)+10);
+                    this.inv[i][j].render(gridLeft + (j * cellSize) + 5, gridTop + (i * cellSize) - 30);
                 }
             }
         }

@@ -878,6 +878,7 @@ function setup() {
     QuitButton.style("font-family","pixelFont");
     QuitButton.style('cursor', 'pointer');
     QuitButton.mousePressed(() => {
+        console.log('Saving and quitting to title screen...');
         title_screen = true;
         paused = false;
         startButton.show();
@@ -888,6 +889,7 @@ function setup() {
         saveAll();
     });
     QuitButton.hide();
+
 
     dif0button = createButton('');
     dif0button.parent('game-container');

@@ -61,6 +61,74 @@ var lastFpsUpdate = 0;
 var displayFps = 0;
 var showFpsDebug = false;
 
+// UI Layout Configuration - all clickable regions defined here
+const UI_BOUNDS = {
+    // Player inventory bar at bottom (inv_img is 512px wide, centered)
+    get inventoryBar() {
+        const barImageLeft = (canvasWidth/2) - 256; // Where inv_img starts
+        const slotWidth = 64;
+        const slotsPerBar = 8;
+        const barWidth = slotWidth * slotsPerBar; // 512px
+        
+        return {
+            top: canvasHeight - slotWidth,
+            bottom: canvasHeight,
+            left: barImageLeft,
+            right: barImageLeft + barWidth,
+            slotWidth: slotWidth,
+            // Calculate which slot the mouse is over
+            getSlotIndex: (mouseX) => {
+                const relativeX = mouseX - barImageLeft;
+                return Math.min(slotsPerBar - 1, Math.max(0, Math.floor(relativeX / slotWidth)));
+            },
+            // Get render position for slot i
+            getSlotX: (slotIndex) => barImageLeft + (slotIndex * slotWidth)
+        };
+    },
+    
+    // Chest/Backpack grid UI
+    get chestGrid() {
+        return {
+            top: 189,
+            bottom: 457,
+            left: (canvasWidth/2) - 184,
+            right: (canvasWidth/2) + 184,
+            cellSize: 90,
+            getGridPos: (mouseX, mouseY, inv) => ({
+                x: Math.min(inv[0].length - 1, Math.round((mouseX - (canvasWidth/2) + 139) / 90)),
+                y: Math.min(inv.length - 1, Math.round((mouseY - 234) / 90))
+            })
+        };
+    },
+    
+    // Robot UI regions
+    get robotInstructions() {
+        return {
+            top: 78,
+            getBottom: (instructionLength) => (Math.ceil(instructionLength / 6) * 86) + 78,
+            left: (canvasWidth/2) - 216,
+            right: (canvasWidth/2) + 314,
+            cellSize: 90,
+            getIndex: (mouseX, mouseY, instructionLength) => {
+                const row = Math.min(instructionLength / 6, Math.round((mouseY - 78 - 43) / 86));
+                const col = Math.min(5, Math.round((mouseX - (canvasWidth/2) + 216 - 45) / 90));
+                return (row * 6) + col;
+            }
+        };
+    },
+    
+    get robotStorage() {
+        return {
+            top: 435,
+            bottom: 500,
+            left: (canvasWidth/2) - 298,
+            right: (canvasWidth/2) + 310,
+            cellSize: 90,
+            getSlotIndex: (mouseX, inv) => Math.min(inv.length - 1, Math.round((mouseX - (canvasWidth/2) + 298 - 45) / 90))
+        };
+    }
+};
+
 // Fast travel CSS animation trigger
 function triggerTravelTransition(callback) {
     const overlay = document.getElementById('travelOverlay');
@@ -416,12 +484,14 @@ function render_ui() {
         if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.looking(currentLevel_x, currentLevel_y).class == "PayToMoveEntity" && player.talking == 0){
             player.looking(currentLevel_x, currentLevel_y).price_render();
         }
+        // Render player inventory slots
+        const invBar = UI_BOUNDS.inventoryBar;
         for (let i = 0; i < 8; i++) {
             if (player.inv[i] == undefined) {
                 player.inv[i] = 0;
             }
             if (player.inv[i] != 0) {
-                player.inv[i].render(112 + (i * 64), canvasHeight - 64);
+                player.inv[i].render(invBar.getSlotX(i), invBar.top);
                 if (i == player.hand) {
                     push();
                     fill(255);
@@ -433,18 +503,29 @@ function render_ui() {
             }
         }
         if(mouse_item != 0){
-            mouse_item.render(mouseX-32, mouseY-32);
+            mouse_item.render(mouseX - Item.HALF_SIZE, mouseY - Item.HALF_SIZE);
         }
     }
 
     if(paused){
         showPaused();
+        // Disable canvas pointer events so pause menu can receive clicks
+        const canvas = document.querySelector('canvas');
+        if(canvas){
+            canvas.style.pointerEvents = 'none';
+        }
     }
     else{
+        hidePaused();
         musicSlider.hide();
         fxSlider.hide();
         QuitButton.hide()
-          hideControls();
+        hideControls();
+        // Re-enable canvas pointer events
+        const canvas = document.querySelector('canvas');
+        if(canvas){
+            canvas.style.pointerEvents = 'auto';
+        }
     }
 
     // Draw FPS counter if debug mode enabled
@@ -461,12 +542,16 @@ function render_ui() {
 function mouseReleased() {
     if(!title_screen){
         if(mouseButton == LEFT){
+            console.log("left click");
             if(!player.show_quests){
                 if(keyIsDown(special_key)){ //16 == shift
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
-                        if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                            if(mouseX >= 113 && mouseX <= 622){
-                                let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+                        const inv = UI_BOUNDS.inventoryBar;
+                        console.log(inv);
+                        if(mouseY >= inv.top && mouseY <= inv.bottom){
+                            console.log("touching inv");
+                            if(mouseX >= inv.left && mouseX <= inv.right){
+                                let currentX = inv.getSlotIndex(mouseX);
                                 if(player.inv[currentX] != 0){
                                     if(player.talking.class == 'Chest' || (player.talking.class == 'Backpack' && player.inv[currentX].class != 'Backpack')){
                                         for (let i = 0; i < player.talking.inv.length; i++) {
@@ -491,10 +576,12 @@ function mouseReleased() {
                                 }
                             }
                         }
-                        else if(mouseY >= 189 && mouseY <= 457){
-                            if(mouseX >= 184 && mouseX <= 552){
-                                let currentX = min(player.talking.inv[0].length-1, round((mouseX-229)/90))
-                                let currentY = min(player.talking.inv.length-1, round((mouseY-234)/90))
+                        const chest = UI_BOUNDS.chestGrid;
+                        if(mouseY >= chest.top && mouseY <= chest.bottom){
+                            if(mouseX >= chest.left && mouseX <= chest.right){
+                                const pos = chest.getGridPos(mouseX, mouseY, player.talking.inv);
+                                let currentX = pos.x;
+                                let currentY = pos.y;
                                 if(checkForSpace(player, item_name_to_num(player.talking.inv[currentY][currentX].name))){
                                     addItem(player, item_name_to_num(player.talking.inv[currentY][currentX].name), player.talking.inv[currentY][currentX].amount);
                                     player.talking.inv[currentY][currentX] = 0;
@@ -503,9 +590,10 @@ function mouseReleased() {
                         }
                     }
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
-                        if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                            if(mouseX >= 113 && mouseX <= 622){
-                                let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+                        const inv = UI_BOUNDS.inventoryBar;
+                        if(mouseY >= inv.top && mouseY <= inv.bottom){
+                            if(mouseX >= inv.left && mouseX <= inv.right){
+                                let currentX = inv.getSlotIndex(mouseX);
                                 if(player.inv[currentX] != 0){
                                     if(checkForSpace(player.talking, item_name_to_num(player.inv[currentX].name))){
                                         addItem(player.talking, item_name_to_num(player.inv[currentX].name), player.inv[currentX].amount);
@@ -514,9 +602,10 @@ function mouseReleased() {
                                 }
                             }
                         }
-                        else if(mouseY >= 435 && mouseY <= 500){
-                            if(mouseX >= 70 && mouseX <= 678){
-                                let currentX = min(player.talking.inv.length-1, round((mouseX-70-45)/90))
+                        const storage = UI_BOUNDS.robotStorage;
+                        if(mouseY >= storage.top && mouseY <= storage.bottom){
+                            if(mouseX >= storage.left && mouseX <= storage.right){
+                                let currentX = storage.getSlotIndex(mouseX, player.talking.inv);
                                 if(checkForSpace(player, item_name_to_num(player.talking.inv[currentX].name))){
                                     addItem(player, item_name_to_num(player.talking.inv[currentX].name), player.talking.inv[currentX].amount);
                                     player.talking.inv[currentX] = 0;
@@ -526,9 +615,10 @@ function mouseReleased() {
                     }
                 }
                 else{
-                    if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                        if(mouseX >= 113 && mouseX <= 622){
-                            let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+                    const inv = UI_BOUNDS.inventoryBar;
+                    if(mouseY >= inv.top && mouseY <= inv.bottom){
+                        if(mouseX >= inv.left && mouseX <= inv.right){
+                            let currentX = inv.getSlotIndex(mouseX);
                             if(mouse_item == 0 || player.inv[currentX] == 0){
                                 let temp = mouse_item;
                                 mouse_item = player.inv[currentX]
@@ -546,10 +636,12 @@ function mouseReleased() {
                         }
                     }
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
-                        if(mouseY >= 189 && mouseY <= 457){
-                            if(mouseX >= 184 && mouseX <= 552){
-                                let currentX = min(player.talking.inv[0].length-1, round((mouseX-229)/90))
-                                let currentY = min(player.talking.inv.length-1, round((mouseY-234)/90))
+                        const chest = UI_BOUNDS.chestGrid;
+                        if(mouseY >= chest.top && mouseY <= chest.bottom){
+                            if(mouseX >= chest.left && mouseX <= chest.right){
+                                const pos = chest.getGridPos(mouseX, mouseY, player.talking.inv);
+                                let currentX = pos.x;
+                                let currentY = pos.y;
                                 if(mouse_item == 0 || player.talking.inv[currentY][currentX] == 0){
                                     if(mouse_item.class == 'Backpack' && player.talking.class == 'Backpack'){
                                         return;
@@ -574,9 +666,10 @@ function mouseReleased() {
                         }
                     }
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
-                        if(mouseY >= 78 && mouseY <= (ceil(player.talking.instructions.length/6)*86)+78){
-                            if(mouseX >= 152 && mouseX <= 682){
-                                let currentX = (min(player.talking.instructions.length/6, round((mouseY - 78-(86/2))/86))*6) + min(5, round((mouseX - 152-45)/90))
+                        const instructions = UI_BOUNDS.robotInstructions;
+                        if(mouseY >= instructions.top && mouseY <= instructions.getBottom(player.talking.instructions.length)){
+                            if(mouseX >= instructions.left && mouseX <= instructions.right){
+                                let currentX = instructions.getIndex(mouseX, mouseY, player.talking.instructions.length);
                                 if(mouse_item == 0){
                                     mouse_item = player.talking.instructions[currentX];
                                     player.talking.instructions[currentX] = 0;
@@ -599,9 +692,10 @@ function mouseReleased() {
                                 }
                             }
                         }
-                        if(mouseY >= 435 && mouseY <= 500){
-                            if(mouseX >= 70 && mouseX <= 678){
-                                let currentX = min(player.talking.inv.length-1, round((mouseX-70-45)/90))
+                        const storage = UI_BOUNDS.robotStorage;
+                        if(mouseY >= storage.top && mouseY <= storage.bottom){
+                            if(mouseX >= storage.left && mouseX <= storage.right){
+                                let currentX = storage.getSlotIndex(mouseX, player.talking.inv);
                                 if(mouse_item == 0 || player.talking.inv[currentX] == 0){
                                     let temp = mouse_item;
                                     mouse_item = player.talking.inv[currentX]
@@ -623,9 +717,10 @@ function mouseReleased() {
             }
         }
         if(mouseButton == RIGHT){
-            if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                if(mouseX >= 113 && mouseX <= 622){
-                    let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+            const inv = UI_BOUNDS.inventoryBar;
+            if(mouseY >= inv.top && mouseY <= inv.bottom){
+                if(mouseX >= inv.left && mouseX <= inv.right){
+                    let currentX = inv.getSlotIndex(mouseX);
                     if(mouse_item == 0 && player.inv[currentX] != 0){
                         mouse_item = new_item_from_num(item_name_to_num(player.inv[currentX].name), ceil(player.inv[currentX].amount/2));
                         player.inv[currentX].amount -= ceil(player.inv[currentX].amount/2)
@@ -643,10 +738,12 @@ function mouseReleased() {
                 }
             }
             if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
-                if(mouseY >= 189 && mouseY <= 457){
-                    if(mouseX >= 184 && mouseX <= 552){
-                        let currentX = min(player.talking.inv[0].length-1, round((mouseX-229)/90))
-                        let currentY = min(player.talking.inv.length-1, round((mouseY-234)/90))
+                const chest = UI_BOUNDS.chestGrid;
+                if(mouseY >= chest.top && mouseY <= chest.bottom){
+                    if(mouseX >= chest.left && mouseX <= chest.right){
+                        const pos = chest.getGridPos(mouseX, mouseY, player.talking.inv);
+                        let currentX = pos.x;
+                        let currentY = pos.y;
                         if(mouse_item == 0 && player.talking.inv[currentY][currentX] != 0){
                             mouse_item = new_item_from_num(item_name_to_num(player.talking.inv[currentY][currentX].name), ceil(player.talking.inv[currentY][currentX].amount/2));
                             player.talking.inv[currentY][currentX].amount -= ceil(player.talking.inv[currentY][currentX].amount/2)
@@ -665,9 +762,10 @@ function mouseReleased() {
                 }
             }
             if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
-                if(mouseY >= 435 && mouseY <= 500){
-                    if(mouseX >= 70 && mouseX <= 678){
-                        let currentX = min(player.talking.inv.length-1, round((mouseX-70-45)/90))
+                const storage = UI_BOUNDS.robotStorage;
+                if(mouseY >= storage.top && mouseY <= storage.bottom){
+                    if(mouseX >= storage.left && mouseX <= storage.right){
+                        let currentX = storage.getSlotIndex(mouseX, player.talking.inv);
                         if(mouse_item == 0 && player.talking.inv[currentX] != 0){
                             mouse_item = new_item_from_num(item_name_to_num(player.talking.inv[currentX].name), ceil(player.talking.inv[currentX].amount/2));
                             player.talking.inv[currentX].amount -= ceil(player.talking.inv[currentX].amount/2)
