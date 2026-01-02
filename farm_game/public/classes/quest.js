@@ -139,7 +139,7 @@ class Quest {
         }
     }
 
-    renderDOM(container){
+    RenderQuestList(container){
         // Clear container
         container.innerHTML = '';
         
@@ -178,7 +178,37 @@ class Quest {
         // Create status text
         const statusDiv = document.createElement('div');
         statusDiv.className = 'quest-status';
-        
+
+        // Inline goal details container
+        const detailsContainer = document.createElement('div');
+        detailsContainer.className = 'quest-details-container';
+        detailsContainer.style.display = 'none';
+
+        // Details button in the progress row
+        const detailsButton = document.createElement('button');
+        detailsButton.className = 'quest-details-button';
+        detailsButton.textContent = 'Details';
+        detailsButton.onclick = (e) => {
+            e.stopPropagation();
+            const isOpen = detailsContainer.style.display === 'flex';
+            if (isOpen) {
+                detailsContainer.innerHTML = '';
+                detailsContainer.style.display = 'none';
+                detailsButton.textContent = 'Details';
+                return;
+            }
+            detailsContainer.innerHTML = '';
+            for (let i = 0; i < this.goals.length; i++) {
+                const goal = this.goals[i];
+                const card = this.createGoalCard(goal, i === this.current_Goal && !goal.done);
+                detailsContainer.appendChild(card);
+            }
+            detailsContainer.style.display = 'flex';
+            detailsButton.textContent = 'Hide';
+        };
+        progressContainer.appendChild(detailsButton);
+        container.appendChild(detailsContainer);
+
         if (this.failed) {
             statusDiv.textContent = 'Failed';
             statusDiv.style.color = 'rgb(255, 0, 0)';
@@ -199,6 +229,145 @@ class Quest {
         
         titleDiv.appendChild(statusDiv);
     }
+
+
+    createGoalCard(goal, isActive){
+        const card = document.createElement('div');
+        card.style.padding = '14px';
+        card.style.marginBottom = '10px';
+        card.style.border = '2px solid rgb(149, 108, 65)';
+        card.style.backgroundColor = isActive ? 'rgb(220, 200, 180)' : 'rgb(240, 225, 205)';
+        card.style.borderRadius = '4px';
+        card.style.display = 'flex';
+        card.style.gap = '14px';
+        card.style.alignItems = 'flex-start';
+        card.style.minHeight = '80px';
+        card.style.boxShadow = isActive ? '0 2px 4px rgba(0, 0, 0, 0.2)' : 'none';
+    
+        card.className = 'quest-goal-card';
+        // Goal image/icon
+        const imageDiv = document.createElement('div');
+        imageDiv.style.minWidth = '64px';
+        imageDiv.style.width = '64px';
+        imageDiv.style.height = '64px';
+        imageDiv.style.backgroundColor = 'rgb(187, 132, 75)';
+        imageDiv.style.border = '2px solid rgb(149, 108, 65)';
+        imageDiv.style.borderRadius = '4px';
+        imageDiv.style.display = 'flex';
+        imageDiv.style.alignItems = 'center';
+        imageDiv.style.justifyContent = 'center';
+        imageDiv.style.overflow = 'hidden';
+        imageDiv.style.flexShrink = '0';
+        
+        const img = document.createElement('img');
+        img.src = this.getGoalImagePath(goal);
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.imageRendering = 'pixelated';
+        img.onerror = () => {
+            img.style.display = 'none';
+            const fallbackEmoji = document.createElement('div');
+            fallbackEmoji.textContent = this.getGoalTypeEmoji(goal);
+            fallbackEmoji.style.fontSize = '36px';
+            fallbackEmoji.style.lineHeight = '1';
+            imageDiv.appendChild(fallbackEmoji);
+        };
+        
+        imageDiv.appendChild(img);
+        card.appendChild(imageDiv);
+        
+        // Content
+        const contentDiv = document.createElement('div');
+        contentDiv.style.flex = '1';
+        contentDiv.style.minWidth = '0';
+        contentDiv.style.overflow = 'hidden';
+        contentDiv.style.display = 'flex';
+        contentDiv.style.flexDirection = 'column';
+        contentDiv.style.justifyContent = 'center';
+        
+        const goalName = document.createElement('div');
+        goalName.textContent = goal.name;
+        goalName.style.fontWeight = 'bold';
+        goalName.style.marginBottom = '6px';
+        goalName.style.fontSize = '12px';
+        goalName.style.lineHeight = '1.3';
+        goalName.style.color = 'rgb(50, 50, 50)';
+        contentDiv.appendChild(goalName);
+        
+        // Goal details - single line where possible
+        const detailsDiv = document.createElement('div');
+        detailsDiv.style.fontSize = '11px';
+        detailsDiv.style.color = 'rgb(90, 90, 90)';
+        detailsDiv.style.marginBottom = '6px';
+        detailsDiv.style.lineHeight = '1.4';
+        
+        if (goal.class === 'TalkingGoal') {
+            detailsDiv.textContent = `NPC: ${goal.npc_name}`;
+            if (goal.item_name) {
+                const itemLine = document.createElement('div');
+                itemLine.textContent = `Give: ${goal.amount}x ${goal.item_name}`;
+                itemLine.style.marginTop = '3px';
+                detailsDiv.appendChild(itemLine);
+            }
+        } else if (goal.class === 'LocationGoal') {
+            detailsDiv.textContent = `Location: ${goal.level_name}`;
+        } else if (goal.class === 'SellGoal') {
+            detailsDiv.textContent = `Sell: ${goal.amount}x ${goal.item_name}`;
+        } else if (goal.class === 'HaveGoal') {
+            detailsDiv.textContent = `Collect: ${goal.amount}x ${goal.item_name}`;
+        } else if (goal.class === 'FundingGoal') {
+            detailsDiv.textContent = `Earn: ${goal.amount} coins`;
+        } else if (goal.class === 'OneTileCheck') {
+            detailsDiv.textContent = `Tile: ${goal.tile_name}`;
+        }
+        
+        contentDiv.appendChild(detailsDiv);
+        
+        // Status
+        const statusDiv = document.createElement('div');
+        statusDiv.style.fontSize = '11px';
+        statusDiv.style.fontWeight = 'bold';
+        statusDiv.style.color = goal.done ? 'rgb(50, 150, 50)' : 'rgb(180, 100, 0)';
+        statusDiv.textContent = goal.done ? '✓ Complete' : '○ Active';
+        contentDiv.appendChild(statusDiv);
+        
+        card.appendChild(contentDiv);
+        
+        return card;
+    }
+    
+    getGoalImagePath(goal){
+        // Return appropriate image path based on goal type
+        if (goal.class === 'TalkingGoal' && goal.npc_name) {
+            return `images/npc/${goal.npc_name.toLowerCase()}.png`;
+        } else if (goal.class === 'HaveGoal' && goal.item_name) {
+            return `images/items/${goal.item_name.toLowerCase()}.png`;
+        } else if (goal.class === 'SellGoal' && goal.item_name) {
+            return `images/items/${goal.item_name.toLowerCase()}.png`;
+        } else if (goal.class === 'LocationGoal' && goal.level_name) {
+            return `images/tiles/grass.png`; // placeholder
+        } else if (goal.class === 'OneTileCheck' && goal.tile_name) {
+            return `images/tiles/${goal.tile_name.toLowerCase()}.png`;
+        }
+        return 'images/ui/default.png';
+    }
+    
+    getItemImagePath(itemName){
+        return `images/items/${itemName.toLowerCase()}.png`;
+    }
+    
+    getGoalTypeEmoji(goal){
+        const emojiMap = {
+            'TalkingGoal': '💬',
+            'LocationGoal': '🗺️',
+            'FundingGoal': '💰',
+            'SellGoal': '🛒',
+            'HaveGoal': '📦',
+            'OneTileCheck': '🔨'
+        };
+        return emojiMap[goal.class] || '❓';
+    }
+
 
     daily_update(){
         if(this.maxDays > 0){
