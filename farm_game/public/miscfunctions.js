@@ -336,8 +336,7 @@ function resetControls() {
 }
 
 function renderControlButtons(container) {
-    console.log('renderControlButtons called with container:', container);
-    
+
     const controlItems = [
         { label: 'Interact:', key: () => Controls_Interact_button_key || 'z', controlIndex: 1 },
         { label: 'Eat:', key: () => Controls_Eat_button_key || 'e', controlIndex: 2 },
@@ -351,12 +350,10 @@ function renderControlButtons(container) {
     
     // If container is provided, use it as parent (for pause menu, options, etc.)
     if (container) {
-        console.log('Container provided, rendering inline buttons');
         container.innerHTML = '';
         
         for (let i = 0; i < controlItems.length; i++) {
             const item = controlItems[i];
-            console.log('Creating button for:', item.label);
             
             const row = document.createElement('div');
             row.className = 'control-row';
