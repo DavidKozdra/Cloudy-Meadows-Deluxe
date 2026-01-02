@@ -510,6 +510,35 @@ button {
     image-rendering: crisp-edges;
 }
 
+.deluxe-text {
+    font-family: pixelFont, monospace;
+    font-size: 42px;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 
+        3px 3px 0px #FF8C00,
+        -2px -2px 0px #FFA500,
+        2px -2px 0px #FF8C00,
+        -2px 2px 0px #FFA500,
+        0px 0px 10px #FFFF00,
+        0px 0px 20px #FFD700;
+    letter-spacing: 8px;
+    margin-bottom: 30px;
+    transform: scale(1);
+    animation: deluxePulse 2s ease-in-out infinite;
+}
+
+@keyframes deluxePulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+    50% {
+        transform: scale(1.05);
+        filter: brightness(1.2);
+    }
+}
+
 .main-menu-button {
     font-family: pixelFont, monospace;
     font-size: 18px;

@@ -12,7 +12,7 @@ var canvasWidth = 23 * tileSize;
 var canvasHeight = 19 * tileSize;
 var player;
 var levels = [];
-var currentLevel_y = 1;
+var currentLevel_y = 2;
 var currentLevel_x = 4;
 var lastMili = 0;
 var maxHunger = 6;
@@ -247,6 +247,13 @@ function draw() {
                         else{
                             level5.map[9][2].current_dialouge = 3;
                         }
+                    }
+                    // Jake appears in park every 10 days
+                    if(days % 10 == 0 && level10.map[9][5].name != 'Jake'){
+                        level10.map[9][5] = new_tile_from_num(88, 5*tileSize, 9*tileSize);
+                    }
+                    else if(days % 10 != 0 && level10.map[9][5].name == 'Jake'){
+                        level10.map[9][5] = new_tile_from_num(57, 5*tileSize, 9*tileSize);
                     }
                     for(let i = 0; i < player.quests.length; i++){
                         if(player.quests[i] != undefined){

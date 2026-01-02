@@ -136,6 +136,11 @@ function showMainMenu(){
         titleImg.className = 'main-menu-title-image';
         container.appendChild(titleImg);
         
+        const deluxeText = document.createElement('div');
+        deluxeText.className = 'deluxe-text';
+        deluxeText.textContent = 'DELUXE';
+        container.appendChild(deluxeText);
+        
         const startBtn = document.createElement('button');
         startBtn.id = 'start-btn';
         startBtn.className = 'main-menu-button';
