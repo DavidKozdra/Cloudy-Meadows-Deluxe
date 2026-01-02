@@ -815,6 +815,26 @@ function setup() {
         background_img
     ];
 
+    resetControlsButton = createButton('Reset Controls');
+    resetControlsButton.parent('game-container');
+    resetControlsButton.position((canvasWidth/2)+165, (canvasHeight/2)+160);
+    resetControlsButton.mousePressed(() => {
+        // Reset controls to defaults
+        Controls_Interact_button_key = 'e';
+        Controls_Eat_button_key = 'q';
+        Controls_Up_button_key = 'w';
+        Controls_Down_button_key = 's';
+        Controls_Left_button_key = 'a';
+        Controls_Right_button_key = 'd';
+        Controls_Special_button_key = 'Shift';
+        Controls_Quest_button_key = 'P';
+    });
+    resetControlsButton.style('width', '200px');
+    resetControlsButton.style('background','url()');
+    resetControlsButton.style("font-family","pixelFont");
+    resetControlsButton.style('cursor', 'pointer');
+    resetControlsButton.hide();
+
     clearButton = createButton('Clear Save Data');
     clearButton.parent('game-container');
     clearButton.position((canvasWidth/2)+165, (canvasHeight/2)+200);

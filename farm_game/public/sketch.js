@@ -40,6 +40,7 @@ var creditsButton;
 var dif0button;
 var dif1button;
 var dif2button;
+var resetControlsButton;
 var creditsOn = false;
 var current_reply = 0;
 var temp_move_bool = true;

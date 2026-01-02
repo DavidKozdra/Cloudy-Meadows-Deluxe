@@ -4,6 +4,7 @@ function start(){
         startButton.hide();
         optionsButton.hide();
         creditsButton.hide();
+        resetControlsButton.hide();
         clearButton.hide();
         Controls_Interact_button.hide();
         Controls_Eat_button.hide();
@@ -62,6 +63,7 @@ function showTitle(){
     else{
         musicSlider.hide();
         fxSlider.hide();
+        resetControlsButton.hide();
         clearButton.hide();
         Controls_Interact_button.hide();
         Controls_Eat_button.hide();
@@ -218,13 +220,14 @@ function showOptions(){
     text('Special:', ((4*canvasWidth)/5)-12, canvasHeight/2+23);
     text('Quest:', ((4*canvasWidth)/5)-12, canvasHeight/2+48);
 
-    let button_key_array = [Controls_Interact_button_key, Controls_Eat_button_key, Controls_Up_button_key, Controls_Left_button_key, Controls_Down_button_key, Controls_Right_button_key, Controls_Special_button_key, Controls_Quest_button_key];
+    let button_key_array = [Controls_Interact_button_key, Controls_Eat_button_key, Controls_Up_button_key, Controls_Down_button_key, Controls_Left_button_key, Controls_Right_button_key, Controls_Special_button_key, Controls_Quest_button_key];
     for(let i = 0; i < button_key_array.length; i++){
         textSize(15 - (button_key_array[i].length > 5 ? ((button_key_array[i].length-5) * 1.5):0));
         text(button_key_array[i], ((4*canvasWidth)/5)+97, (canvasHeight/2-127) + (i*25));
     }
     
 
+    resetControlsButton.show();
     clearButton.show();
     //deleate data button
     image(music_note_img, ((4*canvasWidth)/5)-80, (canvasHeight/6)-50);
@@ -288,7 +291,7 @@ function showPaused(){
     text('Special:', ((2*canvasWidth)/5)+20, canvasHeight/2+48);
     text('Quest:', ((2*canvasWidth)/5)+20, canvasHeight/2+73);
 
-    let button_key_array = [Controls_Interact_button_key, Controls_Eat_button_key, Controls_Up_button_key, Controls_Left_button_key, Controls_Down_button_key, Controls_Right_button_key, Controls_Special_button_key, Controls_Quest_button_key];
+    let button_key_array = [Controls_Interact_button_key, Controls_Eat_button_key, Controls_Up_button_key, Controls_Down_button_key, Controls_Left_button_key, Controls_Right_button_key, Controls_Special_button_key, Controls_Quest_button_key];
     for(let i = 0; i < button_key_array.length; i++){
         textSize(15 - (button_key_array[i].length > 5 ? ((button_key_array[i].length-5) * 1.5):0));
         text(button_key_array[i], ((2*canvasWidth)/5)+129, (canvasHeight/2-102) + (i*25));
