@@ -308,6 +308,33 @@ function selectDifficulty(difficulty){
 let controlsContainer = null;
 let controlRows = [];
 
+function resetControls() {
+    // Reset all control key bindings to defaults
+    Controls_Interact_button_key = 'z';
+    Controls_Eat_button_key = 'e';
+    Controls_Up_button_key = 'w';
+    Controls_Down_button_key = 's';
+    Controls_Left_button_key = 'a';
+    Controls_Right_button_key = 'd';
+    Controls_Special_button_key = 'x';
+    Controls_Quest_button_key = 'q';
+    
+    // Save the reset controls
+    saveOptions();
+    
+    // Refresh the controls display if the options menu is open
+    const controlsContainer = document.getElementById('title-controls-container');
+    if (controlsContainer) {
+        showTitleOptions();
+    }
+    
+    // Refresh pause menu controls if pause menu is open
+    const pauseControlsContainer = document.getElementById('pause-controls-container');
+    if (pauseControlsContainer && pauseControlsContainer.parentElement.style.display !== 'none') {
+        renderControlButtons(pauseControlsContainer);
+    }
+}
+
 function renderControlButtons(container) {
     const controlItems = [
         { label: 'Interact:', key: () => Controls_Interact_button_key || 'z', controlIndex: 1 },
