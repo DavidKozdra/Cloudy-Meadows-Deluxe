@@ -310,13 +310,13 @@ let controlRows = [];
 
 function resetControls() {
     // Reset all control key bindings to defaults
-    Controls_Interact_button_key = 'z';
-    Controls_Eat_button_key = 'e';
+    Controls_Interact_button_key = 'e';
+    Controls_Eat_button_key = 'q';
     Controls_Up_button_key = 'w';
     Controls_Down_button_key = 's';
     Controls_Left_button_key = 'a';
     Controls_Right_button_key = 'd';
-    Controls_Special_button_key = 'x';
+    Controls_Special_button_key = 'Shift';
     Controls_Quest_button_key = 'q';
     
     // Save the reset controls
@@ -374,10 +374,17 @@ function renderControlButtons(container) {
             const keyValue = item.key();
             button.textContent = keyValue ? String(keyValue) : '?';
             button.addEventListener('click', () => {
-                if (control_set === 0) {
+                console.log('Control button clicked:', item.label, 'controlIndex:', item.controlIndex);
+                console.log('Activating keymapping mode...');
+                
+                if (typeof keymapping !== 'undefined') {
+                    keymapping = true;
+                    currentMappingIndex = item.controlIndex;
                     control_set = item.controlIndex;
-                    key = item.key();
-                    lastKey = key;
+                    button.textContent = 'Press Key...';
+                    console.log('Keymapping active for control:', item.controlIndex);
+                } else {
+                    console.error('keymapping variable not defined!');
                 }
             });
             row.appendChild(button);
@@ -406,10 +413,17 @@ function renderControlButtons(container) {
             const button = document.createElement('button');
             button.className = 'control-button';
             button.addEventListener('click', () => {
-                if (control_set === 0) {
+                console.log('Control button clicked (canvas):', item.label, 'controlIndex:', item.controlIndex);
+                console.log('Activating keymapping mode...');
+                
+                if (typeof keymapping !== 'undefined') {
+                    keymapping = true;
+                    currentMappingIndex = item.controlIndex;
                     control_set = item.controlIndex;
-                    key = item.key();
-                    lastKey = key;
+                    button.textContent = 'Press Key...';
+                    console.log('Keymapping active for control:', item.controlIndex);
+                } else {
+                    console.error('keymapping variable not defined!');
                 }
             });
             row.appendChild(button);
