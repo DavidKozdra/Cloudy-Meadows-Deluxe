@@ -179,36 +179,6 @@ class Quest {
         const statusDiv = document.createElement('div');
         statusDiv.className = 'quest-status';
 
-        // Inline goal details container
-        const detailsContainer = document.createElement('div');
-        detailsContainer.className = 'quest-details-container';
-        detailsContainer.style.display = 'none';
-
-        // Details button in the progress row
-        const detailsButton = document.createElement('button');
-        detailsButton.className = 'quest-details-button';
-        detailsButton.textContent = 'Details';
-        detailsButton.onclick = (e) => {
-            e.stopPropagation();
-            const isOpen = detailsContainer.style.display === 'flex';
-            if (isOpen) {
-                detailsContainer.innerHTML = '';
-                detailsContainer.style.display = 'none';
-                detailsButton.textContent = 'Details';
-                return;
-            }
-            detailsContainer.innerHTML = '';
-            for (let i = 0; i < this.goals.length; i++) {
-                const goal = this.goals[i];
-                const card = this.createGoalCard(goal, i === this.current_Goal && !goal.done);
-                detailsContainer.appendChild(card);
-            }
-            detailsContainer.style.display = 'flex';
-            detailsButton.textContent = 'Hide';
-        };
-        progressContainer.appendChild(detailsButton);
-        container.appendChild(detailsContainer);
-
         if (this.failed) {
             statusDiv.textContent = 'Failed';
             statusDiv.style.color = 'rgb(255, 0, 0)';

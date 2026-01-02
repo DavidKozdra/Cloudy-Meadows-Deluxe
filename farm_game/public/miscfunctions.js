@@ -492,6 +492,42 @@ function showQuests(){
             // Let the quest render into the DOM element
             questContent.innerHTML = '';
             player.quests[i].RenderQuestList(questContent, player.current_quest === i ? 'yellow' : null);
+
+            // Inline details UI built here so expanded content stays within parent quest card
+            const detailsContainer = document.createElement('div');
+            detailsContainer.className = 'quest-details-container';
+            detailsContainer.style.display = 'none';
+
+            const detailsButton = document.createElement('button');
+            detailsButton.className = 'quest-details-button';
+            detailsButton.textContent = 'Details';
+            detailsButton.onclick = (e) => {
+                e.stopPropagation();
+                const isOpen = detailsContainer.style.display === 'flex';
+                if (isOpen) {
+                    detailsContainer.innerHTML = '';
+                    detailsContainer.style.display = 'none';
+                    detailsButton.textContent = 'Details';
+                    return;
+                }
+                detailsContainer.innerHTML = '';
+                const quest = player.quests[i];
+                for (let g = 0; g < quest.goals.length; g++) {
+                    const goal = quest.goals[g];
+                    const card = quest.createGoalCard(goal, g === quest.current_Goal && !goal.done);
+                    detailsContainer.appendChild(card);
+                }
+                detailsContainer.style.display = 'flex';
+                detailsButton.textContent = 'Hide';
+            };
+
+            const progressRow = questContent.querySelector('.quest-progress-container');
+            if (progressRow) {
+                progressRow.appendChild(detailsButton);
+            } else {
+                questContent.appendChild(detailsButton);
+            }
+            questContent.appendChild(detailsContainer);
             
             questButton.appendChild(questContent);
             questsList.appendChild(questButton);
