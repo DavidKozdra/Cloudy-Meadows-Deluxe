@@ -70,103 +70,73 @@ class Quest {
         this.maxDays = obj.maxDays;
         this.current_Goal = obj.current_Goal;
     }
-    render(x, y, strokeC, width){
-        // Check if x is a DOM element (new DOM rendering mode)
-        if (x instanceof HTMLElement) {
-            return this.renderDOM(x, y);
-        }
-        
-        // Original canvas rendering
-        push()
-        if(strokeC == 'yellow'){
-            stroke(255, 255, 0);
-        }else{
-            stroke(139, 98, 55);
-        }
-        strokeWeight(5);
-        fill(187, 132, 75);
-        if(width > 0){
-            rect(x, y, width, 60);
-        }
-        else{
-            if(this.goals[this.current_Goal] != undefined){
-                rect(x, y, max((this.name.length*17), (this.goals[this.current_Goal].name.length*12)), 60);
+    renderCurrentGoal(x, y, strokeC, width){
+        // Display current goal as a DOM popup inside the container
+        if(this.goals[this.current_Goal] != undefined){
+            const goalName = this.goals[this.current_Goal].name;
+            
+            // Ensure popup container exists
+            this.ensurePopupContainer();
+            
+            // Create or update the goal popup
+            let goalPopup = document.getElementById('current-goal-popup');
+            if (!goalPopup) {
+                goalPopup = document.createElement('div');
+                goalPopup.id = 'current-goal-popup';
+                const container = document.getElementById('ui-popup-container');
+                if (container) container.appendChild(goalPopup);
             }
-            else{
-                rect(x, y, (this.name.length*17), 60);
-            }
+            
+            // Calculate panel dimensions
+            const panelWidth = Math.max((goalName.length * 12), 150);
+            const panelHeight = 50;
+            
+            // Determine stroke color
+            const strokeColor = (strokeC == 'yellow') ? 'rgb(255, 255, 0)' : 'rgb(139, 98, 55)';
+            
+            // Style the popup
+            goalPopup.style.width = panelWidth + 'px';
+            goalPopup.style.height = panelHeight + 'px';
+            goalPopup.style.backgroundColor = 'rgb(187, 132, 75)';
+            goalPopup.style.border = '5px solid ' + strokeColor;
+            goalPopup.style.padding = '0px';
+            goalPopup.style.boxSizing = 'border-box';
+            goalPopup.style.fontFamily = 'pixelFont, monospace';
+            goalPopup.style.color = 'rgb(255, 255, 255)';
+            goalPopup.style.fontSize = (goalName.length > 25 ? '11px' : '13px');
+            goalPopup.style.display = 'flex';
+            goalPopup.style.alignItems = 'center';
+            goalPopup.style.justifyContent = 'center';
+            goalPopup.style.textAlign = 'center';
+            goalPopup.style.wordWrap = 'break-word';
+            goalPopup.style.textShadow = '2px 2px 0px rgba(0, 0, 0, 0.5)';
+            goalPopup.style.lineHeight = '1.2';
+            goalPopup.style.overflow = 'hidden';
+            goalPopup.style.marginTop = '5px';
+            
+            goalPopup.textContent = goalName;
         }
-        textFont(player_2);
-        textSize(15);
-        fill(255);
-        stroke(0);
-        strokeWeight(4);
-        textAlign(CENTER, CENTER);
-        text(this.name, x+((this.name.length*17)/2), y+(60/4));
-        if(this.failed){
-            fill(255, 0, 0);
-            text('Failed', x+max(((this.name.length*17)/2), (('Failed'.length*17)/2)), y+((3*60)/4)-3);
-            fill(255)
-            noStroke()
-            rect(x+5, y+((3*60)/4)+7, (width > 0 ? width:max((this.name.length*17), ('Failed'.length*12)))-10, 5);
-            fill(255, 0, 0);
-            rect(x+5, y+((3*60)/4)+7, (this.current_Goal)*(((width > 0 ? width:max((this.name.length*17), ('Failed'.length*12)))-10)/this.goals.length), 5)
-            fill(0);
-            for(let i = 0; i < this.goals.length; i++){
-                rect(x+5+((i+1)*((width > 0 ? width:max((this.name.length*17), ('Failed'.length*12)))-10)/this.goals.length), y+((3*60)/4)+6, 3, 8)
-            }
-        }
-        else if(this.goals[this.current_Goal] != undefined){
-            this.goals[this.current_Goal].render(x+(this.goals[this.current_Goal].name.length*12)/2, y+((3*60)/4)-3)
-            fill(255)
-            noStroke()
-            rect(x+5, y+((3*60)/4)+7, (width > 0 ? width:max((this.name.length*17), (this.goals[this.current_Goal].name.length*12)))-10, 5)
-            fill(255, 255, 0);
-            rect(x+5, y+((3*60)/4)+7, (this.current_Goal)*(((width > 0 ? width:max((this.name.length*17), (this.goals[this.current_Goal].name.length*12)))-10)/this.goals.length), 5)
-            fill(0);
-            for(let i = 0; i < this.goals.length; i++){
-                rect(x+5+((i+1)*((width > 0 ? width:max((this.name.length*17), (this.goals[this.current_Goal].name.length*12)))-10)/this.goals.length), y+((3*60)/4)+6, 3, 8)
-            }
-        }
-        else{
-            if(this.reward_item == 0 && this.reward_coins == 0){
-                fill(0, 255, 0);
-                text('Done', x+max(((this.name.length*17)/2), (('Done'.length*17)/2)), y+((3*60)/4)-3);
-            }
-            else{
-                fill(255, 255, 0)
-                if(this.reward_item != 0 && this.reward_coins != 0){
-                    let maxX = max((this.name.length*17), ('Done'.length*17))
-                    image(all_imgs[this.reward_item.png], x+((maxX)/3)-20, y+(60/2)-3, 20, 20);
-                    let stringI = str(this.reward_item.amount);
-                    text(this.reward_item.amount, x+((maxX)/3)+10+((stringI.length-1)*5), y+((3*60)/4)-7);
-                    image(coin_img, x+((2*maxX)/3)-20, y+(60/2)-3, 20, 20);
-                    let stringC = str(this.reward_coins);
-                    text(this.reward_coins, x+((2*maxX)/3)+10+((stringC.length-1)*5), y+((3*60)/4)-7);
-                }
-                else if(this.reward_item != 0){
-                    image(all_imgs[this.reward_item.png], x+(maxX/2)-20, y+(60/2)-3, 20, 20);
-                    let stringI = str(this.reward_item.amount);
-                    text(this.reward_item.amount, x+(maxX/2)+10+((stringI.length-1)*5), y+((3*60)/4)-7);
-                }
-                else if(this.reward_coins != 0){
-                    image(coin_img, x+(maxX/2)-20, y+(60/2)-3, 16, 16);
-                    let stringC = str(this.reward_coins);
-                    text(this.reward_coins, x+(maxX/2)+10+((stringC.length-1)*5), y+((3*60)/4)-7);
-                }
-            }
-            fill(255)
-            noStroke()
-            rect(x+5, y+((3*60)/4)+7, (width > 0 ? width:max((this.name.length*17), ('Done'.length*12)))-10, 5)
-            fill(0, 255, 0);
-            rect(x+5, y+((3*60)/4)+7, (this.current_Goal)*(((width > 0 ? width:max((this.name.length*17), ('Done'.length*12)))-10)/this.goals.length), 5)
-            fill(0);
-            for(let i = 0; i < this.goals.length; i++){
-                rect(x+5+((i+1)*((width > 0 ? width:max((this.name.length*17), ('Done'.length*12)))-10)/this.goals.length), y+((3*60)/4)+6, 3, 8)
+    }
+    
+    ensurePopupContainer(){
+        // Create a shared container for all UI popups to prevent overlap
+        if (!document.getElementById('ui-popup-container')) {
+            const container = document.createElement('div');
+            container.id = 'ui-popup-container';
+            document.body.appendChild(container);
+            
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+                const canvasRect = canvas.getBoundingClientRect();
+                container.style.position = 'fixed';
+                container.style.top = (canvasRect.top + 2) + 'px';
+                container.style.left = (canvasRect.left + 2) + 'px';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                container.style.zIndex = '1000';
+                container.style.pointerEvents = 'none';
             }
         }
-        pop()
-        
     }
 
     renderDOM(container){

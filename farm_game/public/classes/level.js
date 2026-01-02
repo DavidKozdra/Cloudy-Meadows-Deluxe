@@ -94,7 +94,7 @@ class Level {
         }
     }
 
-    //Controls movement for top-left level box when you enter a new level
+    //Controls movement for top-left level box when you enter a new level (DOM version in shared container)
     name_render() {
         if(!this.done){
             if(!paused){
@@ -121,23 +121,75 @@ class Level {
                 
             this.ticks += 1;
         }
-            push();
-            stroke(149, 108, 65);
-            strokeWeight(5);
-            fill(187, 132, 75);
-            rect(2, this.y, (this.name.length*17)+6, 50);
-            textFont(player_2);
-            textSize(15);
-            fill(255);
-            stroke(0);
-            strokeWeight(4);
-            textAlign(CENTER, CENTER);
-            text(this.name, (((this.name.length*17)+6)/2)+2, this.y+25);
-            pop();
+        
+        // Create shared popup container if needed
+        this.ensurePopupContainer();
+        
+        // Create or update the level name popup in container
+        let levelPopup = document.getElementById('level-name-popup');
+        if (!levelPopup) {
+            levelPopup = document.createElement('div');
+            levelPopup.id = 'level-name-popup';
+            const container = document.getElementById('ui-popup-container');
+            if (container) {
+                container.insertBefore(levelPopup, container.firstChild); // Insert at top
+            }
+        }
+        
+        const panelWidth = (this.name.length * 17) + 6;
+        const panelHeight = 50;
+        
+        // Apply styling to match original canvas rendering
+        levelPopup.style.width = panelWidth + 'px';
+        levelPopup.style.height = panelHeight + 'px';
+        levelPopup.style.backgroundColor = 'rgb(187, 132, 75)';
+        levelPopup.style.border = '5px solid rgb(149, 108, 65)';
+        levelPopup.style.padding = '0px';
+        levelPopup.style.boxSizing = 'border-box';
+        levelPopup.style.fontFamily = 'pixelFont, monospace';
+        levelPopup.style.color = 'rgb(255, 255, 255)';
+        levelPopup.style.fontSize = '15px';
+        levelPopup.style.display = 'flex';
+        levelPopup.style.alignItems = 'center';
+        levelPopup.style.justifyContent = 'center';
+        levelPopup.style.textAlign = 'center';
+        levelPopup.style.fontWeight = 'bold';
+        levelPopup.style.textShadow = '4px 4px 0px rgba(0, 0, 0, 0.5)';
+        levelPopup.style.marginBottom = '5px';
+        // Animate position based on y value
+        levelPopup.style.transform = 'translateY(' + this.y + 'px)';
+        
+        levelPopup.textContent = this.name;
 
         }
         else{
+            // Hide popup when done
+            let levelPopup = document.getElementById('level-name-popup');
+            if (levelPopup) {
+                levelPopup.style.display = 'none';
+            }
             this.level_name_popup = false;
+        }
+    }
+    
+    ensurePopupContainer(){
+        // Create a shared container for all UI popups to prevent overlap
+        if (!document.getElementById('ui-popup-container')) {
+            const container = document.createElement('div');
+            container.id = 'ui-popup-container';
+            document.body.appendChild(container);
+            
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+                const canvasRect = canvas.getBoundingClientRect();
+                container.style.position = 'fixed';
+                container.style.top = (canvasRect.top + 2) + 'px';
+                container.style.left = (canvasRect.left + 2) + 'px';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                container.style.zIndex = '1000';
+                container.style.pointerEvents = 'none';
+            }
         }
     }
     fore_render() {

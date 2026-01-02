@@ -250,7 +250,9 @@ function render_ui() {
     }
 
     if(player.quests[player.current_quest] != undefined){
-        player.quests[player.current_quest].render(2, levels[currentLevel_y][currentLevel_x].y+52, 0, 0);
+        player.quests[player.current_quest].renderCurrentGoal(2, levels[currentLevel_y][currentLevel_x].y+52, 0, 0);
+        
+        
     }
 
     if (player.talking != undefined && player.talking != 0 && player.talking.class != 'Chest' && player.talking.class != 'Robot' && player.talking.class != 'Backpack') {
