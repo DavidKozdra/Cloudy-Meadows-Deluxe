@@ -924,20 +924,27 @@ function loadWorldLevels(slot) {
                                 // Reconstruct the full level from changed tiles
                                 const reconstructedLevel = JSON.parse(JSON.stringify(levels[i][j]));
                                 
-                                // Apply changed tiles with inventory reconstruction
+                                // Apply changed tiles with proper tile reconstruction
                                 optimizedLevel.changedTiles.forEach(tileData => {
                                     if (reconstructedLevel.map[tileData.y] && reconstructedLevel.map[tileData.y][tileData.x]) {
-                                        const tile = tileData.tile;
+                                        const savedTile = tileData.tile;
+                                        
+                                        // Create a new tile instance with proper methods
+                                        const newTile = new_tile_from_num(
+                                            tile_name_to_num(savedTile.name), 
+                                            savedTile.pos.x, 
+                                            savedTile.pos.y
+                                        );
                                         
                                         // Reconstruct inventory if compressed version exists
-                                        if (tileData.optimizedInv !== undefined) {
-                                            const originalTile = reconstructedLevel.map[tileData.y][tileData.x];
-                                            if (originalTile && originalTile.inv) {
-                                                tile.inv = reconstructInventory(tileData.optimizedInv, originalTile.inv);
-                                            }
+                                        if (tileData.optimizedInv !== undefined && newTile.inv) {
+                                            savedTile.inv = reconstructInventory(tileData.optimizedInv, newTile.inv);
                                         }
                                         
-                                        reconstructedLevel.map[tileData.y][tileData.x] = tile;
+                                        // Load saved state into the new tile instance
+                                        newTile.load(savedTile);
+                                        
+                                        reconstructedLevel.map[tileData.y][tileData.x] = newTile;
                                     }
                                 });
                                 
