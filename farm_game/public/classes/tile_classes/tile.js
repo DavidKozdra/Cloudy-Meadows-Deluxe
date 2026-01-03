@@ -1,5 +1,5 @@
 class Tile {
-    constructor(name, png, x, y, collide, age) {
+    constructor(name, png, x, y, collide, age, under_tile_num) {
         this.name = name;
         this.png = png;
         this.pos = createVector(x, y);
@@ -7,6 +7,14 @@ class Tile {
         this.age = age;
         this.variant = round(random(0, all_imgs[this.png].length-1));
         this.class = "Tile";
+        // Only create under_tile for specific tiles that should have one (wall, bed, etc.)
+        // Not for base tiles like grass, concrete, plot to avoid infinite recursion
+        if((this.name == 'wall' || this.name == 'bed') && under_tile_num != 0 && under_tile_num != undefined){
+            this.under_tile = new_tile_from_num(under_tile_num, this.pos.x, this.pos.y);
+        }
+        else{
+            this.under_tile = 0;
+        }
     }
 
     render() {

@@ -22,8 +22,8 @@ const TILE_DEFINITIONS = [
     /*3*/   { name: 'plot', png: 2, collide: false, age: 0, class: 'Tile' },
     /*4*/   { name: 'dirt', png: 3, collide: false, age: -1, class: 'Tile' },
     /*5*/   { name: 'junk', png: 4, collide: false, age: -1, class: 'Tile' },
-    /*6*/   { name: 'wall', png: 5, collide: true, age: -1, class: 'Tile' },
-    /*7*/   { name: 'bed', png: 6, collide: false, age: -1, class: 'Tile' },
+    /*6*/   { name: 'wall', png: 5, collide: true, age: -1, under_tile_num: 2, class: 'Tile' },
+    /*7*/   { name: 'bed', png: 6, collide: false, age: -1, under_tile_num: 2, class: 'Tile' },
     /*8*/   { name: 'Bridge', png: 7, collide: false, age: -1, class: 'Tile' },
     /*9*/   { name: 'bridge2', png: 8, collide: false, age: -1, class: 'Tile' },
     /*10*/  { name: 'satilite', png: 9, collide: true, age: -1, class: 'Tile' },
@@ -116,8 +116,8 @@ const TILE_DEFINITIONS = [
     /*97*/  { name: 'Barry', png: 141, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC'},
     /*98*/  { name: 'Mr.C', png: 142, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['down', 'down', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'disappear', 'disappear', 'disappear'], moving_timer: 10, class: 'NPC'},
     /*99*/  { name: 'Pumpkin', png: 143, collide: false, age: 0, eat_num: 41, waterneed: 0, growthTime: 3000, class: 'Plant' },
-    /*100*/ { name: 'Building Supplies', png: 43, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}], under_tile_num: 1, class: 'Shop' },
-    /*101*/ { name: 'Building Supplies', png: 43, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}], under_tile_num: 1, class: 'Shop' }
+    /*100*/ { name: 'Building Supplies', png: 42, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}, {num: 45, amount: 5}], under_tile_num: 1, class: 'Shop' },
+    /*101*/ { name: 'Building Supplies', png: 42, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}, {num: 45, amount: 5}], under_tile_num: 1, class: 'Shop' }
 ];
 
 /*

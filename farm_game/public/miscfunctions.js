@@ -1266,7 +1266,7 @@ function tile_name_to_num(tile_name) {
 function new_tile_from_num(num, x, y) {
     if (num-1 <= all_tiles.length) {
         if (all_tiles[num - 1].class == 'Tile') {
-            return new Tile(all_tiles[num - 1].name, all_tiles[num - 1].png, x, y, all_tiles[num - 1].collide, all_tiles[num - 1].age);
+            return new Tile(all_tiles[num - 1].name, all_tiles[num - 1].png, x, y, all_tiles[num - 1].collide, all_tiles[num - 1].age, all_tiles[num - 1].under_tile_num);
         }
         else if (all_tiles[num - 1].class == 'Shop') {
             return new Shop(all_tiles[num - 1].name, all_tiles[num - 1].png, x, y, all_tiles[num - 1].inv, all_tiles[num - 1].under_tile_num);

@@ -531,7 +531,10 @@ class Player extends MoveableEntity {
                     }
                 }
                 else{
-                    levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(this.inv[this.hand].tile_num, this.touching.pos.x, this.touching.pos.y);
+                    let old_tile = levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize];
+                    let new_tile = new_tile_from_num(this.inv[this.hand].tile_num, this.touching.pos.x, this.touching.pos.y);
+                    new_tile.under_tile = old_tile;
+                    levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile;
                     if (this.inv[this.hand].name == 'Ladybugs') {
                         levels[y][x].ladybugs += 1;
                     }
@@ -553,6 +556,18 @@ class Player extends MoveableEntity {
                 if(checkForSpace(this, 12)){
                     addItem(this, 12, 1);
                     levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(2, this.touching.pos.x, this.touching.pos.y);
+                    shovelSound.play();
+                }
+            }
+        }
+        else if (this.inv[this.hand].name == 'Axe'){
+            if (this.looking(x, y) != undefined && (this.looking(x, y).name == 'wall' || this.looking(x, y).name == 'bed')){
+                let item_to_add = this.looking(x, y).name == 'wall' ? 44 : 43;
+                let broken_tile = this.looking(currentLevel_x, currentLevel_y);
+                if(checkForSpace(this, item_to_add)){
+                    addItem(this, item_to_add, 1);
+                    let under_tile = broken_tile.under_tile ? broken_tile.under_tile : new_tile_from_num(1, broken_tile.pos.x, broken_tile.pos.y);
+                    levels[currentLevel_y][currentLevel_x].map[(broken_tile.pos.y / tileSize)][broken_tile.pos.x / tileSize] = under_tile;
                     shovelSound.play();
                 }
             }
