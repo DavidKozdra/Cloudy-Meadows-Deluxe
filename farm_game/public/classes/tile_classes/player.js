@@ -560,6 +560,16 @@ class Player extends MoveableEntity {
                 }
             }
         }
+        else if (this.touching.name == 'compost_bucket'){
+            if (this.inv[this.hand].name == 'Shovel'){
+                if(checkForSpace(this, 46)){
+                    addItem(this, 46, 1);
+                    let under_tile = this.touching.under_tile ? this.touching.under_tile : new_tile_from_num(2, this.touching.pos.x, this.touching.pos.y);
+                    levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = under_tile;
+                    shovelSound.play();
+                }
+            }
+        }
         else if (this.inv[this.hand].name == 'Axe'){
             if (this.looking(x, y) != undefined && (this.looking(x, y).name == 'wall' || this.looking(x, y).name == 'bed')){
                 let item_to_add = this.looking(x, y).name == 'wall' ? 44 : 43;

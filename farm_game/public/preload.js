@@ -643,7 +643,8 @@ function preload() {
     /*144*/pumpkin_img,
     /*145*/pumpkin_seed_img,
     /*146*/bed_item_img,
-    /*147*/wall_item_img
+    /*147*/wall_item_img,
+    /*148*/compost_bucket_tile_img
     ];
 
    /*
