@@ -39,7 +39,7 @@ class PayToMoveEntity extends Tile{
         stroke(0);
         strokeWeight(4);
         text('Move', this.pos.x + (tileSize / 2) - (this.pos.x >= (22*tileSize) ? (70/2): 0) + (this.pos.x < tileSize ? (70/2): 0), this.pos.y - (tileSize * 1.5) + (this.pos.y < tileSize ? tileSize:0), 90, 70);
-        image(coin_img, (this.pos.x - (tileSize / 2) - 10) - (this.pos.x >= (22*tileSize) ? (70/2): 0) + (this.pos.x < tileSize ? (70/2): 0), this.pos.y - (tileSize * 1) + (this.pos.y < tileSize ? tileSize:0));
+        image(coin_img, (this.pos.x - (tileSize / 2) - 20) - (this.pos.x >= (22*tileSize) ? (70/2): 0) + (this.pos.x < tileSize ? (70/2): 0), this.pos.y - (tileSize * 1) + (this.pos.y < tileSize ? tileSize:0));
         if (player.coins >= this.price) {
             fill(255);
         }
