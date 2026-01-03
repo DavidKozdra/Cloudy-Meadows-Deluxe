@@ -89,6 +89,23 @@
       ],
       "hand_num": -1,
       "amount": 0
+    },
+    {
+      "phrase": "Thanks so much! I'll put that junk to good use!",
+      "replies": [
+        {
+          "phrase": "Happy to help!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "Anytime!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
     }
   ],
   "Rick": [
@@ -412,7 +429,7 @@
         {
           "phrase": "Can do.",
           "dialouge_num": -1,
-          "quest": {"name": "Ride the Air Ballon", "goals": [{"class": "LocationGoal", "level_name": "Poly Park: Air balloon landing"}], "days": 1, "reward_item": {"num": 11, "amount": 1}, "reward_coins": 0}
+          "quest": {"name": "Ride the Air Ballon", "goals": [{"class": "LocationGoal", "level_name": "Poly Park: Air ballon landing"}, {"class": "TalkingGoal", "npc_name": "Mira"}], "days": 3, "reward_item": {"num": 11, "amount": 1}, "reward_coins": 0}
         },
         {
           "phrase": "No thanks.",
@@ -686,7 +703,7 @@
         {
           "phrase": "You Got it Brent!",
           "dialouge_num": -1,
-          "quest": {"name": "Save Brent", "goals": [{"class": "TalkingGoal", "npc_name": "Super Tina", "item_name": 0, "amount": 0}], "days": 0, "reward_item": {"num": 4, "amount": 5}, "reward_coins": 0}
+          "quest": {"name": "Save Brent", "goals": [{"class": "TalkingGoal", "npc_name": "Super Tina", "item_name": 0, "amount": 0}], "days": 3, "reward_item": {"num": 4, "amount": 5}, "reward_coins": 0}
         }
       ],
       "hand_num": -1,
@@ -720,6 +737,23 @@
       ],
       "hand_num": -1,
       "amount": 0
+    },
+    {
+      "phrase": "As promised, here are some carrots!",
+      "replies": [
+        {
+          "phrase": "Thanks!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "Much appreciated!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": 0,
+      "amount": 5
     }
   ],
   "BlindPete": [
@@ -785,10 +819,27 @@
         {
           "phrase": "Ok will do.",
           "dialouge_num": -1,
-          "quest": {"name": "Move That Rock", "goals": [{"class": "OneTileCheck", "tile_name": "Bridge", "level_name": "Cloudy Meadows: Market", "x": 22, "y": 8}], "days": 0, "reward_item": 0, "reward_coins": 500}
+          "quest": {"name": "Move That Rock", "goals": [{"class": "OneTileCheck", "tile_name": "Bridge",  "old_tile_name": "Rock", "level_name": "Cloudy Meadows: Market", "x": 22, "y": 8}], "days": 30, "reward_item": 0, "reward_coins": 500}
         },
         {
           "phrase": "No thanks.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Much appreciated! You made my day!",
+      "replies": [
+        {
+          "phrase": "Happy to help!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "No problem!",
           "dialouge_num": -1,
           "quest": -1
         }
@@ -941,11 +992,28 @@
         {
           "phrase": "Will do.",
           "dialouge_num": -1,
-          "quest": {"name": "Love letter Delivery", "goals": [{"class": "TalkingGoal", "npc_name": "James", "item_name": 0, "amount": 0}], "days": 1, "reward_item": {"num": 10, "amount": 1}, "reward_coins": 0}
+          "quest": {"name": "Love letter Delivery", "goals": [{"class": "TalkingGoal", "npc_name": "James", "item_name": 0, "amount": 0}], "days": 3, "reward_item": {"num": 10, "amount": 1}, "reward_coins": 0}
         }
       ],
       "hand_num": -1,
       "amount": 0
+    },
+    {
+      "phrase": "Thanks so much! As a little gift, have this cherry!",
+      "replies": [
+        {
+          "phrase": "Thanks!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "That's sweet!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": 0,
+      "amount": 1
     }
   ],
   "Zoda": [
@@ -1297,6 +1365,23 @@
       ],
       "hand_num": -1,
       "amount": 0
+    },
+    {
+      "phrase": "As promised, here's that level 1 robot!",
+      "replies": [
+        {
+          "phrase": "Thanks so much!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "This is awesome!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": 0,
+      "amount": 1
     }
   ],
   "Vinny": [
@@ -1473,8 +1558,8 @@
       "replies": [
         {
           "phrase": "Consider it done",
-          "dialouge_num": -1,
-          "quest": {"name": "veggie press for Ishmil", "goals": [{"class": "TalkingGoal", "npc_name": "Ishmil", "item_name": "Veggie Press", "amount": 1}], "days": 10, "reward_item": {"num": 33, "amount": 1}, "reward_coins": 0}
+          "dialouge_num": 4,
+          "quest": {"name": "veggie press for Ishmil", "goals": [{"class": "HaveGoal", "item_name": "Veggie Press", "amount": 1}], "days": 10, "reward_item": {"num": 33, "amount": 1}, "reward_coins": 0}
          
         },
         {
@@ -1485,6 +1570,23 @@
       ],
       "hand_num": -1,
       "amount": 0
+    },
+    {
+      "phrase": "As promised, here you go!",
+      "replies": [
+        {
+          "phrase": "Thanks!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "Much appreciated!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": 0,
+      "amount": 1
     }
   ],
   "David": [

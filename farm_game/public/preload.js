@@ -653,107 +653,8 @@ function preload() {
     GridMoveEntity  { name: 'name', png: png_img, inv: [0, {num: 1, amount: 1}], hand: 0, facing: 2, under_tile_num: 0, instructions: [], moving_timer: 0, class: 'GridMoveEntity' }
     NPC             { name: 'name', png: png_img, inv: [0, {num: 1, amount: 1}], hand: 0, facing: 2, under_tile_num: 0, instructions: [], moving_timer: 0, class: 'NPC' }
     */
-    all_tiles = [
-    /*1*/    { name: 'concrete', png: 0, collide: false, age: -1, class: 'Tile' },
-    /*2*/    { name: 'grass', png: 1, collide: false, age: -1, class: 'Tile' },
-    /*3*/    { name: 'plot', png: 2, collide: false, age: 0, class: 'Tile' },
-    /*4*/    { name: 'dirt', png: 3, collide: false, age: -1, class: 'Tile' },
-    /*5*/    { name: 'junk', png: 4, collide: false, age: -1, class: 'Tile' },
-    /*6*/    { name: 'wall', png: 5, collide: true, age: -1, class: 'Tile' },
-    /*7*/    { name: 'bed', png: 6, collide: false, age: -1, class: 'Tile' },
-    /*8*/    { name: 'Bridge', png: 7, collide: false, age: -1, class: 'Tile' },
-    /*9*/    { name: 'bridge2', png: 8, collide: false, age: -1, class: 'Tile' },
-    /*10*/    { name: 'satilite', png: 9, collide: true, age: -1, class: 'Tile' },
-    /*11*/    { name: 'solarpanel', png: 10, collide: true, age: -1, class: 'Tile' },
-    /*12*/    { name: 'lamppost', png: 11, collide: true, age: -1, class: 'Tile' },
-    /*13*/    { name: 'compost_tile', png: 12, collide: false, age: 0, class: 'Tile' },
-    /*14*/    { name: 'compost_bucket', png: 13, collide: false, age: -1, class: 'Tile' },
-    /*15*/    { name: 'cart_s', png: 14, collide: true, age: -1, class: 'Tile' },
-    /*16*/    { name: 'Vegetables', png: 15, inv: [{ num: 2, amount: 7}, {num: 5, amount: 6}, {num: 39, amount: 1}], under_tile_num: 1, class: 'Shop' },
-    /*17*/    { name: 'Ladybugs and Flowers', png: 16, inv: [{num: 10, amount: 6}, {num: 11, amount: 6}], under_tile_num: 1, class: 'Shop' },
-    /*18*/    { name: 'Sprinklers', png: 17, inv: [{num: 12, amount: 6}], under_tile_num: 1, class: 'Shop' },
-    /*19*/    { name: 'Veggie Seeds', png: 18, inv: [{ num: 3, amount: 7}, {num: 6, amount: 6}, {num: 40, amount: 0}], under_tile_num: 1, class: 'Shop' },
-    /*20*/    { name: 'sprinkler', png: 19, collide: false, age: -1, class: 'Tile' },
-    /*21*/    { name: 'corn', png: 20, collide: false, age: 0, eat_num: 2, waterneed: 0, growthTime: 2000, class: 'Plant' },
-    /*22*/    { name: 'sweet_potato', png: 21, collide: false, age: 0, eat_num: 5, waterneed: 0, growthTime: 2200, class: 'Plant' },
-    /*23*/    { name: 'strawberry', png: 22, collide: false, age: 0, eat_num: 7, waterneed: 1, growthTime: 1900, class: 'Plant' },
-    /*24*/    { name: 'tomato', png: 23, collide: false, age: 0, eat_num: 15, waterneed: 1, growthTime: 1300, class: 'Plant' },
-    /*25*/    { name: 'flower', png: 24, collide: false, age: 0, eat_num: 0, waterneed: 0, growthTime: 1000, class: 'Plant' },
-    /*26*/    { name: 'ladybug', png: 25, collide: false, age: 0, inv: [0], hand: 0, under_tile_num: 2, class: 'Entity' },
-    /*27*/    { name: 'Rick', png: 26, inv: [{ num: 7, amount: 2 }], hand: 0, facing: 2, under_tile_num: 1, instructions: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'up', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'down', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'left'], moving_timer: 100, class: 'NPC' },
-    /*28*/    { name: 'Deb', png: 27, inv: [{num: 4, amount: 3}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 0, class: 'NPC' },
-    /*29*/    { name: 'Mario', png: 28, inv: [{num: 12, amount: 1}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*30*/    { name: 'Garry', png: 29, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['down', 'up'], moving_timer: 100, class: 'NPC' },
-    /*31*/    { name: 'Mira', png: 30, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['down', 'left', 'up', 'right'], moving_timer: 100, class: 'NPC' },
-    /*32*/    { name: 'OldManJ', png: 31, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['left', 'left', 'left', 'down', 'right', 'right', 'right', 'up'], moving_timer: 100, class: 'NPC' },
-    /*33*/    { name: 'Brandon', png: 32, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'right', 'down', 'left'], moving_timer: 100, class: 'NPC' },
-    /*34*/    { name: 'Brent', png: 33, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*35*/    { name: 'BlindPete', png: 34, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'up', 'up', 'up', 'up', 'up', 'up', 'up', 'up', 'up', 'up', 'up', 'up', 'up', 'down', 'down', 'down', 'down', 'down', 'down', 'down', 'down', 'down', 'down', 'down', 'down', 'down', 'down'], moving_timer: 100, class: 'NPC' },
-    /*36*/    { name: 'James', png: 35, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*37*/    { name: 'Liam', png: 36, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'up', 'down', 'down'], moving_timer: 100, class: 'NPC' },
-    /*38*/    { name: 'Meb', png: 37, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*39*/    { name: 'bush', png: 38, collide: true, age: -1, class: 'Tile' },
-    /*40*/    { name: 'Chest', png: 39, inv: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], facing: 2, under_tile_num: 1, class: 'Chest'},
-    /*41*/    { name: 'watermelon', png: 40, collide: false, age: 0, eat_num: 17, waterneed: 2, growthTime: 4000, class: 'Plant'},
-    /*42*/    { name: 'Robot3', png: 41, inv: [0, 0, 0, 0, 0, 0, 0], under_tile_num: 1, instructions: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], moving_timer: 60, class: 'Robot'},
-    /*43*/    { name: 'Fruits', png: 42, inv: [{num: 7, amount: 3}, {num: 15, amount: 3}, {num: 17, amount: 3}], under_tile_num: 1, class: 'Shop' },
-    /*44*/    { name: 'Fruit Seeds', png: 43, inv: [{num: 8, amount: 4}, {num: 14, amount: 2}, {num: 16, amount: 1}], under_tile_num: 1, class: 'Shop' },
-    /*45*/    { name: 'hemp', png: 44, collide: false, age: 0, eat_num: 25, waterneed: 2, growthTime: 2000, class: 'Plant'},
-    /*46*/    { name: 'Robot1', png: 45, inv: [0, 0, 0, 0], under_tile_num: 1, instructions: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], moving_timer: 100, class: 'Robot'},
-    /*47*/    { name: 'Robot2', png: 46, inv: [0, 0, 0, 0, 0, 0], under_tile_num: 1, instructions: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], moving_timer: 80, class: 'Robot'},
-    /*48*/    { name: 'Veggie_Press', png: 47, collide: false, age: -1, class: 'Tile' },
-    /*49*/    { name: 'Bees', png: 48, inv:[0], under_tile_num: 0, instructions: [], moving_timer: 50, class: 'FreeMoveEntity' },
-    /*50*/    { name: 'Flower_Done', png: 49, collide: false, age: 0, class: 'Tile'},
-    /*51*/    { name: 'Guy', png: 50, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC'},
-    /*52*/    { name: 'Ishmil', png: 51, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*53*/    { name: 'Kenny', png: 52, inv: [0], hand: 0, facing: 2, under_tile_num: 71, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*54*/    { name: 'Super Tina', png: 53, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*55*/    { name: 'Vinny', png: 54, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*56*/    { name: 'Chef', png: 55, inv: [{num: 13, amount: 1}], under_tile_num: 1, class: 'Shop' },
-    /*57*/    { name: 'park_grass', png: 94, collide: false, age: -1, class: 'Tile'},
-    /*58*/    { name: 'hori_fence', png: 95, collide: true, age: -1, class: 'Tile'},
-    /*59*/    { name: 'vert_fence', png: 96, collide: true, age: -1, class: 'Tile'},
-    /*60*/    { name: 'top_right_corner_fence', png: 97, collide: true, age: -1, class: 'Tile'},
-    /*61*/    { name: 'park_path', png: 98, collide: false, age: -1, class: 'Tile'},
-    /*62*/    { name: 'park_path_vert', png: 99, collide: false, age: -1, class: 'Tile'},
-    /*63*/    { name: 'park_path_cross', png: 103, collide: false, age: -1, class: 'Tile'},
-    /*64*/    { name: 'park_path_up_t', png: 104, collide: false, age: -1, class: 'Tile'},
-    /*65*/    { name: 'bottom_right_corner_fence', png: 100, collide: true, age: -1, class: 'Tile'},
-    /*66*/    { name: 'bottom_left_corner_fence', png: 101, collide: true, age: -1, class: 'Tile'},
-    /*67*/    { name: 'top_left_corner_fence', png: 102, collide: true, age: -1, class: 'Tile'},
-    /*68*/    { name: 'tree_bottom', png: 105, collide: true, age: -1, class: 'Tile'},
-    /*69*/    { name: 'tree_top', png: 106, collide: true, age: -1, class: 'Tile'},
-    /*70*/    { name: 'Hotdog Stand', png: 108, inv: [{num: 35, amount: 4}], under_tile_num: 57, class: 'Shop' },
-    /*71*/    { name: 'swamp_grass', png: 110, collide: false, age: -1, class: 'Tile'},
-    /*72*/    { name: 'water', png: 109, collide: true, age: -1, class: 'Tile'},
-    /*73*/    { name: 'Chef', png: 111, inv:[{num:13, amount: 1}], under_tile_num: 74, class: 'Shop'},
-    /*74*/    { name: 'kitchen_tile', png: 112, collide: false, age: -1, class: 'Tile'},
-    /*75*/    { name: 'table', png: 113, collide: true, age: -1, class: 'Tile'},
-    /*76*/    { name: 'dirt_path', png: 114, collide: false, age: -1, class: 'Tile'},
-    /*77*/    { name: 'Frog', png: 115, inv: [0], under_tile_num: 71, instructions: [], moving_timer: 80, class: 'FreeMoveEntity'},
-    /*78*/    { name: 'LightBug', png: 134, inv: [0], under_tile_num: 71, instructions: [], moving_timer: 30, class: 'LightMoveEntity'},
-    /*79*/    { name: 'Air Ship', png: 116, under_tile_num: 1, class: 'AirBallon'},
-    /*80*/    { name: 'Zoda', png: 117, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*81*/    { name: 'kitchen_counter', png: 118, collide: true, age: -1, class: 'Tile'},
-    /*82*/    { name: 'bar_counter', png: 119, collide: true, age: -1, class: 'Tile'},
-    /*83*/    { name: 'grinder', png: 122, collide: false, age: -1, class: 'Tile' },
-    /*84*/    { name: 'Tile Shop', png: 123, inv: [{num: 36, amount: 3}, {num: 37, amount: 1}, {num: 38, amount: 0}], under_tile_num: 1, class: 'Shop' },
-    /*85*/    { name: 'computer', png: 124, collide: false, age: -1, class: 'Tile'},
-    /*86*/    { name: 'Tool Shop', png: 126, inv: [{num: 1, amount: 2}, {num: 32, amount: 2}], under_tile_num: 57, class: 'Shop'},
-    /*87*/    { name: 'Rob Botus', png: 127, inv: [{num: 27, amount: 1}, {num: 28, amount: 1}, {num: 18, amount: 1}, {num: 19, amount: 4}, {num: 20, amount: 4}, {num: 21, amount: 4}, {num: 22, amount: 4}, {num: 23, amount: 2}, {num: 29, amount: 4}, {num: 30, amount: 4}, {num: 26, amount: 4}, {num: 34, amount: 4}], under_tile_num: 57, class: 'Shop'},
-    /*88*/    { name: 'Jake', png: 128, inv: [{num: 25, amount: 3}, {num: 24, amount: 1}], under_tile_num: 57, class: 'Shop'},
-    /*89*/    { name: 'Dog', png: 129, inv: [0], under_tile_num: 57, instructions: [], moving_timer: 80, class: 'FreeMoveEntity'},
-    /*90*/    { name: 'David', png: 130, inv: [0], hand: 0, facing: 2, under_tile_num: 71, instructions: [], moving_timer: 100, class: 'NPC'},
-    /*91*/    { name: 'bunny', png: 135, inv: [0], under_tile_num: 3, instructions: [], moving_timer: 80, class: 'FreeMoveEntity'},
-    /*92*/    { name: 'carrot', png: 138, collide: false, age: 0, eat_num: 39, waterneed: 1, growthTime: 2200, class: 'Plant' },
-    /*93*/    { name: 'brigde_hori_move', png: 139, age: -1, under_tile_num: 8, price: 1000, class: 'PayToMoveEntity'},
-    /*94*/    { name: 'brigde_vert_move', png: 139, age: -1, under_tile_num: 9, price: 1000, class: 'PayToMoveEntity'},
-    /*95*/    { name: 'park_grass_move', png: 139, age: -1, under_tile_num: 57, price: 420, class: 'PayToMoveEntity'},
-    /*96*/    { name: 'Adam', png: 140, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC'},
-    /*97*/    { name: 'Barry', png: 141, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC'},
-    /*98*/    { name: 'Mr.C', png: 142, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['down', 'down', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'disappear'], moving_timer: 10, class: 'NPC'},
-    /*99*/    { name: 'Pumpkin', png: 143, collide: false, age: 0, eat_num: 41, waterneed: 0, growthTime: 3000, class: 'Plant' },
-    ];
+    // Use tile definitions from config/tiles.js
+    all_tiles = TILE_DEFINITIONS;
     
     /*
     class       obj
@@ -763,58 +664,82 @@ function preload() {
     Seed        {name: 'name', png: png_img, plant_num: 0, class: 'Seed'}
     Placable    {name: 'name', png: png_img, price: 0, tile_num: 0, tile_need_num: 0, class: 'Placeable'}
     */
-    all_items = [
-        /*0*/ 0,
-        /*1*/ { name: 'Hoe', png: 56, class: 'Tool' },
-        /*2*/ { name: 'Corn', png: 57, price: 4, hunger: 2, hunger_timer: 2000, seed_num: 3, class: 'Eat' },
-        /*3*/ { name: 'Corn Seed', png: 58, plant_num: 21, class: 'Seed' },
-        /*4*/ { name: 'Junk', png: 59, price: 0, class: 'Item' },
-        /*5*/ { name: 'Sweet Potatoes', png: 60, price: 3, hunger: 1, hunger_timer: 3000, seed_num: 6, class: 'Eat' },
-        /*6*/ { name: 'Sweet Potato Seed', png: 61, plant_num: 22, class: 'Seed' },
-        /*7*/ { name: 'Strawberries', png: 62, price: 2, hunger: 1, hunger_timer: 1700, seed_num: 8, class: 'Eat' },
-        /*8*/ { name: 'Strawberry Seed', png: 63, plant_num: 23, class: 'Seed' },
-        /*9*/ { name: 'Compost', png: 64, price: 2, tile_num: 13, tile_need_num: 4, class: 'Placeable' },
-        /*10*/{ name: 'Ladybugs', png: 65, price: 100, tile_num: 26, tile_need_num: 2, class: 'Placeable' },
-        /*11*/{ name: 'Flower Seed', png: 66, plant_num: 25, class: 'Seed'},
-        /*12*/{ name: 'Sprinkler', png: 67, price: 9, tile_num: 20, tile_need_num: 2, class: 'Placeable' },
-        /*13*/{ name: 'Full Course', png: 68, price: 20, hunger: 100, hunger_timer: 4000, seed_num: 0, class: 'Eat' },
-        /*14*/{name: 'Tomato Seed', png: 69, plant_num: 24, class: 'Seed'},
-        /*15*/{name: 'Tomato', png: 70, price: 3, hunger: 1, hunger_timer: 1800, seed_num: 14, class: 'Eat'},
-        /*16*/{name: 'Watermelon Seed', png: 71, plant_num: 41, class: 'Seed'},
-        /*17*/{name: 'Watermelon', png: 72, price: 8, hunger: 2, hunger_timer: 2000, seed_num: 16, class: 'Eat'},
-        /*18*/{name: 'Robot3', png: 73, price: 150, tile_num: 42, tile_need_num: 0, class: 'Placeable'},
-        /*19*/{name: 'Up Command', png: 74, command: 'up', class: 'Command'},
-        /*20*/{name: 'Right Command', png: 75, command: 'right', class: 'Command'},
-        /*21*/{name: 'Down Command', png: 76, command: 'down', class: 'Command'},
-        /*22*/{name: 'Left Command', png: 77, command: 'left', class: 'Command'},
-        /*23*/{name: 'Interact Command', png: 78, command: 'interact', class: 'Command'},
-        /*24*/{name: 'Hemp Seed', png: 79, plant_num: 45, class: 'Seed'},
-        /*25*/{name: 'Hemp Flower', png: 80, price: 20, hunger: -2, hunger_timer: 100, seed_num: 24, class: 'Eat'},
-        /*26*/{name: 'Restart Command', png: 81, command: 'restart', class: 'Command'},
-        /*27*/{name: 'Robot1', png: 82, price: 70, tile_num: 46, tile_need_num: 0, class: 'Placeable'},
-        /*28*/{name: 'Robot2', png: 83, price: 110, tile_num: 47, tile_need_num: 0, class: 'Placeable'},
-        /*29*/{name: 'Add to Chest Command', png: 84, command: 'add_to_chest', class: 'Command'},
-        /*30*/{name: 'Add from Chest Command', png: 85, command: 'add_from_chest', class: 'Command'},
-        /*31*/{name: 'Veggie Oil', png: 86, price: 7, class: 'Item'},
-        /*32*/{name: 'Shovel', png: 87, class: 'Tool'},
-        /*33*/{name: 'Backpack', png: 88, inv: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], class: 'Backpack'},
-        /*34*/{name: '1 Day Pause Command', png: 89, command: '1day_pause', class: 'Command'},
-        /*35*/{name: 'Hotdog', png: 107, price: 20, hunger: 100, hunger_timer: 4000, seed_num: 0, class: 'Eat' },
-        /*36*/{name: 'Chest', png: 120, price: 20, tile_num: 40, tile_need_num: 0, class: 'Placeable'},
-        /*37*/{name: 'Grinder', png: 121, price: 50, tile_num: 83, tile_need_num: 1, class: 'Placeable'},
-        /*38*/{name: 'Veggie Press', png: 125, price: 130, tile_num: 48, tile_need_num: 1, class: 'Placeable'},
-        /*39*/{name: 'Carrot', png: 136, price: 4, hunger: 1, hunger_timer: 2000, seed_num: 40, class: 'Eat' },
-        /*40*/{name: 'Carrot Seed', png: 137, plant_num: 92, class: 'Seed'},
-        /*41*/{name: 'Pumpkin', png: 144, price: 3, hunger: 3, hunger_timer: 2000, seed_num: 42, class: 'Eat'},
-        /*42*/{name: 'Pumpkin Seed', png: 145, plant_num: 99, class: 'Seed'}
-        
-    ];
+    // Use item definitions from config/items.js
+    all_items = ITEM_DEFINITIONS;
 
+}
+
+// Fullscreen functionality by default
+function setupFullscreen() {
+    toggleFullscreen()
+    resizeCanvasForFullscreen();
+    // Also allow F11 key (but prevent default browser fullscreen)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F11') {
+            e.preventDefault();
+            toggleFullscreen();
+        }
+    });
+    
+
+}
+
+function toggleFullscreen() {
+    const elem = document.documentElement;
+    
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+        !document.mozFullScreenElement && !document.msFullscreenElement) {
+        // Enter fullscreen
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+            elem.mozRequestFullScreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
+    } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function resizeCanvasForFullscreen() {
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return;
+        
+        // Calculate scale to fill screen while maintaining aspect ratio
+        const scaleX = window.innerWidth / canvasWidth;
+        const scaleY = window.innerHeight / canvasHeight;
+        const scale = Math.max(scaleX, scaleY) * .7; // Use max to fill screen completely
+        
+        // Apply CSS transform to scale canvas
+        canvas.style.width = (canvasWidth * scale) + 'px';
+        canvas.style.height = (canvasHeight * scale) + 'px';
+        canvas.style.position = 'absolute';
+        canvas.style.left = '50%';
+        canvas.style.top = '50%';
+        canvas.style.transform = 'translate(-50%, -50%)';
+  
 }
 
 function setup() {
     
-    createCanvas(canvasWidth, canvasHeight);
+    let canvas = createCanvas(canvasWidth, canvasHeight);
+    canvas.parent('game-container');
+    
+    // Setup fullscreen functionality
+    setupFullscreen();
+    
     for (let i = 0; i < cloudCount; i++) {
         clouds[i] = new Cloud()
     }
@@ -824,14 +749,17 @@ function setup() {
     
 
     startButton = createButton('Start');
+    startButton.parent('game-container');
     startButton.position(canvasWidth/2-250/2, canvasHeight/2+120);
     startButton.mousePressed(start);
     startButton.style('width', '250px');
     startButton.style('background','url()');
     startButton.style("font-family","pixelFont");
+    startButton.style('cursor', 'pointer');
    
     
     optionsButton = createButton('Options');
+    optionsButton.parent('game-container');
     optionsButton.position(canvasWidth/2-250/2, canvasHeight/2+160);
     optionsButton.mousePressed(() => {
         paused = !paused;
@@ -841,8 +769,10 @@ function setup() {
     optionsButton.style('width', '250px');
     optionsButton.style('background','url()');
     optionsButton.style("font-family","pixelFont");
+    optionsButton.style('cursor', 'pointer');
 
     creditsButton = createButton('Credits');
+    creditsButton.parent('game-container');
     creditsButton.position(canvasWidth/2-250/2, canvasHeight/2+200);
     creditsButton.mousePressed(() => {
         creditsOn = !creditsOn;
@@ -852,8 +782,10 @@ function setup() {
     creditsButton.style('width', '250px');
     creditsButton.style('background','url()');
     creditsButton.style("font-family","pixelFont");
+    creditsButton.style('cursor', 'pointer');
 
     robotPlayButton = createButton('Play');
+    robotPlayButton.parent('game-container');
     robotPlayButton.position(((11*canvasWidth)/16) - 55, canvasHeight/8 - 5);
     robotPlayButton.mousePressed(() => {
         temp_move_bool = true;
@@ -861,9 +793,11 @@ function setup() {
     robotPlayButton.style("font-family","pixelFont");
     robotPlayButton.style('background-color','rgb(100, 100, 100)');
     robotPlayButton.style('color','rgb(0, 255, 0)');
+    robotPlayButton.style('cursor', 'pointer');
     robotPlayButton.hide();
 
     robotPauseButton = createButton('Pause');
+    robotPauseButton.parent('game-container');
     robotPauseButton.position(((11*canvasWidth)/16) + 19, canvasHeight/8 - 5);
     robotPauseButton.mousePressed(() => {
         temp_move_bool = false;
@@ -871,9 +805,11 @@ function setup() {
     robotPauseButton.style("font-family","pixelFont");
     robotPauseButton.style('background-color','rgb(100, 100, 100)');
     robotPauseButton.style('color','rgb(0, 0, 255)');
+    robotPauseButton.style('cursor', 'pointer');
     robotPauseButton.hide();
 
     robotBoomButton = createButton('Boom');
+    robotBoomButton.parent('game-container');
     robotBoomButton.position(((14*canvasWidth)/16) - 30, canvasHeight/8 - 5);
     robotBoomButton.mousePressed(() => {
         if(checkForSpace(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name))){
@@ -890,24 +826,105 @@ function setup() {
     robotBoomButton.style("font-family","pixelFont");
     robotBoomButton.style('background-color','rgb(50, 50, 50)');
     robotBoomButton.style('color','rgb(255, 0, 0)');
+    robotBoomButton.style('cursor', 'pointer');
     robotBoomButton.hide();
 
     musicSlider = createSlider(0, 1, ((localData.get('Options') != null ? localData.get('Options').musicVolume:0.5)), 0.01);
+    musicSlider.parent('game-container');
     musicSlider.position((canvasWidth/2)-10, (canvasHeight/2)-85);
-    musicSlider.input(saveOptions)
+    musicSlider.input(saveOptions);
     musicSlider.hide();
+    
     fxSlider = createSlider(0, 1, ((localData.get('Options') != null ? localData.get('Options').fxVolume:0.5)), 0.01);
+    fxSlider.parent('game-container');
     fxSlider.position((canvasWidth/2)-10, (canvasHeight/2)-5);
-    fxSlider.input(saveOptions)
+    fxSlider.input(saveOptions);
     fxSlider.hide();
 
     questSlider = createSlider(0, 1, 0, 1);
-    questSlider.position((canvasWidth/2)+(3*22), canvasHeight/8)
+    questSlider.parent('game-container');
+    questSlider.position((canvasWidth/2)+(3*22), canvasHeight/8);
     questSlider._rotate(90);
     questSlider.size((65*6)+45);
     questSlider.hide();
 
+    questCloseButton = createButton('×');
+    questCloseButton.parent('game-container');
+    questCloseButton.position(0, 0);
+    questCloseButton.mousePressed(() => {
+        player.show_quests = false;
+        questSlider.hide();
+        questCloseButton.hide();
+    });
+    questCloseButton.style('width', '30px');
+    questCloseButton.style('height', '30px');
+    questCloseButton.style('font-size', '24px');
+    questCloseButton.style('font-weight', 'bold');
+    questCloseButton.style('background-color', 'rgba(187, 132, 75, 0.9)');
+    questCloseButton.style('color', 'white');
+    questCloseButton.style('border', '2px solid rgb(149, 108, 65)');
+    questCloseButton.style('border-radius', '3px');
+    questCloseButton.style('padding', '0');
+    questCloseButton.style('line-height', '1');
+    questCloseButton.hide();
+
+    // Setup money gained event listener for quest updates
+    window.addEventListener('moneyGained', (e) => {
+        // Update all active quests when money is gained
+        if (player && player.quests) {
+            for (let i = 0; i < player.quests.length; i++) {
+                if (!player.quests[i].done && !player.quests[i].failed) {
+                    player.quests[i].update();
+                }
+            }
+        }
+    });
+
+    // Register all animated GIF images for pause control
+    animatedGifs = [
+        sprinkler_tile_img,
+        water_tile_img,
+        air_ship_img,
+        grinder_tile_img,
+        title_screen_img,
+        save_img,
+        ladybug_img,
+        bee_img,
+        light_bug_img,
+        background_img
+    ];
+
+    resetControlsButton = createButton('Reset Controls');
+    resetControlsButton.parent('game-container');
+    resetControlsButton.position((canvasWidth/2)+165, (canvasHeight/2)+160);
+    resetControlsButton.mousePressed(() => {
+        // Reset controls to defaults
+        Controls_Interact_button_key = 'e';
+        Controls_Eat_button_key = 'q';
+        Controls_Up_button_key = 'w';
+        Controls_Down_button_key = 's';
+        Controls_Left_button_key = 'a';
+        Controls_Right_button_key = 'd';
+        Controls_Special_button_key = 'Shift';
+        Controls_Quest_button_key = 'P';
+        move_right_button = 68;
+        move_left_button = 65;
+        move_up_button = 87;
+        move_down_button = 83;
+        interact_button = 69;
+        eat_button = 81;
+        special_key = 16;
+        quest_key = 80;
+        saveOptions();
+    });
+    resetControlsButton.style('width', '200px');
+    resetControlsButton.style('background','url()');
+    resetControlsButton.style("font-family","pixelFont");
+    resetControlsButton.style('cursor', 'pointer');
+    resetControlsButton.hide();
+
     clearButton = createButton('Clear Save Data');
+    clearButton.parent('game-container');
     clearButton.position((canvasWidth/2)+165, (canvasHeight/2)+200);
     clearButton.mousePressed(() => {
         clear_anim = true;
@@ -917,69 +934,80 @@ function setup() {
     clearButton.style('width', '200px');
     clearButton.style('background','url()');
     clearButton.style("font-family","pixelFont");
-
+    clearButton.style('cursor', 'pointer');
     clearButton.hide();
 
     QuitButton = createButton('Save and Quit');
-    QuitButton.position((canvasWidth/2)-125, (canvasWidth/2)+95);
+    QuitButton.parent('game-container');
+    QuitButton.position((canvasWidth/2)-125, (canvasWidth/2)+80);
     QuitButton.style('width', '250px');
     QuitButton.style('background','url()');
     QuitButton.style("font-family","pixelFont");
+    QuitButton.style('cursor', 'pointer');
     QuitButton.mousePressed(() => {
+        console.log('Saving and quitting to title screen...');
         title_screen = true;
         paused = false;
         startButton.show();
         creditsButton.show();
-        optionsButton.show()
+        optionsButton.show();
         clearButton.hide();
         QuitButton.hide();
         saveAll();
     });
     QuitButton.hide();
 
+
     dif0button = createButton('');
+    dif0button.parent('game-container');
     dif0button.position((canvasWidth/4)-90, (canvasWidth/2)-150);
     dif0button.style('width','180px');
     dif0button.style('height','300px');
     dif0button.style('background','url()');
+    dif0button.style('cursor', 'pointer');
     dif0button.mousePressed(() => {
         dificulty = 0;
         dificulty_screen = false;
-        dif0button.hide()
-        dif1button.hide()
-        dif2button.hide()
+        dif0button.hide();
+        dif1button.hide();
+        dif2button.hide();
     });
     dif0button.hide();
 
     dif1button = createButton('');
+    dif1button.parent('game-container');
     dif1button.position(((2*canvasWidth)/4)-90, (canvasWidth/2)-150);
     dif1button.style('width','180px');
     dif1button.style('height','300px');
     dif1button.style('background','url()');
+    dif1button.style('cursor', 'pointer');
     dif1button.mousePressed(() => {
         dificulty = 1;
         dificulty_screen = false;
-        dif0button.hide()
-        dif1button.hide()
-        dif2button.hide()
+        dif0button.hide();
+        dif1button.hide();
+        dif2button.hide();
     });
     dif1button.hide();
 
     dif2button = createButton('');
+    dif2button.parent('game-container');
     dif2button.position(((3*canvasWidth)/4)-90, (canvasWidth/2)-150);
     dif2button.style('width','180px');
     dif2button.style('height','300px');
     dif2button.style('background','url()');
+    dif2button.style('cursor', 'pointer');
     dif2button.mousePressed(() => {
         dificulty = 2;
         dificulty_screen = false;
-        dif0button.hide()
-        dif1button.hide()
-        dif2button.hide()
+        dif0button.hide();
+        dif1button.hide();
+        dif2button.hide();
     });
     dif2button.hide();
 
     Controls_Interact_button = createButton('');
+    Controls_Interact_button.parent('game-container');
     Controls_Interact_button.position(((4*canvasWidth)/5)+70, canvasHeight/2-120);
     Controls_Interact_button.mousePressed(() => {
         if(control_set == 0){
@@ -992,10 +1020,12 @@ function setup() {
     Controls_Interact_button.style('height', '20px');
     Controls_Interact_button.style('background','url()');
     Controls_Interact_button.style("font-family","pixelFont");
+    Controls_Interact_button.style('cursor', 'pointer');
     //Controls_Interact.style("border","none");
     Controls_Interact_button.hide();
 
     Controls_Eat_button = createButton('');
+    Controls_Eat_button.parent('game-container');
     Controls_Eat_button.position(((4*canvasWidth)/5)+70, canvasHeight/2-95);
     Controls_Eat_button.mousePressed(() => {
         if(control_set == 0){
@@ -1008,10 +1038,12 @@ function setup() {
     Controls_Eat_button.style('height', '20px');
     Controls_Eat_button.style('background','url()');
     Controls_Eat_button.style("font-family","pixelFont");
+    Controls_Eat_button.style('cursor', 'pointer');
     //Controls_Eat.style("border","none");
     Controls_Eat_button.hide();
 
     Controls_Up_button = createButton('');
+    Controls_Up_button.parent('game-container');
     Controls_Up_button.position(((4*canvasWidth)/5)+70, canvasHeight/2-70);
     Controls_Up_button.mousePressed(() => {
         if(control_set == 0){
@@ -1024,6 +1056,7 @@ function setup() {
     Controls_Up_button.style('height', '20px');
     Controls_Up_button.style('background','url()');
     Controls_Up_button.style("font-family","pixelFont");
+    Controls_Up_button.style('cursor', 'pointer');
     //Controls_Up.style("border","none");
     Controls_Up_button.hide();
 
@@ -1040,6 +1073,8 @@ function setup() {
     Controls_Left_button.style('height', '20px');
     Controls_Left_button.style('background','url()');
     Controls_Left_button.style("font-family","pixelFont");
+    Controls_Left_button.parent('game-container');
+    Controls_Left_button.style('cursor', 'pointer');
     //Controls_Left.style("border","none");
     Controls_Left_button.hide();
 
@@ -1055,7 +1090,9 @@ function setup() {
     Controls_Down_button.style('width', '90px');
     Controls_Down_button.style('height', '20px');
     Controls_Down_button.style('background','url()');
+    Controls_Down_button.parent('game-container');
     Controls_Down_button.style("font-family","pixelFont");
+    Controls_Down_button.style('cursor', 'pointer');
     //Controls_Down.style("border","none");
     Controls_Down_button.hide();
 
@@ -1071,7 +1108,9 @@ function setup() {
     Controls_Right_button.style('width', '90px');
     Controls_Right_button.style('height', '20px');
     Controls_Right_button.style('background','url()');
+    Controls_Right_button.parent('game-container');
     Controls_Right_button.style("font-family","pixelFont");
+    Controls_Right_button.style('cursor', 'pointer');
     //Controls_Right.style("border","none");
     Controls_Right_button.hide();
 
@@ -1087,7 +1126,9 @@ function setup() {
     Controls_Special_button.style('width', '90px');
     Controls_Special_button.style('height', '20px');
     Controls_Special_button.style('background','url()');
+    Controls_Special_button.parent('game-container');
     Controls_Special_button.style("font-family","pixelFont");
+    Controls_Special_button.style('cursor', 'pointer');
     //Controls_Special.style("border","none");
     Controls_Special_button.hide();
 
@@ -1104,6 +1145,7 @@ function setup() {
     Controls_Quest_button.style('height', '20px');
     Controls_Quest_button.style('background','url()');
     Controls_Quest_button.style("font-family","pixelFont");
+    Controls_Quest_button.style('cursor', 'pointer');
     //Controls_Quest.style("border","none");
     Controls_Quest_button.hide();
     extra_lvls = {map: [

@@ -12,8 +12,9 @@ var canvasWidth = 23 * tileSize;
 var canvasHeight = 19 * tileSize;
 var player;
 var levels = [];
-var currentLevel_y = 1;
+var currentLevel_y = 2;
 var currentLevel_x = 4;
+var visitedLocations = new Set(); // Track all locations player has visited
 var lastMili = 0;
 var maxHunger = 6;
 var time = 0;
@@ -40,14 +41,132 @@ var creditsButton;
 var dif0button;
 var dif1button;
 var dif2button;
+var resetControlsButton;
+var controlLabels = [];
+var controlKeyTexts = [];
+var controlHighlight;
 var creditsOn = false;
 var current_reply = 0;
 var temp_move_bool = true;
+var questCloseButton;
+var animatedGifs = []; // Track all animated GIF images
 var clear_anim = false;
 var clear_movephase = 0;
 var clear_ticks = 0;
 var clear_y = canvasHeight;
 var extraCount = 0;
+
+// Performance profiling
+var fpsCounter = 0;
+var lastFpsUpdate = 0;
+var displayFps = 0;
+var showFpsDebug = false;
+
+// UI Layout Configuration - all clickable regions defined here
+const UI_BOUNDS = {
+    // Player inventory bar at bottom (inv_img is 512px wide, centered)
+    get inventoryBar() {
+        const barImageLeft = (canvasWidth/2) - 256; // Where inv_img starts
+        const slotWidth = 64;
+        const slotsPerBar = 8;
+        const barWidth = slotWidth * slotsPerBar; // 512px
+        
+        return {
+            top: canvasHeight - slotWidth,
+            bottom: canvasHeight,
+            left: barImageLeft,
+            right: barImageLeft + barWidth,
+            slotWidth: slotWidth,
+            // Calculate which slot the mouse is over
+            getSlotIndex: (mouseX) => {
+                const relativeX = mouseX - barImageLeft;
+                return Math.min(slotsPerBar - 1, Math.max(0, Math.floor(relativeX / slotWidth)));
+            },
+            // Get render position for slot i
+            getSlotX: (slotIndex) => barImageLeft + (slotIndex * slotWidth)
+        };
+    },
+    
+    // Chest/Backpack grid UI
+    get chestGrid() {
+        return {
+            top: 189,
+            bottom: 457,
+            left: (canvasWidth/2) - 184,
+            right: (canvasWidth/2) + 184,
+            cellSize: 90,
+            getGridPos: (mouseX, mouseY, inv) => ({
+                x: Math.min(inv[0].length - 1, Math.round((mouseX - (canvasWidth/2) + 139) / 90)),
+                y: Math.min(inv.length - 1, Math.round((mouseY - 234) / 90))
+            })
+        };
+    },
+    
+    // Robot UI regions
+    get robotInstructions() {
+        return {
+            top: 78,
+            getBottom: (instructionLength) => (Math.ceil(instructionLength / 6) * 86) + 78,
+            left: (canvasWidth/2) - 216,
+            right: (canvasWidth/2) + 314,
+            cellSize: 90,
+            getIndex: (mouseX, mouseY, instructionLength) => {
+                const row = Math.min(instructionLength / 6, Math.round((mouseY - 78 - 43) / 86));
+                const col = Math.min(5, Math.round((mouseX - (canvasWidth/2) + 216 - 45) / 90));
+                return (row * 6) + col;
+            }
+        };
+    },
+    
+    get robotStorage() {
+        return {
+            top: 435,
+            bottom: 500,
+            left: (canvasWidth/2) - 298,
+            right: (canvasWidth/2) + 310,
+            cellSize: 90,
+            getSlotIndex: (mouseX, inv) => Math.min(inv.length - 1, Math.round((mouseX - (canvasWidth/2) + 298 - 45) / 90))
+        };
+    }
+};
+
+// Fast travel CSS animation trigger
+function triggerTravelTransition(callback, destination = 'Unknown') {
+    const overlay = document.getElementById('travelOverlay');
+    const destinationText = overlay.querySelector('.travel-destination');
+    
+    if (destinationText) {
+        destinationText.textContent = `Traveling to ${destination}`;
+    }
+    
+    overlay.classList.add('active');
+    
+    // Call teleport callback at peak fade (1 second in)
+    setTimeout(() => {
+        if (callback) callback();
+    }, 1000);
+    
+    // Remove overlay after animation completes
+    setTimeout(() => {
+        overlay.classList.remove('active');
+    }, 2000);
+}
+
+// Menu fade transition trigger
+function triggerMenuFadeOut(callback) {
+    const overlay = document.getElementById('menuOverlay');
+    overlay.classList.add('active');
+    
+    // Call callback at peak fade (500ms in)
+    setTimeout(() => {
+        if (callback) callback();
+    }, 500);
+    
+    // Remove overlay after animation completes
+    setTimeout(() => {
+        overlay.classList.remove('active');
+    }, 1000);
+}
 
 function draw() {
     musicplayer.update()
@@ -81,13 +200,24 @@ function draw() {
         levels[currentLevel_y][currentLevel_x].fore_render();
         levels[currentLevel_y][currentLevel_x].render();
         if (!paused){
-            for (let y = 0; y < levels.length; y++) {
-                for (let x = 0; x < levels[y].length; x++) {
-                    if (levels[y][x] != 0 && levels[y][x] != undefined) {
-                        levels[y][x].update(x, y);
-                    }
+            // Resume GIF animations
+            animatedGifs.forEach(gif => gif.play());
+            // Only update the current level (36x performance improvement)
+            const currentLevel = levels[currentLevel_y][currentLevel_x];
+            if (currentLevel) {
+                // Track visited location and dispatch event
+                if (!visitedLocations.has(currentLevel.name)) {
+                    visitedLocations.add(currentLevel.name);
+                    window.dispatchEvent(new CustomEvent('locationVisited', {
+                        detail: { locationName: currentLevel.name }
+                    }));
                 }
+                currentLevel.update(currentLevel_x, currentLevel_y);
             }
+        }
+        else{
+            // Pause GIF animations
+            animatedGifs.forEach(gif => gif.pause());
         }
         player.render();
         if(!player.dead){
@@ -96,8 +226,11 @@ function draw() {
         }
         
         if (!paused){
-            if(player.quests[player.current_quest] != undefined){
-                player.quests[player.current_quest].update();
+            // Update all active quests (event-based system)
+            for(let i = 0; i < player.quests.length; i++){
+                if(player.quests[i] != undefined && !player.quests[i].done && !player.quests[i].failed){
+                    player.quests[i].update();
+                }
             }
             if (millis() - lastTimeMili > 300) { //300 for 2 min 1 day, 150 for 1 min 1 day
                 if (timephase == 0) {
@@ -129,6 +262,13 @@ function draw() {
                             level5.map[9][2].current_dialouge = 3;
                         }
                     }
+                    // Jake appears in park every 10 days
+                    if(days % 10 == 0 && level10.map[9][5].name != 'Jake'){
+                        level10.map[9][5] = new_tile_from_num(88, 5*tileSize, 9*tileSize);
+                    }
+                    else if(days % 10 != 0 && level10.map[9][5].name == 'Jake'){
+                        level10.map[9][5] = new_tile_from_num(57, 5*tileSize, 9*tileSize);
+                    }
                     for(let i = 0; i < player.quests.length; i++){
                         if(player.quests[i] != undefined){
                             player.quests[i].daily_update();
@@ -151,6 +291,14 @@ function draw() {
                 lastTimeMili = millis();
             }
         }
+    }
+
+    // Update FPS counter
+    fpsCounter++;
+    if (millis() - lastFpsUpdate > 500) { // Update every 500ms
+        displayFps = round(fpsCounter * 2); // multiply by 2 since we update every 500ms
+        fpsCounter = 0;
+        lastFpsUpdate = millis();
     }
 }
 
@@ -191,7 +339,9 @@ function render_ui() {
     }
 
     if(player.quests[player.current_quest] != undefined){
-        player.quests[player.current_quest].render(2, levels[currentLevel_y][currentLevel_x].y+52, 0, 0);
+        player.quests[player.current_quest].renderCurrentGoal(2, levels[currentLevel_y][currentLevel_x].y+52, 0, 0);
+        
+        
     }
 
     if (player.talking != undefined && player.talking != 0 && player.talking.class != 'Chest' && player.talking.class != 'Robot' && player.talking.class != 'Backpack') {
@@ -317,6 +467,15 @@ function render_ui() {
         }
         else{
             questSlider.hide();
+            questCloseButton.hide();
+            if(questsContainer){
+                questsContainer.style.display = 'none';
+            }
+            // Re-enable canvas pointer events
+            const canvas = document.querySelector('canvas');
+            if(canvas){
+                canvas.style.pointerEvents = 'auto';
+            }
         }
         if (player.looking(currentLevel_x, currentLevel_y) != undefined && player.looking(currentLevel_x, currentLevel_y).name == "cart_s" && player.talking == 0) {
             push()
@@ -346,12 +505,14 @@ function render_ui() {
         if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.looking(currentLevel_x, currentLevel_y).class == "PayToMoveEntity" && player.talking == 0){
             player.looking(currentLevel_x, currentLevel_y).price_render();
         }
+        // Render player inventory slots
+        const invBar = UI_BOUNDS.inventoryBar;
         for (let i = 0; i < 8; i++) {
             if (player.inv[i] == undefined) {
                 player.inv[i] = 0;
             }
             if (player.inv[i] != 0) {
-                player.inv[i].render(112 + (i * 64), canvasHeight - 64);
+                player.inv[i].render(invBar.getSlotX(i), invBar.top);
                 if (i == player.hand) {
                     push();
                     fill(255);
@@ -363,71 +524,55 @@ function render_ui() {
             }
         }
         if(mouse_item != 0){
-            mouse_item.render(mouseX-32, mouseY-32);
+            mouse_item.render(mouseX - Item.HALF_SIZE, mouseY - Item.HALF_SIZE);
         }
     }
 
     if(paused){
         showPaused();
+        // Disable canvas pointer events so pause menu can receive clicks
+        const canvas = document.querySelector('canvas');
+        if(canvas){
+            canvas.style.pointerEvents = 'none';
+        }
     }
     else{
+        hidePaused();
         musicSlider.hide();
         fxSlider.hide();
         QuitButton.hide()
-        Controls_Interact_button.hide();
-        Controls_Eat_button.hide();
-        Controls_Up_button.hide();
-        Controls_Down_button.hide();
-        Controls_Left_button.hide();
-        Controls_Right_button.hide();
-        Controls_Special_button.hide();
-        Controls_Quest_button.hide();
+        hideControls();
+        // Re-enable canvas pointer events
+        const canvas = document.querySelector('canvas');
+        if(canvas){
+            canvas.style.pointerEvents = 'auto';
+        }
+    }
+
+    // Draw FPS counter if debug mode enabled
+    if(showFpsDebug){
+        push();
+        fill(255, 0, 0);
+        textSize(16);
+        textAlign(LEFT, TOP);
+        text('FPS: ' + displayFps, 10, 10);
+        pop();
     }
 }
 
 function mouseReleased() {
     if(!title_screen){
         if(mouseButton == LEFT){
-            if(player.show_quests){
-                if(mouseY >= (canvasHeight/8)+30 && mouseY <= (canvasHeight/8)+(60*6)+35){
-                    let width = 6*22;
-                    for(let i = questSlider.value(); i < (player.quests.length > 6 ? 6 + questSlider.value(): player.quests.length); i++){
-                        width = max(width, (player.quests[i].name.length*17));
-                        if(!player.quests[i].done){
-                            width = max(width, (player.quests[i].goals[player.quests[i].current_Goal].name.length*12));
-                        }
-                    }
-                    if(mouseX >= (canvasWidth/2)-(width/2) && mouseX <= (canvasWidth/2)+(width/2)){
-                        let currentX = min((player.quests.length > 5 ? 5:player.quests.length-1), round((mouseY-((canvasHeight/8)+30)-30)/60))+questSlider.value()
-                        if(currentX == player.current_quest){
-                            player.current_quest = undefined;
-                        }
-                        else{
-                            player.current_quest = currentX;
-                        }
-                        if(player.quests[player.current_quest] != undefined && player.quests[player.current_quest].done){
-                            if(player.quests[player.current_quest].reward_item != 0){
-                                if(checkForSpace(player, item_name_to_num(player.quests[player.current_quest].reward_item.name))){
-                                    addItem(player, item_name_to_num(player.quests[player.current_quest].reward_item.name), player.quests[player.current_quest].reward_item.amount)
-                                    player.quests[player.current_quest].reward_item = 0;
-                                    if(player.quests[player.current_quest].reward_coins > 0){
-                                        player.coins += player.quests[player.current_quest].reward_coins;
-                                        player.money_anim = 255;
-                                        player.money_anim_amount += player.quests[player.current_quest].reward_coins;
-                                        player.quests[player.current_quest].reward_coins = 0;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else{
+            console.log("left click");
+            if(!player.show_quests){
                 if(keyIsDown(special_key)){ //16 == shift
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
-                        if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                            if(mouseX >= 113 && mouseX <= 622){
-                                let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+                        const inv = UI_BOUNDS.inventoryBar;
+                        console.log(inv);
+                        if(mouseY >= inv.top && mouseY <= inv.bottom){
+                            console.log("touching inv");
+                            if(mouseX >= inv.left && mouseX <= inv.right){
+                                let currentX = inv.getSlotIndex(mouseX);
                                 if(player.inv[currentX] != 0){
                                     if(player.talking.class == 'Chest' || (player.talking.class == 'Backpack' && player.inv[currentX].class != 'Backpack')){
                                         for (let i = 0; i < player.talking.inv.length; i++) {
@@ -452,10 +597,12 @@ function mouseReleased() {
                                 }
                             }
                         }
-                        else if(mouseY >= 189 && mouseY <= 457){
-                            if(mouseX >= 184 && mouseX <= 552){
-                                let currentX = min(player.talking.inv[0].length-1, round((mouseX-229)/90))
-                                let currentY = min(player.talking.inv.length-1, round((mouseY-234)/90))
+                        const chest = UI_BOUNDS.chestGrid;
+                        if(mouseY >= chest.top && mouseY <= chest.bottom){
+                            if(mouseX >= chest.left && mouseX <= chest.right){
+                                const pos = chest.getGridPos(mouseX, mouseY, player.talking.inv);
+                                let currentX = pos.x;
+                                let currentY = pos.y;
                                 if(checkForSpace(player, item_name_to_num(player.talking.inv[currentY][currentX].name))){
                                     addItem(player, item_name_to_num(player.talking.inv[currentY][currentX].name), player.talking.inv[currentY][currentX].amount);
                                     player.talking.inv[currentY][currentX] = 0;
@@ -464,9 +611,10 @@ function mouseReleased() {
                         }
                     }
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
-                        if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                            if(mouseX >= 113 && mouseX <= 622){
-                                let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+                        const inv = UI_BOUNDS.inventoryBar;
+                        if(mouseY >= inv.top && mouseY <= inv.bottom){
+                            if(mouseX >= inv.left && mouseX <= inv.right){
+                                let currentX = inv.getSlotIndex(mouseX);
                                 if(player.inv[currentX] != 0){
                                     if(checkForSpace(player.talking, item_name_to_num(player.inv[currentX].name))){
                                         addItem(player.talking, item_name_to_num(player.inv[currentX].name), player.inv[currentX].amount);
@@ -475,9 +623,10 @@ function mouseReleased() {
                                 }
                             }
                         }
-                        else if(mouseY >= 435 && mouseY <= 500){
-                            if(mouseX >= 70 && mouseX <= 678){
-                                let currentX = min(player.talking.inv.length-1, round((mouseX-70-45)/90))
+                        const storage = UI_BOUNDS.robotStorage;
+                        if(mouseY >= storage.top && mouseY <= storage.bottom){
+                            if(mouseX >= storage.left && mouseX <= storage.right){
+                                let currentX = storage.getSlotIndex(mouseX, player.talking.inv);
                                 if(checkForSpace(player, item_name_to_num(player.talking.inv[currentX].name))){
                                     addItem(player, item_name_to_num(player.talking.inv[currentX].name), player.talking.inv[currentX].amount);
                                     player.talking.inv[currentX] = 0;
@@ -487,9 +636,10 @@ function mouseReleased() {
                     }
                 }
                 else{
-                    if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                        if(mouseX >= 113 && mouseX <= 622){
-                            let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+                    const inv = UI_BOUNDS.inventoryBar;
+                    if(mouseY >= inv.top && mouseY <= inv.bottom){
+                        if(mouseX >= inv.left && mouseX <= inv.right){
+                            let currentX = inv.getSlotIndex(mouseX);
                             if(mouse_item == 0 || player.inv[currentX] == 0){
                                 let temp = mouse_item;
                                 mouse_item = player.inv[currentX]
@@ -507,10 +657,12 @@ function mouseReleased() {
                         }
                     }
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
-                        if(mouseY >= 189 && mouseY <= 457){
-                            if(mouseX >= 184 && mouseX <= 552){
-                                let currentX = min(player.talking.inv[0].length-1, round((mouseX-229)/90))
-                                let currentY = min(player.talking.inv.length-1, round((mouseY-234)/90))
+                        const chest = UI_BOUNDS.chestGrid;
+                        if(mouseY >= chest.top && mouseY <= chest.bottom){
+                            if(mouseX >= chest.left && mouseX <= chest.right){
+                                const pos = chest.getGridPos(mouseX, mouseY, player.talking.inv);
+                                let currentX = pos.x;
+                                let currentY = pos.y;
                                 if(mouse_item == 0 || player.talking.inv[currentY][currentX] == 0){
                                     if(mouse_item.class == 'Backpack' && player.talking.class == 'Backpack'){
                                         return;
@@ -535,9 +687,10 @@ function mouseReleased() {
                         }
                     }
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
-                        if(mouseY >= 78 && mouseY <= (ceil(player.talking.instructions.length/6)*86)+78){
-                            if(mouseX >= 152 && mouseX <= 682){
-                                let currentX = (min(player.talking.instructions.length/6, round((mouseY - 78-(86/2))/86))*6) + min(5, round((mouseX - 152-45)/90))
+                        const instructions = UI_BOUNDS.robotInstructions;
+                        if(mouseY >= instructions.top && mouseY <= instructions.getBottom(player.talking.instructions.length)){
+                            if(mouseX >= instructions.left && mouseX <= instructions.right){
+                                let currentX = instructions.getIndex(mouseX, mouseY, player.talking.instructions.length);
                                 if(mouse_item == 0){
                                     mouse_item = player.talking.instructions[currentX];
                                     player.talking.instructions[currentX] = 0;
@@ -560,9 +713,10 @@ function mouseReleased() {
                                 }
                             }
                         }
-                        if(mouseY >= 435 && mouseY <= 500){
-                            if(mouseX >= 70 && mouseX <= 678){
-                                let currentX = min(player.talking.inv.length-1, round((mouseX-70-45)/90))
+                        const storage = UI_BOUNDS.robotStorage;
+                        if(mouseY >= storage.top && mouseY <= storage.bottom){
+                            if(mouseX >= storage.left && mouseX <= storage.right){
+                                let currentX = storage.getSlotIndex(mouseX, player.talking.inv);
                                 if(mouse_item == 0 || player.talking.inv[currentX] == 0){
                                     let temp = mouse_item;
                                     mouse_item = player.talking.inv[currentX]
@@ -584,9 +738,10 @@ function mouseReleased() {
             }
         }
         if(mouseButton == RIGHT){
-            if(mouseY >= canvasHeight - 64 && mouseY <= canvasHeight){
-                if(mouseX >= 113 && mouseX <= 622){
-                    let currentX = min(player.inv.length-1, round((mouseX-113-32)/64))
+            const inv = UI_BOUNDS.inventoryBar;
+            if(mouseY >= inv.top && mouseY <= inv.bottom){
+                if(mouseX >= inv.left && mouseX <= inv.right){
+                    let currentX = inv.getSlotIndex(mouseX);
                     if(mouse_item == 0 && player.inv[currentX] != 0){
                         mouse_item = new_item_from_num(item_name_to_num(player.inv[currentX].name), ceil(player.inv[currentX].amount/2));
                         player.inv[currentX].amount -= ceil(player.inv[currentX].amount/2)
@@ -604,10 +759,12 @@ function mouseReleased() {
                 }
             }
             if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
-                if(mouseY >= 189 && mouseY <= 457){
-                    if(mouseX >= 184 && mouseX <= 552){
-                        let currentX = min(player.talking.inv[0].length-1, round((mouseX-229)/90))
-                        let currentY = min(player.talking.inv.length-1, round((mouseY-234)/90))
+                const chest = UI_BOUNDS.chestGrid;
+                if(mouseY >= chest.top && mouseY <= chest.bottom){
+                    if(mouseX >= chest.left && mouseX <= chest.right){
+                        const pos = chest.getGridPos(mouseX, mouseY, player.talking.inv);
+                        let currentX = pos.x;
+                        let currentY = pos.y;
                         if(mouse_item == 0 && player.talking.inv[currentY][currentX] != 0){
                             mouse_item = new_item_from_num(item_name_to_num(player.talking.inv[currentY][currentX].name), ceil(player.talking.inv[currentY][currentX].amount/2));
                             player.talking.inv[currentY][currentX].amount -= ceil(player.talking.inv[currentY][currentX].amount/2)
@@ -626,9 +783,10 @@ function mouseReleased() {
                 }
             }
             if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
-                if(mouseY >= 435 && mouseY <= 500){
-                    if(mouseX >= 70 && mouseX <= 678){
-                        let currentX = min(player.talking.inv.length-1, round((mouseX-70-45)/90))
+                const storage = UI_BOUNDS.robotStorage;
+                if(mouseY >= storage.top && mouseY <= storage.bottom){
+                    if(mouseX >= storage.left && mouseX <= storage.right){
+                        let currentX = storage.getSlotIndex(mouseX, player.talking.inv);
                         if(mouse_item == 0 && player.talking.inv[currentX] != 0){
                             mouse_item = new_item_from_num(item_name_to_num(player.talking.inv[currentX].name), ceil(player.talking.inv[currentX].amount/2));
                             player.talking.inv[currentX].amount -= ceil(player.talking.inv[currentX].amount/2)

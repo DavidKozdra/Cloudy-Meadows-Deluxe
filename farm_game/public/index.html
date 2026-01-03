@@ -1,29 +1,18 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cloudy Meadows </title>
+    <title>Cloudy Meadows: Deluxe Edition</title>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/p5.min.js"></script>
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/addons/p5.sound.min.js"></script>
 
     <link rel="icon" type="image/x-icon" href="images/ui/Title_Screen.gif">
     <script type="text/javascript" src="localDataStorage-3.0.0.min.js"></script>
-    <script type="text/javascript" src="miscfunctions.js"></script>
-    <script type="text/javascript" src="preload.js"></script>
-    <script type="text/javascript" src="sketch.js"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-        body {
-            padding: 10px;
-            background: #000000;
-        }
-    </style>
-    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Class definitions (must load before usage in preload.js) -->
     <script src="classes/Sound.js"></script>
     <script src="classes/Cloud.js"></script>
     <script src="classes/item.js"></script>
@@ -44,9 +33,60 @@
     <script src="classes/tile_classes/chest.js"></script>
     <script src="classes/tile_classes/robot.js"></script>
     <script src="classes/tile_classes/air_ballon.js"></script>
+    
+    <!-- Configuration files -->
+    <script type="text/javascript" src="config/constants.js"></script>
+    <script type="text/javascript" src="config/items.js"></script>
+    <script type="text/javascript" src="config/tiles.js"></script>
+    
+    <!-- Main game files -->
+    <script type="text/javascript" src="miscfunctions.js"></script>
+    <script type="text/javascript" src="preload.js"></script>
+    <script type="text/javascript" src="sketch.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            padding: 0;
+            margin: 0;
+            background: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+
+        
+        #game-container {
+            position: relative;
+            /* transform: scale(1.5); - Removed: causes mouse coordinate mismatch */
+            /* transform-origin: center center; */
+        }
+        
+    
+    </style>
+    <link rel="stylesheet" href="styles.css">
 
  
 </head>
   <body>
+    <div id="game-container"></div>
+    <div id="travelOverlay">
+      <div class="travel-cloud travel-cloud-1"></div>
+      <div class="travel-cloud travel-cloud-2"></div>
+      <div class="travel-cloud travel-cloud-3"></div>
+      <div class="travel-cloud travel-cloud-4"></div>
+      <div class="travel-cloud travel-cloud-5"></div>
+      <div class="travel-cloud travel-cloud-6"></div>
+      <div class="travel-cloud travel-cloud-7"></div>
+      <div class="travel-cloud travel-cloud-8"></div>
+      <div class="travel-cloud travel-cloud-9"></div>
+      <img src="images/tiles/air_ship.gif" alt="Airship" class="travel-airship">
+      <div class="travel-destination">Traveling to...</div>
+    </div>
+    <div id="menuOverlay"></div>
   </body>
 </html>

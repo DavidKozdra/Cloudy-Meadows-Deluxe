@@ -13,6 +13,52 @@ class NPC extends GridMoveEntity {
         this.current_dialouge = 0;
     }
 
+    // Check if this NPC has a quest the player doesn't have
+    hasQuestForPlayer() {
+        if(!this.dialouges) return false;
+        
+        // Check ALL dialogues, not just the current one
+        for(let dialogue of this.dialouges) {
+            if(!dialogue.replies) continue;
+            
+            // Check if any reply has a quest
+            for(let reply of dialogue.replies) {
+                if(reply.quest && reply.quest != -1) {
+                    // Check if player already has this quest
+                    const questName = reply.quest.og_name || reply.quest.name;
+                    let hasQuest = false;
+                    for(let playerQuest of player.quests) {
+                        if(playerQuest.og_name === questName || playerQuest.name === questName) {
+                            hasQuest = true;
+                            break;
+                        }
+                    }
+                    if(!hasQuest) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Check if this NPC has a gift (items in dialogue)
+    hasGiftForPlayer() {
+        if(!this.dialouges) return false;
+        
+        // Check ALL dialogues, not just the current one
+        for(let dialogue of this.dialouges) {
+            // Check if dialogue has a gift AND the NPC still has items
+            if(dialogue.hand_num != -1 && dialogue.hand_num != undefined) {
+                // Make sure the inventory slot exists and has items
+                if(this.inv[dialogue.hand_num] && 
+                   this.inv[dialogue.hand_num] != 0 && 
+                   this.inv[dialogue.hand_num].amount > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     dialouge_render() {
         this.dialouges[this.current_dialouge].render(this.name, this.inv);
     }

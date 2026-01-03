@@ -168,7 +168,7 @@ class Player extends MoveableEntity {
                         this.ticks = 0;
                     }
                     this.a += 5;
-                    text('Respawn in 9', canvasWidth/2, (3*canvasHeight)/4);
+                    text('Respawn in 10', canvasWidth/2, (3*canvasHeight)/4);
                 }
                 if(this.transphase == 1){
                     if(this.ticks >= 600){
@@ -183,6 +183,7 @@ class Player extends MoveableEntity {
                         this.deaths += 1;
                         this.transphase = 2;
                         this.ticks = 0;
+                        saveAll(); // Auto-save after respawn
                         this.deathConsequence(dificulty)
                     }
                     text('Respawn in ' + floor((600-this.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
@@ -454,6 +455,13 @@ class Player extends MoveableEntity {
                 temp_move_bool = this.looking(currentLevel_x, currentLevel_y).move_bool;
                 this.talking = this.looking(currentLevel_x, currentLevel_y);
                 this.oldlooking_name = this.looking(currentLevel_x, currentLevel_y).name;
+                
+                // Dispatch NPC interaction event for quest system
+                if(this.talking.class == 'NPC' || this.talking.class == 'Shop'){
+                    window.dispatchEvent(new CustomEvent('npcInteraction', {
+                        detail: { npcName: this.talking.name }
+                    }));
+                }
                 return;
             }
             else if(this.looking(currentLevel_x, currentLevel_y).class == "PayToMoveEntity"){
@@ -486,10 +494,9 @@ class Player extends MoveableEntity {
                 if(keyIsDown(special_key)){
                     current_amount = this.inv[this.hand].amount;
                 }
-                player.coins += this.inv[this.hand].price * current_amount;
+                const moneyGained = this.inv[this.hand].price * current_amount;
+                addMoney(moneyGained);
                 moneySound.play();
-                this.money_anim = 255;
-                this.money_anim_amount += this.inv[this.hand].price*current_amount;
                 this.inv[this.hand].amount -= current_amount;
                 if(this.quests != undefined && this.quests.length > 0){
                 if(this.current_quest != undefined && this.quests[this.current_quest].goals[this.quests[this.current_quest].current_Goal] != undefined){
@@ -632,6 +639,97 @@ var special_key = 16;
 var quest_key = 80;
 var control_set = 0;
 var lastKey = '!';
+var keymapping = false;  // Global flag for when we're capturing a key for remapping
+var currentMappingIndex = 0;  // Track which control we're currently mapping
+
+// Add keydown listener for capturing keys during remapping
+document.addEventListener('keydown', (e) => {
+
+    if (keymapping) {
+        e.preventDefault();
+        console.log('✓ Key pressed during mapping:', e.key, 'keyCode:', e.keyCode, 'controlIndex:', currentMappingIndex);
+        
+        // Dispatch custom event with the captured key
+        window.dispatchEvent(new CustomEvent('keymapCapture', {
+            detail: {
+                controlIndex: currentMappingIndex,
+                key: e.key,
+                keyCode: e.keyCode
+            }
+        }));
+    }
+});
+
+// Listen for key mapping events
+window.addEventListener('keymapCapture', (e) => {
+    console.log('✓ keymapCapture event received:', e.detail);
+    const { controlIndex, key, keyCode } = e.detail;
+    console.log('Processing control index:', controlIndex, 'key:', key, 'keyCode:', keyCode);
+    
+    switch(controlIndex) {
+        case 1:
+            interact_button = keyCode;
+            Controls_Interact_button_key = key;
+            console.log('Set Interact to:', key);
+            break;
+        case 2:
+            eat_button = keyCode;
+            Controls_Eat_button_key = key;
+            console.log('Set Eat to:', key);
+            break;
+        case 3:
+            move_up_button = keyCode;
+            Controls_Up_button_key = key;
+            console.log('Set Up to:', key);
+            break;
+        case 4:
+            move_down_button = keyCode;
+            Controls_Down_button_key = key;
+            console.log('Set Down to:', key);
+            break;
+        case 5:
+            move_left_button = keyCode;
+            Controls_Left_button_key = key;
+            console.log('Set Left to:', key);
+            break;
+        case 6:
+            move_right_button = keyCode;
+            Controls_Right_button_key = key;
+            console.log('Set Right to:', key);
+            break;
+        case 7:
+            special_key = keyCode;
+            Controls_Special_button_key = key;
+            console.log('Set Special to:', key);
+            break;
+        case 8:
+            quest_key = keyCode;
+            Controls_Quest_button_key = key;
+            console.log('Set Quest to:', key);
+            break;
+        default:
+            console.warn('Unknown control index:', controlIndex);
+    }
+    
+    keymapping = false;
+    control_set = 0;
+    console.log('keymapping reset to false, saving options...');
+    saveOptions();
+    
+    // Refresh the controls display
+    const pauseControlsContainer = document.getElementById('pause-controls-container');
+    if (pauseControlsContainer && pauseControlsContainer.style.display !== 'none') {
+        console.log('Refreshing pause controls');
+        renderControlButtons(pauseControlsContainer);
+    }
+    const titleControlsContainer = document.getElementById('title-controls-container');
+    if (titleControlsContainer) {
+        console.log('Refreshing title controls');
+        titleControlsContainer.innerHTML = ''; // Clear so it re-renders
+        showTitleOptions();
+    }
+});
+
 function takeInput() {
     if (title_screen) {
         if(control_set == 1 && key != lastKey){
@@ -865,8 +963,11 @@ function takeInput() {
             if (millis() - player.lastinteractMili > 200) {
                 if (player.talking.class == 'NPC'){
                     if(player.talking.dialouges[player.talking.current_dialouge].replies[current_reply].quest != -1){
-                        player.quests.push(player.talking.dialouges[player.talking.current_dialouge].replies[current_reply].quest);
+                        let newQuest = player.talking.dialouges[player.talking.current_dialouge].replies[current_reply].quest;
+                        player.quests.push(newQuest);
                         player.current_quest = player.quests.length - 1;
+                        // Check if any goals were already completed in the past
+                        newQuest.checkPastProgress();
                         player.talking.dialouges[player.talking.current_dialouge].new_phrase = [];
                         let phrase = "You already helped me with this.";
                         for(let i = 0; i < phrase.length; i++){
@@ -925,41 +1026,48 @@ function takeInput() {
                     }
                 }
                 else if (player.talking.class == 'AirBallon'){
-                    if(current_reply == 0){
-                        player.touching.collide = false;
-                        player.pos.x = tileSize*17;
-                        player.pos.y = tileSize*6;
-                        currentLevel_x = 2;
-                        currentLevel_y = 0;
-                        player.tileTouching(currentLevel_x, currentLevel_y).collide = true;
-                        levels[currentLevel_y][currentLevel_x].level_name_popup = true;
-                        player.oldlooking_name = player.talking.name;
-                        player.talking = 0;
-                        current_reply = 0;
+                    const selectedPlace = player.talking.availablePlaces[current_reply];
+                    if(selectedPlace == 'Park'){
+                        triggerTravelTransition(() => {
+                            player.touching.collide = false;
+                            player.pos.x = tileSize*17;
+                            player.pos.y = tileSize*6;
+                            currentLevel_x = 2;
+                            currentLevel_y = 0;
+                            player.tileTouching(currentLevel_x, currentLevel_y).collide = true;
+                            levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+                            player.oldlooking_name = player.talking.name;
+                            player.talking = 0;
+                            current_reply = 0;
+                        }, 'Park');
                     }
-                    else if (current_reply == 1){
-                        player.touching.collide = false;
-                        player.pos.x = tileSize*17;
-                        player.pos.y = tileSize*6;
-                        currentLevel_x = 3;
-                        currentLevel_y = 3;
-                        player.tileTouching(currentLevel_x, currentLevel_y).collide = true;
-                        levels[currentLevel_y][currentLevel_x].level_name_popup = true;
-                        player.oldlooking_name = player.talking.name;
-                        player.talking = 0;
-                        current_reply = 0;
+                    else if (selectedPlace == 'Swamp'){
+                        triggerTravelTransition(() => {
+                            player.touching.collide = false;
+                            player.pos.x = tileSize*17;
+                            player.pos.y = tileSize*6;
+                            currentLevel_x = 3;
+                            currentLevel_y = 3;
+                            player.tileTouching(currentLevel_x, currentLevel_y).collide = true;
+                            levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+                            player.oldlooking_name = player.talking.name;
+                            player.talking = 0;
+                            current_reply = 0;
+                        }, 'Swamp');
                     }
-                    else if (current_reply == 2){
-                        player.touching.collide = false;
-                        player.pos.x = tileSize*2;
-                        player.pos.y = tileSize*7;
-                        currentLevel_x = 3;
-                        currentLevel_y = 0;
-                        player.tileTouching(currentLevel_x, currentLevel_y).collide = true;
-                        levels[currentLevel_y][currentLevel_x].level_name_popup = true;
-                        player.oldlooking_name = player.talking.name;
-                        player.talking = 0;
-                        current_reply = 0;
+                    else if (selectedPlace == 'Cloudy Meadows'){
+                        triggerTravelTransition(() => {
+                            player.touching.collide = false;
+                            player.pos.x = tileSize*2;
+                            player.pos.y = tileSize*7;
+                            currentLevel_x = 3;
+                            currentLevel_y = 0;
+                            player.tileTouching(currentLevel_x, currentLevel_y).collide = true;
+                            levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+                            player.oldlooking_name = player.talking.name;
+                            player.talking = 0;
+                            current_reply = 0;
+                        }, 'Cloudy Meadows');
                     }
                 }
                 lastMili = millis();
@@ -1013,6 +1121,13 @@ function takeInput() {
         if (keyIsDown(quest_key)) {
             if (millis() - lastMili > 100) {
                 player.show_quests = !player.show_quests;
+                lastMili = millis();
+            }
+        }
+        // Debug: Toggle FPS display with F1 key (key code 112)
+        if (keyIsDown(112)) {
+            if (millis() - lastMili > 200) {
+                showFpsDebug = !showFpsDebug;
                 lastMili = millis();
             }
         }

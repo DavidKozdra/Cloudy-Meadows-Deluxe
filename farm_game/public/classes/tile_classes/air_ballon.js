@@ -29,7 +29,15 @@ class AirBallon extends Entity {
         text(String.fromCharCode(eat_button) + ' to leave', ((3*canvasWidth) / 4)- 10, canvasHeight - 140);
         textAlign(CENTER, TOP);
         text('Where to?', (canvasWidth / 2), canvasHeight - 140);
-        for(let i = 0; i < this.places.length; i++){
+        
+        // Filter out current location from the list
+        const currentLocationName = levels[currentLevel_y][currentLevel_x].name;
+        this.availablePlaces = this.places.filter(place => {
+            // Check if the place name is in the current level name
+            return !currentLocationName.includes(place);
+        });
+        
+        for(let i = 0; i < this.availablePlaces.length; i++){
             fill(149, 108, 65)
             rectMode(CENTER)
             rect((canvasWidth / 2), (canvasHeight - 110) + (i * 32) + 8 + 8, this.places[2].length*18, 25)
@@ -39,7 +47,7 @@ class AirBallon extends Entity {
             else{
                 fill(255);
             }
-            text(this.places[i], (canvasWidth / 2), (canvasHeight - 110) + (i * 32) + 8);
+            text(this.availablePlaces[i], (canvasWidth / 2), (canvasHeight - 110) + (i * 32) + 8);
         }
         pop()
     }
