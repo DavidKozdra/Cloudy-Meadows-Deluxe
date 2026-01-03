@@ -1039,7 +1039,7 @@ function takeInput() {
                             player.oldlooking_name = player.talking.name;
                             player.talking = 0;
                             current_reply = 0;
-                        });
+                        }, 'Park');
                     }
                     else if (selectedPlace == 'Swamp'){
                         triggerTravelTransition(() => {
@@ -1053,7 +1053,7 @@ function takeInput() {
                             player.oldlooking_name = player.talking.name;
                             player.talking = 0;
                             current_reply = 0;
-                        });
+                        }, 'Swamp');
                     }
                     else if (selectedPlace == 'Cloudy Meadows'){
                         triggerTravelTransition(() => {
@@ -1067,7 +1067,7 @@ function takeInput() {
                             player.oldlooking_name = player.talking.name;
                             player.talking = 0;
                             current_reply = 0;
-                        });
+                        }, 'Cloudy Meadows');
                     }
                 }
                 lastMili = millis();

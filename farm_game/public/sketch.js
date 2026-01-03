@@ -131,8 +131,14 @@ const UI_BOUNDS = {
 };
 
 // Fast travel CSS animation trigger
-function triggerTravelTransition(callback) {
+function triggerTravelTransition(callback, destination = 'Unknown') {
     const overlay = document.getElementById('travelOverlay');
+    const destinationText = overlay.querySelector('.travel-destination');
+    
+    if (destinationText) {
+        destinationText.textContent = `Traveling to ${destination}`;
+    }
+    
     overlay.classList.add('active');
     
     // Call teleport callback at peak fade (1 second in)
