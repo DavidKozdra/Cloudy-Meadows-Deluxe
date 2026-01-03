@@ -18,6 +18,38 @@ body {
     font-family: pixelFont, monospace;
 }
 
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgb(187, 132, 75);
+    border: 2px solid rgb(149, 108, 65);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgb(139, 98, 55);
+    border-radius: 4px;
+    border: 2px solid rgb(187, 132, 75);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgb(100, 70, 40);
+}
+
+::-webkit-scrollbar-corner {
+    background: rgb(187, 132, 75);
+}
+
+/* Firefox scrollbar styles */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(139, 98, 55) rgb(187, 132, 75);
+}
+
 .but{
     background-color: black;
 }
@@ -149,7 +181,7 @@ button {
     border-radius: 4px;
     padding: 15px;
     min-width: 40dvw;
-    max-width: 45dvh;
+    max-width: 45dvw;
     min-height: 40dvh;
     display: flex;
     flex-direction: column;
@@ -208,6 +240,7 @@ button {
     flex-direction: column;
     gap: 10px;
     max-height: 40dvh;
+    min-height: 30dvh;
     overflow-y: auto;
 }
 

@@ -513,9 +513,36 @@ class Quest {
         
         let hasRewards = false;
         
+        // Special handling for main quest "Save Cloudy Meadows"
+        if (this.og_name === "Save Cloudy Meadows") {
+            hasRewards = true;
+            const mainReward = document.createElement('div');
+            mainReward.style.display = 'flex';
+            mainReward.style.alignItems = 'center';
+            mainReward.style.gap = '8px';
+            mainReward.style.padding = '6px';
+            mainReward.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
+            mainReward.style.borderRadius = '4px';
+            
+            const cloudImg = document.createElement('img');
+            cloudImg.src = 'images/foreground/cloud_tile2.png';
+            cloudImg.style.width = '32px';
+            cloudImg.style.height = '32px';
+            cloudImg.style.imageRendering = 'pixelated';
+            mainReward.appendChild(cloudImg);
+            
+            const rewardText = document.createElement('span');
+            rewardText.textContent = 'Freedom from Capitalism';
+            rewardText.style.fontSize = '13px';
+            rewardText.style.color = 'rgb(100, 70, 40)';
+            rewardText.style.fontWeight = 'bold';
+            mainReward.appendChild(rewardText);
+            
+            rewardsContainer.appendChild(mainReward);
+        }
         // Add item reward with image
         // Check if reward_item is an object with name property (Item/Tool/Seed/etc object)
-        if (this.reward_item && typeof this.reward_item === 'object' && this.reward_item.name) {
+        else if (this.reward_item && typeof this.reward_item === 'object' && this.reward_item.name) {
             hasRewards = true;
             const itemReward = document.createElement('div');
             itemReward.style.display = 'flex';
