@@ -28,7 +28,100 @@ function decompressData(compressed) {
     }
 }
 
-// Optimized level save - only save changed/non-default tiles
+// Optimized inventory compression - only save non-empty slots
+function optimizeInventory(inventory) {
+    if (!inventory) return [];
+    
+    const optimized = [];
+    
+    // Handle both 1D and 2D inventories
+    if (Array.isArray(inventory[0])) {
+        // 2D inventory (chests, backpacks)
+        for (let i = 0; i < inventory.length; i++) {
+            for (let j = 0; j < inventory[i].length; j++) {
+                const item = inventory[i][j];
+                if (item != 0 && item != undefined) {
+                    const itemData = {
+                        pos: [i, j],
+                        name: item.name,
+                        amount: item.amount
+                    };
+                    
+                    // Only save optional properties if they exist
+                    if (item.price !== undefined && item.price !== 0) {
+                        itemData.price = item.price;
+                    }
+                    if (item.inv !== undefined) {
+                        itemData.inv = optimizeInventory(item.inv);
+                    }
+                    
+                    optimized.push(itemData);
+                }
+            }
+        }
+    } else {
+        // 1D inventory (player hotbar)
+        for (let i = 0; i < inventory.length; i++) {
+            const item = inventory[i];
+            if (item != 0 && item != undefined) {
+                const itemData = {
+                    pos: i,
+                    name: item.name,
+                    amount: item.amount
+                };
+                
+                // Only save optional properties if they exist
+                if (item.price !== undefined && item.price !== 0) {
+                    itemData.price = item.price;
+                }
+                if (item.inv !== undefined) {
+                    itemData.inv = optimizeInventory(item.inv);
+                }
+                
+                optimized.push(itemData);
+            }
+        }
+    }
+    
+    return optimized;
+}
+
+// Reconstruct inventory from optimized format
+function reconstructInventory(optimizedInv, templateInv) {
+    if (!optimizedInv || optimizedInv.length === 0) {
+        return JSON.parse(JSON.stringify(templateInv));
+    }
+    
+    const inventory = JSON.parse(JSON.stringify(templateInv));
+    
+    optimizedInv.forEach(itemData => {
+        try {
+            const reconstructed = new_item_from_num(item_name_to_num(itemData.name), itemData.amount);
+            
+            if (itemData.price !== undefined) {
+                reconstructed.price = itemData.price;
+            }
+            
+            if (itemData.inv !== undefined && reconstructed.inv !== undefined) {
+                reconstructed.inv = reconstructInventory(itemData.inv, reconstructed.inv);
+            }
+            
+            if (Array.isArray(itemData.pos)) {
+                // 2D position
+                inventory[itemData.pos[0]][itemData.pos[1]] = reconstructed;
+            } else {
+                // 1D position
+                inventory[itemData.pos] = reconstructed;
+            }
+        } catch (e) {
+            console.error('Error reconstructing inventory item:', itemData, e);
+        }
+    });
+    
+    return inventory;
+}
+
+// Optimized level save - only save changed/non-default tiles with compressed inventories
 function optimizeLevelForSave(level) {
     const optimized = {
         name: level.name,
@@ -44,12 +137,25 @@ function optimizeLevelForSave(level) {
                     (tile.inv && tile.inv.some(item => item != 0)) ||
                     tile.growTimer > 0 ||
                     tile.watermet !== undefined) {
+                    
                     tile.getReadyForSave();
-                    optimized.changedTiles.push({
+                    
+                    // Create optimized tile copy
+                    const tileData = {
                         x: x,
                         y: y,
                         tile: tile
-                    });
+                    };
+                    
+                    // Compress inventory if tile has one
+                    if (tile.inv && tile.inv.some(item => item != 0)) {
+                        tileData.optimizedInv = optimizeInventory(tile.inv);
+                        // Remove full inventory from tile to save space
+                        tileData.tile = Object.assign({}, tile);
+                        delete tileData.tile.inv;
+                    }
+                    
+                    optimized.changedTiles.push(tileData);
                 }
             }
         }
@@ -740,6 +846,13 @@ function loadWorld(slot) {
         if (worldData.playerCompressed) {
             const playerData = decompressData(worldData.playerCompressed);
             if (playerData) {
+                // Reconstruct inventory if using optimized format (array of items instead of objects)
+                if (playerData.inv && Array.isArray(playerData.inv) && playerData.inv.length > 0) {
+                    // Check if it's optimized format (first element has 'pos' property)
+                    if (playerData.inv[0] && playerData.inv[0].pos !== undefined) {
+                        playerData.inv = reconstructInventory(playerData.inv, player.inv);
+                    }
+                }
                 player.load(playerData);
             }
         } else if (worldData.player) {
@@ -811,10 +924,20 @@ function loadWorldLevels(slot) {
                                 // Reconstruct the full level from changed tiles
                                 const reconstructedLevel = JSON.parse(JSON.stringify(levels[i][j]));
                                 
-                                // Apply changed tiles
+                                // Apply changed tiles with inventory reconstruction
                                 optimizedLevel.changedTiles.forEach(tileData => {
                                     if (reconstructedLevel.map[tileData.y] && reconstructedLevel.map[tileData.y][tileData.x]) {
-                                        reconstructedLevel.map[tileData.y][tileData.x] = tileData.tile;
+                                        const tile = tileData.tile;
+                                        
+                                        // Reconstruct inventory if compressed version exists
+                                        if (tileData.optimizedInv !== undefined) {
+                                            const originalTile = reconstructedLevel.map[tileData.y][tileData.x];
+                                            if (originalTile && originalTile.inv) {
+                                                tile.inv = reconstructInventory(tileData.optimizedInv, originalTile.inv);
+                                            }
+                                        }
+                                        
+                                        reconstructedLevel.map[tileData.y][tileData.x] = tile;
                                     }
                                 });
                                 
@@ -1742,8 +1865,10 @@ function saveAll(){
             // First, clean up old data to make space
             cleanupOldSaveData();
             
-            // Compress player data
-            const playerData = compressData(player);
+            // Compress player data - save full player but optimize inventory
+            const playerForSave = Object.assign({}, player);
+            playerForSave.inv = optimizeInventory(player.inv);
+            const playerData = compressData(playerForSave);
             
             const worldData = {
                 playerName: playerName,
