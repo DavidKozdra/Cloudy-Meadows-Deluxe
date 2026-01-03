@@ -40,25 +40,49 @@ class Quest {
             }
             else{
                 if(this.goals[i].class == 'TalkingGoal'){
-                    this.goals[i] = new TalkingGoal(this.goals[i].npc_name, this.goals[i].item_name, this.goals[i].amount)
+                    const savedGoal = this.goals[i];
+                    this.goals[i] = new TalkingGoal(savedGoal.npc_name, savedGoal.item_name, savedGoal.amount);
+                    if(savedGoal.done !== undefined) {
+                        this.goals[i].done = savedGoal.done;
+                    }
                 }
                 else if (this.goals[i].class == 'FundingGoal'){
-                    this.goals[i] = new FundingGoal(this.goals[i].amount)
+                    const savedGoal = this.goals[i];
+                    this.goals[i] = new FundingGoal(savedGoal.amount);
+                    if(savedGoal.done !== undefined) {
+                        this.goals[i].done = savedGoal.done;
+                    }
                 }
                 else if (this.goals[i].class == 'LocationGoal'){
-                    this.goals[i] = new LocationGoal(this.goals[i].level_name)
+                    const savedGoal = this.goals[i];
+                    this.goals[i] = new LocationGoal(savedGoal.level_name);
+                    if(savedGoal.done !== undefined) {
+                        this.goals[i].done = savedGoal.done;
+                    }
                 }
                 else if (this.goals[i].class == 'SellGoal'){
-                    this.goals[i] = new SellGoal(this.goals[i].item_name, this.goals[i].amount)
+                    const savedGoal = this.goals[i];
+                    this.goals[i] = new SellGoal(savedGoal.item_name, savedGoal.amount);
+                    if(savedGoal.done !== undefined) {
+                        this.goals[i].done = savedGoal.done;
+                    }
                 }
                 else if (this.goals[i].class == 'HaveGoal'){
-                    this.goals[i] = new HaveGoal(this.goals[i].item_name, this.goals[i].amount)
+                    const savedGoal = this.goals[i];
+                    this.goals[i] = new HaveGoal(savedGoal.item_name, savedGoal.amount);
+                    if(savedGoal.done !== undefined) {
+                        this.goals[i].done = savedGoal.done;
+                    }
                 }
                 else if (this.goals[i].class == 'OneTileCheck'){
-                    if(this.goals[i].old_tile_name == undefined){
-                        this.goals[i].old_tile_name = "Rock"
+                    const savedGoal = this.goals[i];
+                    if(savedGoal.old_tile_name == undefined){
+                        savedGoal.old_tile_name = "Rock"
                     }
-                    this.goals[i] = new OneTileCheck(this.goals[i].tile_name, this.goals[i].x, this.goals[i].y, this.goals[i].level_name,  this.goals[i].old_tile_name) 
+                    this.goals[i] = new OneTileCheck(savedGoal.tile_name, savedGoal.x, savedGoal.y, savedGoal.level_name, savedGoal.old_tile_name);
+                    if(savedGoal.done !== undefined) {
+                        this.goals[i].done = savedGoal.done;
+                    }
                 }
             }
         }
@@ -77,7 +101,18 @@ class Quest {
             this.reward_coins = obj.reward_coins;
         }
     }
+
+    render(container){
+        // Called by miscfunctions to render quest UI
+        this.RenderQuestList(container);
+    }
+
     renderCurrentGoal(x, y, strokeC, width){
+        // Advance to next incomplete goal if current is done
+        while(this.current_Goal < this.goals.length && this.goals[this.current_Goal].done){
+            this.current_Goal += 1;
+        }
+        
         // Display current goal as a DOM popup inside the container
         if(this.goals[this.current_Goal] != undefined){
             const goalName = this.goals[this.current_Goal].name;
@@ -226,11 +261,12 @@ class Quest {
             }
         } else {
             // Show active status
-            statusDiv.textContent = `${this.current_Goal}/${this.goals.length} goals`;
+            statusDiv.textContent = `${completedGoals}/${this.goals.length} goals`;
             statusDiv.style.color = 'rgb(255, 255, 255)';
         }
         
         titleDiv.appendChild(statusDiv);
+        // Details button is managed by miscfunctions.js in showQuestsPanel()
     }
 
 
@@ -451,12 +487,45 @@ class Quest {
         
         const npcMap = {
             'rick': 'cowboy_rick',
+            'cowboyrick': 'cowboy_rick',
             'deb': 'deb',
             'mira': 'mira',
-            'oldmanj': 'old_man_j',
-            'old man j': 'old_man_j',
             'mario': 'mario',
-            'jake': 'Jake'
+            'jake': 'Jake',
+            'jake player': 'Jake',
+            
+            // Old Man J - handle ALL variations (FIXED to use actual file)
+            'oldmanj': 'old_man_jay1',
+            'old man j': 'old_man_jay1',
+            'oldmanjay': 'old_man_jay1',
+            'old man jay': 'old_man_jay1',
+            
+            // Other available NPCs from image files
+            'blindpete': 'blind_pete',
+            'blind pete': 'blind_pete',
+            'brandon': 'brandon',
+            'brent': 'brent',
+            'chef': 'chef',
+            'christian': 'christian',
+            'garry': 'garry',
+            'james': 'james',
+            'kenny': 'kenny',
+            'liam': 'liam',
+            'mrc': 'mrC',
+            'mr c': 'mrC',
+            'mister c': 'mrC',
+            'robb': 'Rob_Botus',
+            'robbot': 'Rob_Botus',
+            'rob botus': 'Rob_Botus',
+            'supertina': 'supertina',
+            'tina': 'supertina',
+            'vinny': 'vinny',
+            'meb': 'meb',
+            
+            // Animals
+            'bunny': 'bunny_front',
+            'frog': 'frog_front',
+            'dog': 'dog_left'
         };
         
         // Normalize the name
@@ -701,6 +770,67 @@ class Quest {
             }
         }
     }
+    
+    checkGoalCompletions(){
+        // Lightweight check for goal completions that fires events
+        if(this.failed) return;
+        
+        let anyCompleted = false;
+        for(let i = 0; i < this.goals.length; i++){
+            if(!this.goals[i].done){
+                // Call update to check completion
+                this.goals[i].update();
+                
+                // If goal just completed, fire event
+                if(this.goals[i].done){
+                    anyCompleted = true;
+                    // Dispatch goal completion event
+                    window.dispatchEvent(new CustomEvent('questGoalCompleted', {
+                        detail: { quest: this, goalIndex: i }
+                    }));
+                }
+            }
+        }
+        
+        // Check if all goals are complete
+        if(anyCompleted){
+            let allComplete = true;
+            for(let i = 0; i < this.goals.length; i++){
+                if(!this.goals[i].done){
+                    allComplete = false;
+                    break;
+                }
+            }
+            if(allComplete && !this.done){
+                this.completeQuest();
+            }
+        }
+    }
+    
+    markGoalComplete(goalIndex){
+        // Called by goals when they complete to trigger UI update
+        if (this.goals[goalIndex] && !this.goals[goalIndex].done) {
+            this.goals[goalIndex].done = true;
+            
+            // Dispatch goal completion event
+            window.dispatchEvent(new CustomEvent('questGoalCompleted', {
+                detail: { quest: this, goalIndex: goalIndex }
+            }));
+            
+            // Check if all goals complete
+            let allComplete = true;
+            for (let i = 0; i < this.goals.length; i++) {
+                if (!this.goals[i].done) {
+                    allComplete = false;
+                    break;
+                }
+            }
+            
+            if (allComplete && !this.done) {
+                this.completeQuest();
+            }
+        }
+    }
 
 }
 
@@ -747,15 +877,16 @@ class Goal {
 class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(item_name) to _(npc_name)
 
     constructor(npc_name, item_name, amount){
-        if(item_name != 0){
+        // Handle undefined or 0 as "just talk" goal
+        if(item_name && item_name != 0){
             super('Give ' + amount + ' ' + item_name + ' to ' + npc_name);
         }
         else{
             super('Talk to ' + npc_name);
         }
         this.npc_name = npc_name;
-        this.item_name = item_name;
-        this.amount = amount;
+        this.item_name = item_name || 0;  // Default to 0 if undefined
+        this.amount = amount || 0;  // Default to 0 if undefined
         this.class = 'TalkingGoal';
         
         // Listen for NPC interaction events

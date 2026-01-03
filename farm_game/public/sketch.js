@@ -243,10 +243,10 @@ function draw() {
         }
         
         if (!paused){
-            // Update all active quests (event-based system)
+            // Check for quest goal completions and fire events
             for(let i = 0; i < player.quests.length; i++){
                 if(player.quests[i] != undefined && !player.quests[i].done && !player.quests[i].failed){
-                    player.quests[i].update();
+                    player.quests[i].checkGoalCompletions();
                 }
             }
             if (millis() - lastTimeMili > 300) { //300 for 2 min 1 day, 150 for 1 min 1 day

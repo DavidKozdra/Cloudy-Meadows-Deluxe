@@ -44,6 +44,7 @@ function addMoney(amount) {
 }
 
 function updateQuestContent(){
+    if (!questsContainer) return; // Quest panel not open yet
     const questsList = questsContainer.querySelector('.quests-list');
     if (!questsList) return;
     
@@ -51,8 +52,10 @@ function updateQuestContent(){
     buttons.forEach(btn => {
         const questIndex = parseInt(btn.getAttribute('data-quest-index'));
         const questContent = btn.querySelector('.quest-content');
-        questContent.innerHTML = '';
-        player.quests[questIndex].render(questContent, player.current_quest === questIndex ? 'yellow' : null);
+        if (questContent && player.quests[questIndex]) {
+            questContent.innerHTML = '';
+            player.quests[questIndex].render(questContent, player.current_quest === questIndex ? 'yellow' : null);
+        }
     });
 }
 
@@ -1082,6 +1085,62 @@ function showQuests(){
 
     questsContainer.style.display = 'flex';
     updateCanvasPointerEvents();
+    
+    // Set up event listeners for quest updates
+    window.addEventListener('questGoalCompleted', (e) => {
+        // Find which quest button this is and update it
+        const quest = e.detail.quest;
+        const questIndex = player.quests.indexOf(quest);
+        const btn = document.querySelector(`[data-quest-index="${questIndex}"]`)?.closest('.quest-item');
+        if (btn) updateQuestProgressBar(btn);
+    });
+    
+    window.addEventListener('questCompleted', (e) => {
+        const questIndex = player.quests.indexOf(e.detail.quest);
+        const btn = document.querySelector(`[data-quest-index="${questIndex}"]`)?.closest('.quest-item');
+        if (btn) updateQuestProgressBar(btn);
+    });
+}
+
+function updateQuestProgressBar(btn) {
+    const questIndex = parseInt(btn.getAttribute('data-quest-index'));
+    const quest = player.quests[questIndex];
+    if (!quest) return;
+    
+    // Update progress bar
+    let completedGoals = 0;
+    for (let j = 0; j < quest.goals.length; j++) {
+        if (quest.goals[j].done) completedGoals++;
+    }
+    
+    const progressFill = btn.querySelector('.quest-progress-fill');
+    const statusDiv = btn.querySelector('.quest-status');
+    
+    if (progressFill) {
+        const progress = (completedGoals / quest.goals.length) * 100;
+        progressFill.style.width = progress + '%';
+        if (quest.failed) {
+            progressFill.style.backgroundColor = 'rgb(255, 0, 0)';
+        } else if (quest.done || completedGoals === quest.goals.length) {
+            progressFill.style.backgroundColor = 'rgb(50, 200, 50)';
+        } else {
+            progressFill.style.backgroundColor = 'rgb(255, 255, 0)';
+        }
+    }
+    
+    if (statusDiv) {
+        if (quest.failed) {
+            statusDiv.textContent = 'Failed';
+            statusDiv.style.color = 'rgb(255, 0, 0)';
+        } else if (quest.done) {
+            statusDiv.textContent = 'Completed';
+            statusDiv.style.color = 'rgb(50, 200, 50)';
+            statusDiv.style.fontWeight = 'bold';
+        } else {
+            statusDiv.textContent = `${completedGoals}/${quest.goals.length} goals`;
+            statusDiv.style.color = 'rgb(255, 255, 255)';
+        }
+    }
 }
 
 function updateQuestButtonHighlight(){
