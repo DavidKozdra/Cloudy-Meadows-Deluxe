@@ -17,6 +17,8 @@ function preload() {
     chest_img = loadImage('images/items/Chest.png');
     grinder_img = loadImage('images/items/Grinder.png');
     veggy_press_img = loadImage('images/items/veg_oil_maker.png');
+    bed_item_img = loadImage('images/tiles/Bed.png');
+    wall_item_img = loadImage('images/tiles/Wood.png');
 
     //Tile
     grass_tile_img = loadImage('images/tiles/Grass.png');
@@ -639,7 +641,9 @@ function preload() {
     /*142*/mrC_tile_imgs,
     /*143*/pumpkin_tile_imgs,
     /*144*/pumpkin_img,
-    /*145*/pumpkin_seed_img
+    /*145*/pumpkin_seed_img,
+    /*146*/bed_item_img,
+    /*147*/wall_item_img
     ];
 
    /*
@@ -1808,7 +1812,7 @@ function newWorld(){
         [57, 57, 57, 57, 57, 62, 57, 57, 1, 1, 1, 1, 43, 1, 44, 1, 1, 57, 57, 57, 57, 57, 57], 
         [57, 57, 57, 57, 57, 62, 57, 57, 1, 1, 1, 1, 1, 1, 1, 1, 1, 57, 57, 62, 61, 61, 61], 
         [57, 57, 57, 57, 57, 62, 57, 57, 1, 1, 1, 1, 1, 17, 1, 1, 1, 57, 57, 62, 57, 57, 57], 
-        [57, 57, 57, 57, 57, 62, 57, 57, 1, 1, 1, 17, 1, 1, 1, 1, 1, 57, 57, 62, 57, 57, 57], 
+        [57, 57, 57, 57, 57, 62, 57, 57, 1, 100, 1, 17, 1, 1, 1, 101, 1, 57, 57, 62, 57, 57, 57], 
         [57, 57, 57, 57, 57, 62, 57, 57, 57, 1, 1, 1, 1, 1, 1, 1, 57, 57, 57, 62, 57, 57, 57], 
         [57, 57, 57, 57, 57, 62, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 62, 57, 57, 57], 
         [57, 57, 57, 57, 57, 62, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 62, 57, 57, 57], 

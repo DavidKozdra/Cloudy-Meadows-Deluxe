@@ -115,7 +115,9 @@ const TILE_DEFINITIONS = [
     /*96*/  { name: 'Adam', png: 140, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC'},
     /*97*/  { name: 'Barry', png: 141, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC'},
     /*98*/  { name: 'Mr.C', png: 142, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['down', 'down', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'disappear', 'disappear', 'disappear'], moving_timer: 10, class: 'NPC'},
-    /*99*/  { name: 'Pumpkin', png: 143, collide: false, age: 0, eat_num: 41, waterneed: 0, growthTime: 3000, class: 'Plant' }
+    /*99*/  { name: 'Pumpkin', png: 143, collide: false, age: 0, eat_num: 41, waterneed: 0, growthTime: 3000, class: 'Plant' },
+    /*100*/ { name: 'Building Supplies', png: 43, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}], under_tile_num: 1, class: 'Shop' },
+    /*101*/ { name: 'Building Supplies', png: 43, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}], under_tile_num: 1, class: 'Shop' }
 ];
 
 /*

@@ -41,7 +41,7 @@ class Quest {
             else{
                 if(this.goals[i].class == 'TalkingGoal'){
                     const savedGoal = this.goals[i];
-                    this.goals[i] = new TalkingGoal(savedGoal.npc_name, savedGoal.item_name, savedGoal.amount);
+                    this.goals[i] = new TalkingGoal(savedGoal.npc_name, savedGoal.item_name, savedGoal.amount, savedGoal.receive_type);
                     if(savedGoal.done !== undefined) {
                         this.goals[i].done = savedGoal.done;
                     }
@@ -874,12 +874,17 @@ class Goal {
 
 }
 
-class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(item_name) to _(npc_name)
+class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(item_name) to _(npc_name)  or Get _(amount) _(item_name) from _(npc_name)
 
-    constructor(npc_name, item_name, amount){
-        // Handle undefined or 0 as "just talk" goal
+    constructor(npc_name, item_name, amount, receive_type){
+        // receive_type: undefined/false = give items, true = receive items from NPC
         if(item_name && item_name != 0){
-            super('Give ' + amount + ' ' + item_name + ' to ' + npc_name);
+            if(receive_type){
+                super('Get ' + amount + ' ' + item_name + ' from ' + npc_name);
+            }
+            else{
+                super('Give ' + amount + ' ' + item_name + ' to ' + npc_name);
+            }
         }
         else{
             super('Talk to ' + npc_name);
@@ -887,7 +892,16 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
         this.npc_name = npc_name;
         this.item_name = item_name || 0;  // Default to 0 if undefined
         this.amount = amount || 0;  // Default to 0 if undefined
+        this.receive_type = receive_type || false;  // true if receiving from NPC
+        this.npc_gave_items = false;  // Track if NPC actually gave us the items
         this.class = 'TalkingGoal';
+        
+        // Listen for NPC giving items through dialogue
+        this.addEventListener('npcGaveItems', (e) => {
+            if(e.detail.npcName === this.npc_name && e.detail.itemName === this.item_name && e.detail.amount >= this.amount){
+                this.npc_gave_items = true;
+            }
+        });
         
         // Listen for NPC interaction events
         this.addEventListener('npcInteraction', (e) => {
@@ -895,8 +909,19 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
                 if(this.item_name == 0){
                     // Just need to talk
                     this.done = true;
+                } else if(this.receive_type){
+                    // For receive type: only complete if NPC actually gave us the items
+                    if(this.npc_gave_items){
+                        // Verify we still have the items
+                        for(let i = 0; i < player.inv.length; i++){
+                            if(player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+                                this.done = true;
+                                break;
+                            }
+                        }
+                    }
                 } else {
-                    // Need to give item
+                    // Need to give item to NPC
                     for(let i = 0; i < player.inv.length; i++){
                         if(player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
                             player.inv[i].amount -= this.amount;
@@ -920,13 +945,28 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
         
         if(isTalkingToNPC){
             if(this.item_name != 0){
-                for(let i = 0; i < player.inv.length; i++){
-                    if(!this.done && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
-                        player.inv[i].amount -= this.amount;
-                        if(player.inv[i].amount <= 0){
-                            player.inv[i] = 0;
+                if(this.receive_type){
+                    // For receive type: only complete if NPC actually gave us the items
+                    if(this.npc_gave_items){
+                        // Verify we still have the items
+                        for(let i = 0; i < player.inv.length; i++){
+                            if(!this.done && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+                                this.done = true;
+                                break;
+                            }
                         }
-                        this.done = true;
+                    }
+                }
+                else{
+                    // For give type: check if we have items to give, then remove them
+                    for(let i = 0; i < player.inv.length; i++){
+                        if(!this.done && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+                            player.inv[i].amount -= this.amount;
+                            if(player.inv[i].amount <= 0){
+                                player.inv[i] = 0;
+                            }
+                            this.done = true;
+                        }
                     }
                 }
             }
