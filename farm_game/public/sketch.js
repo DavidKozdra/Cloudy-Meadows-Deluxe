@@ -220,21 +220,23 @@ function drawRain(isSunshower = false, isThunderstorm = false) {
     for (let i = 0; i < rainDroplets.length; i++) {
         const drop = rainDroplets[i];
         
-        // Update droplet position
-        drop.x += drop.vx;
-        drop.y += drop.vy;
-        
-        // Wrap horizontally (wind effect)
-        if (drop.x > canvasWidth) {
-            drop.x = -5;
-        } else if (drop.x < -5) {
-            drop.x = canvasWidth;
-        }
-        
-        // Reset to top when droplet reaches bottom
-        if (drop.y > canvasHeight) {
-            drop.y = -10;
-            drop.x = Math.random() * canvasWidth;
+        // Update droplet position (only when not paused)
+        if (!paused) {
+            drop.x += drop.vx;
+            drop.y += drop.vy;
+            
+            // Wrap horizontally (wind effect)
+            if (drop.x > canvasWidth) {
+                drop.x = -5;
+            } else if (drop.x < -5) {
+                drop.x = canvasWidth;
+            }
+            
+            // Reset to top when droplet reaches bottom
+            if (drop.y > canvasHeight) {
+                drop.y = -10;
+                drop.x = Math.random() * canvasWidth;
+            }
         }
         
         // Draw the raindrop as a line
@@ -288,6 +290,22 @@ function drawLightning() {
 
 // Update and render falling frogs for frog rain
 function updateFrogRain() {
+    // Don't update weather when paused
+    if (paused) {
+        // Still render but don't update positions
+        for (let i = 0; i < frogRainEntities.length; i++) {
+            const frog = frogRainEntities[i];
+            const age = millis() - frog.spawnTime;
+            const frogImageIndex = Math.floor((age / 200) % 2) === 0 ? 0 : 2; // Alternate between back (0) and front (2)
+            push();
+            imageMode(CENTER);
+            tint(0, 200, 0, 200 - (age / frog.lifetime) * 50);
+            image(frog_imgs[frogImageIndex][0], frog.x + tileSize/2, frog.y + tileSize/2, tileSize, tileSize);
+            pop();
+        }
+        return;
+    }
+    
     // SYSTEM 1: Spawn visual falling frogs from sky
     if (Math.random() < frogRainSpawnChance && frogRainEntities.length < 15) {
         const newFrog = {
@@ -330,15 +348,16 @@ function updateFrogRain() {
         }
         
         // Draw falling frog
+        const frogImageIndex = Math.floor((age / 200) % 2) === 0 ? 0 : 2; // Alternate between back (0) and front (2)
         push();
         imageMode(CENTER);
         tint(0, 200, 0, 200 - (age / frog.lifetime) * 50); // Fade out over time
-        image(frog_imgs[0][0], frog.x + tileSize/2, frog.y + tileSize/2, tileSize, tileSize);
+        image(frog_imgs[frogImageIndex][0], frog.x + tileSize/2, frog.y + tileSize/2, tileSize, tileSize);
         pop();
     }
     
     // SYSTEM 2: Spawn new frogs directly on tiles periodically
-    if (Math.random() < 0.1) { // 10% chance each frame to spawn a frog
+    if (Math.random() < 0.02) { // 10% chance each frame to spawn a frog
         const currentLevelMap = levels[currentLevel_y][currentLevel_x].map;
         const mapHeight = currentLevelMap.length;
         const mapWidth = currentLevelMap[0].length;
@@ -418,10 +437,11 @@ function updateFrogRain() {
         }
         
         // Draw falling frog
+        const frogImageIndex = Math.floor((age / 200) % 2) === 0 ? 0 : 2; // Alternate between back (0) and front (2)
         push();
         imageMode(CENTER);
         tint(0, 200, 0, 200 - (age / frog.lifetime) * 50); // Fade out over time
-        image(frog_imgs[0][0], frog.x + tileSize/2, frog.y + tileSize/2, tileSize, tileSize);
+        image(frog_imgs[frogImageIndex][0], frog.x + tileSize/2, frog.y + tileSize/2, tileSize, tileSize);
         pop();
     }
 }
@@ -661,7 +681,7 @@ function draw() {
                                 for(let my = 0; my < mapGrid.length; my++){
                                     for(let mx = 0; mx < mapGrid[my].length; mx++){
                                         const tile = mapGrid[my][mx];
-                                        if(tile && tile.rainFrog && tile.spawnedDay < days){
+                                        if(tile && tile.rainFrog && tile.spawnedDay < days - 1){
                                             // Restore the underlying tile if it exists
                                             mapGrid[my][mx] = tile.under_tile ? tile.under_tile : new_tile_from_num(2, mx * tileSize, my * tileSize);
                                         }
