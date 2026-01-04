@@ -215,10 +215,10 @@ class Level {
                         
                         if(this.map[i][j].hasQuestForPlayer && this.map[i][j].hasQuestForPlayer()) {
                             // Quest marker sprite
-                            image(quest_marker_img, this.map[i][j].pos.x + (tileSize / 2), this.map[i][j].pos.y - 16);
+                            image(quest_marker_img, this.map[i][j].pos.x + (tileSize / 2), this.map[i][j].pos.y - 8);
                         } else if(this.map[i][j].hasGiftForPlayer && this.map[i][j].hasGiftForPlayer()) {
                             // Gift indication sprite
-                            image(gift_indication_img, this.map[i][j].pos.x + (tileSize / 2), this.map[i][j].pos.y - 16);
+                            image(gift_indication_img, this.map[i][j].pos.x + (tileSize / 2), this.map[i][j].pos.y - 8);
                         }
                         
                         pop();

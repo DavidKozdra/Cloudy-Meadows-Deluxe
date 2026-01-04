@@ -4,6 +4,7 @@ class Plant extends Tile {
         this.eat_num = eat_num;
         this.waterneeded = waterneeded;
         this.watermet = false;
+        this.waterChecked = false; // Track if we've checked water at least once
         this.deathAttempts = 3;
         this.growTimer = 0;
         this.growthTime = growthTime;
@@ -30,7 +31,7 @@ class Plant extends Tile {
         noTint();
         
         // Draw sprinkler icon with red X when water is NOT met
-        if(this.waterneeded > 0 && !this.watermet){
+        if(this.waterneeded > 0 && !this.watermet && this.waterChecked){
             // Draw sprinkler icon
             fill(100, 150, 200);
             noStroke();
@@ -99,6 +100,7 @@ class Plant extends Tile {
         }
         
         this.watermet = (water_found >= this.waterneeded);
+        this.waterChecked = true; // Mark that we've checked water at least once
         
         // Only grow when it's time to grow
         if (this.growTimer >= this.growthTime) {

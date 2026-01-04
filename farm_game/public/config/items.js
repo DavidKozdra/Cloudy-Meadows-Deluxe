@@ -24,7 +24,7 @@ const ITEM_DEFINITIONS = [
     /*8*/  { name: 'Strawberry Seed', png: 63, plant_num: 23, class: 'Seed' },
     /*9*/  { name: 'Compost', png: 64, price: 2, tile_num: 13, tile_need_num: 4, class: 'Placeable' },
     /*10*/ { name: 'Ladybugs', png: 65, price: 100, tile_num: 26, tile_need_num: 2, class: 'Placeable' },
-    /*11*/ { name: 'Flower Seed', png: 66, plant_num: 25, class: 'Seed'},
+    /*11*/ { name: 'Flower Seed', png: 66, price: 30, plant_num: 25, class: 'Seed'},
     /*12*/ { name: 'Sprinkler', png: 67, price: 30, tile_num: 20, tile_need_num: 0, class: 'Placeable' },
     /*13*/ { name: 'Full Course', png: 68, price: 20, hunger: 100, hunger_timer: 4000, seed_num: 0, class: 'Eat' },
     /*14*/ { name: 'Tomato Seed', png: 69, plant_num: 24, class: 'Seed'},
