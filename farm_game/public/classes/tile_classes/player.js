@@ -1072,8 +1072,14 @@ function takeInput() {
         if (keyIsDown(interact_button)){
             if (millis() - player.lastinteractMili > 200) {
                 if (player.talking.class == 'NPC'){
-                    if(player.talking.dialouges[player.talking.current_dialouge].replies[current_reply].quest != -1){
-                        let newQuest = player.talking.dialouges[player.talking.current_dialouge].replies[current_reply].quest;
+                    const selectedReply = player.talking.dialouges[player.talking.current_dialouge].replies[current_reply];
+                    // Fire replyUsed so TellGoals can listen for it
+                    window.dispatchEvent(new CustomEvent('replyUsed', {
+                        detail: { npcName: player.talking.name, reply: selectedReply.phrase }
+                    }));
+
+                    if(selectedReply.quest != -1){
+                        let newQuest = selectedReply.quest;
                         player.quests.push(newQuest);
                         player.current_quest = player.quests.length - 1;
                         // Check if any goals were already completed in the past
@@ -1098,7 +1104,7 @@ function takeInput() {
                         }
                         player.talking.dialouges[player.talking.current_dialouge].new_replies = -1;
                     }
-                    if(player.talking.dialouges[player.talking.current_dialouge].replies[current_reply].dialouge_num == -1){
+                    if(selectedReply.dialouge_num == -1){
                         player.talking.move_bool = true;
                         player.talking.current_dialouge = 0;
                         player.oldlooking_name = player.talking.name;
@@ -1121,7 +1127,7 @@ function takeInput() {
                         current_reply = 0;
                     }
                     else{
-                        player.talking.current_dialouge = player.talking.dialouges[player.talking.current_dialouge].replies[current_reply].dialouge_num;
+                        player.talking.current_dialouge = selectedReply.dialouge_num;
                         current_reply = 0;
                     }
                 }

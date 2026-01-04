@@ -1058,6 +1058,9 @@ function showQuests(){
             
             questButton.appendChild(questContent);
             questsList.appendChild(questButton);
+
+            // Sync progress immediately in case goals were completed before opening the UI
+            updateQuestProgressBar(questButton);
         }
     }
 

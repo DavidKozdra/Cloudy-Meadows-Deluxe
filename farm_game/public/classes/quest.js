@@ -46,6 +46,13 @@ class Quest {
                         this.goals[i].done = savedGoal.done;
                     }
                 }
+                else if (this.goals[i].class == 'TellGoal'){
+                    const savedGoal = this.goals[i];
+                    this.goals[i] = new TellGoal(savedGoal.npc_name, savedGoal.reply_phrase);
+                    if(savedGoal.done !== undefined) {
+                        this.goals[i].done = savedGoal.done;
+                    }
+                }
                 else if (this.goals[i].class == 'FundingGoal'){
                     const savedGoal = this.goals[i];
                     this.goals[i] = new FundingGoal(savedGoal.amount);
@@ -356,6 +363,30 @@ class Quest {
                 locationLine.style.marginTop = '3px';
                 detailsDiv.appendChild(locationLine);
             }
+            // If this talking goal is the final step and a reward exists, hint the gift
+            const isFinalGoal = this.goals[this.goals.length - 1] === goal;
+            const hasRewardItem = this.reward_item && this.reward_item !== 0;
+            const hasRewardCoins = this.reward_coins && this.reward_coins > 0;
+            if (isFinalGoal && (hasRewardItem || hasRewardCoins)) {
+                const rewardLine = document.createElement('div');
+                const parts = [];
+                if (hasRewardItem && this.reward_item.name) {
+                    parts.push(`${this.reward_item.amount}x ${this.reward_item.name}`);
+                }
+                if (hasRewardCoins) {
+                    parts.push(`${this.reward_coins} coins`);
+                }
+                rewardLine.textContent = 'Gift after talking: ' + parts.join(' and ');
+                rewardLine.style.marginTop = '3px';
+                rewardLine.style.color = 'rgb(70, 120, 40)';
+                detailsDiv.appendChild(rewardLine);
+            }
+        } else if (goal.class === 'TellGoal') {
+            detailsDiv.textContent = `NPC: ${goal.npc_name}`;
+            const tellLine = document.createElement('div');
+            tellLine.textContent = `Tell them: "${goal.reply_phrase}"`;
+            tellLine.style.marginTop = '3px';
+            detailsDiv.appendChild(tellLine);
         } else if (goal.class === 'LocationGoal') {
             detailsDiv.textContent = `Location: ${goal.level_name}`;
         } else if (goal.class === 'SellGoal') {
@@ -395,6 +426,8 @@ class Quest {
     getGoalImagePath(goal){
         // Return appropriate image path based on goal type
         if (goal.class === 'TalkingGoal' && goal.npc_name) {
+            return this.map_quest_images('npc', goal.npc_name);
+        } else if (goal.class === 'TellGoal' && goal.npc_name) {
             return this.map_quest_images('npc', goal.npc_name);
         } else if (goal.class === 'HaveGoal' && goal.item_name) {
             return this.map_quest_images('items', goal.item_name);
@@ -555,6 +588,7 @@ class Quest {
     getGoalTypeEmoji(goal){
         const emojiMap = {
             'TalkingGoal': '💬',
+            'TellGoal': '🗣️',
             'LocationGoal': '🗺️',
             'FundingGoal': '💰',
             'SellGoal': '🛒',
@@ -803,33 +837,30 @@ class Quest {
         
         let anyCompleted = false;
         for(let i = 0; i < this.goals.length; i++){
+            const wasDone = this.goals[i].done;
             if(!this.goals[i].done){
                 // Call update to check completion
                 this.goals[i].update();
-                
-                // If goal just completed, fire event
-                if(this.goals[i].done){
-                    anyCompleted = true;
-                    // Dispatch goal completion event
-                    window.dispatchEvent(new CustomEvent('questGoalCompleted', {
-                        detail: { quest: this, goalIndex: i }
-                    }));
-                }
+            }
+            // If goal just completed (either via update or an external event), fire event once
+            if(this.goals[i].done && !wasDone){
+                anyCompleted = true;
+                window.dispatchEvent(new CustomEvent('questGoalCompleted', {
+                    detail: { quest: this, goalIndex: i }
+                }));
             }
         }
         
-        // Check if all goals are complete
-        if(anyCompleted){
-            let allComplete = true;
-            for(let i = 0; i < this.goals.length; i++){
-                if(!this.goals[i].done){
-                    allComplete = false;
-                    break;
-                }
+        // Check if all goals are complete even if completion happened outside update()
+        let allComplete = true;
+        for(let i = 0; i < this.goals.length; i++){
+            if(!this.goals[i].done){
+                allComplete = false;
+                break;
             }
-            if(allComplete && !this.done){
-                this.completeQuest();
-            }
+        }
+        if(allComplete && !this.done){
+            this.completeQuest();
         }
     }
     
@@ -921,6 +952,7 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
         this.amount = amount || 0;  // Default to 0 if undefined
         this.receive_type = receive_type || false;  // true if receiving from NPC
         this.required_location = required_location || null; // Require visiting a location first
+        this.interactedAfterStart = false; // Only count interactions that happen after quest acceptance
         this.npc_gave_items = false;  // Track if NPC actually gave us the items
         this.class = 'TalkingGoal';
         
@@ -934,6 +966,8 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
         // Listen for NPC interaction events
         this.addEventListener('npcInteraction', (e) => {
             if(e.detail.npcName === this.npc_name && !this.done){
+                // Only count interactions that happen after this goal was created
+                this.interactedAfterStart = true;
                 if(!this.hasVisitedRequiredLocation()){
                     return;
                 }
@@ -985,6 +1019,9 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
         if(!this.hasVisitedRequiredLocation()){
             return;
         }
+        if(!this.interactedAfterStart){
+            return;
+        }
         // Check if talking to the right NPC (either looking at them OR already in conversation)
         const isTalkingToNPC = (player.talking != 0 && player.talking.name === this.npc_name) || 
                                (player.looking(currentLevel_x, currentLevel_y) != undefined && 
@@ -1021,6 +1058,30 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
                 this.done = true;
             }
         }
+    }
+}
+
+class TellGoal extends Goal{ // Use a specific reply with an NPC
+
+    constructor(npc_name, reply_phrase){
+        super('Tell ' + npc_name + ': "' + reply_phrase + '"');
+        this.npc_name = npc_name;
+        this.reply_phrase = reply_phrase;
+        this.class = 'TellGoal';
+        this.completedViaReply = false;
+        
+        // Listen for reply usage events
+        this.addEventListener('replyUsed', (e) => {
+            if(this.done) return;
+            if(e.detail.npcName === this.npc_name && e.detail.reply === this.reply_phrase){
+                this.completedViaReply = true;
+                this.done = true;
+            }
+        });
+    }
+
+    update(){
+        // Completion happens via replyUsed event; nothing to poll here
     }
 }
 

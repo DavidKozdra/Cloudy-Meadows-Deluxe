@@ -703,7 +703,7 @@
         {
           "phrase": "You Got it Brent!",
           "dialouge_num": -1,
-          "quest": {"name": "Save Brent", "goals": [{"class": "TalkingGoal", "npc_name": "Super Tina", "item_name": 0, "amount": 0}], "days": 3, "reward_item": {"num": 4, "amount": 5}, "reward_coins": 0}
+          "quest": {"name": "Save Brent", "goals": [{"class": "TellGoal", "npc_name": "Super Tina", "reply_phrase": "Your son needs help"}], "days": 3, "reward_item": {"num": 4, "amount": 5}, "reward_coins": 0}
         }
       ],
       "hand_num": -1,
@@ -992,7 +992,7 @@
         {
           "phrase": "Will do.",
           "dialouge_num": -1,
-          "quest": {"name": "Love letter Delivery", "goals": [{"class": "TalkingGoal", "npc_name": "James", "item_name": 0, "amount": 0}], "days": 3, "reward_item": {"num": 10, "amount": 1}, "reward_coins": 0}
+          "quest": {"name": "Love letter Delivery", "goals": [{"class": "LocationGoal", "level_name": "Cloudy Meadows: Market"}, {"class": "TalkingGoal", "npc_name": "James", "item_name": 0, "amount": 0, "required_location": "Cloudy Meadows: Market"}], "days": 3, "reward_item": {"num": 10, "amount": 1}, "reward_coins": 0}
         }
       ],
       "hand_num": -1,
@@ -1277,6 +1277,11 @@
           "quest": -1
         },
         {
+          "phrase": "Your son needs help",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
           "phrase": "Bye",
           "dialouge_num": -1,
           "quest": -1
@@ -1312,6 +1317,18 @@
         },
         {
           "phrase": "That wasn't helpful.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Brent needs help? I am on my way!",
+      "replies": [
+        {
+          "phrase": "Thank you!",
           "dialouge_num": -1,
           "quest": -1
         }
