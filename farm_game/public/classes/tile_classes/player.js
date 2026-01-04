@@ -10,7 +10,7 @@ class Player extends MoveableEntity {
         this.lastFoodnum = 2;
         this.hunger_timer = all_items[this.lastFoodnum].hunger_timer;
         this.hunger_counter = 0;
-        this.coins = 1000000;
+        this.coins = 0;
         this.hp = 100;
         this.dead = false;
         this.deaths = 0;
@@ -413,7 +413,11 @@ class Player extends MoveableEntity {
                     if (this.inv[this.hand].amount == 0) {
                         this.inv[this.hand] = 0;
                     }
-                    addItem(this, seed_obj_num, random([1, 1, 1, 1, 2, 2, 2, 3]));
+                    // Use item's seed_min/seed_max or defaults
+                    let seed_min = this.inv[this.hand].seed_min || 1;
+                    let seed_max = this.inv[this.hand].seed_max || 3;
+                    let seed_amount = floor(random(seed_min, seed_max + 1));
+                    addItem(this, seed_obj_num, seed_amount);
                 }
                 else if (this.inv[this.hand].class == 'Eat' && (checkForSpace(this, this.inv[this.hand].seed_num))) {
                     EatSound.play();
@@ -429,7 +433,11 @@ class Player extends MoveableEntity {
                     if (this.inv[this.hand].amount == 0) {
                         this.inv[this.hand] = 0;
                     }
-                    addItem(this, seed_obj_num, random([1, 1, 1, 1, 2, 2, 2, 3]));
+                    // Use item's seed_min/seed_max or defaults
+                    let seed_min = this.inv[this.hand].seed_min || 1;
+                    let seed_max = this.inv[this.hand].seed_max || 3;
+                    let seed_amount = floor(random(seed_min, seed_max + 1));
+                    addItem(this, seed_obj_num, seed_amount);
                 }
             }
         }
@@ -619,14 +627,22 @@ class Player extends MoveableEntity {
                 if(this.inv[this.hand].seed_num != 0){
                     if(this.inv[this.hand].amount == 1){
                         this.inv[this.hand].amount -= 1;
-                        addItem(this, this.inv[this.hand].seed_num, random([1, 2, 2, 2, 2, 3, 3, 4]));
+                        // Grinder gives bonus: +1 to min and +2 to max
+                        let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
+                        let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
+                        let seed_amount = floor(random(seed_min, seed_max + 1));
+                        addItem(this, this.inv[this.hand].seed_num, seed_amount);
                         if (this.inv[this.hand].amount == 0) {
                             this.inv[this.hand] = 0;
                         }
                     }
                     else if(checkForSpace(this, this.inv[this.hand].seed_num)){
                         this.inv[this.hand].amount -= 1;
-                        addItem(this, this.inv[this.hand].seed_num, random([1, 2, 2, 2, 2, 3, 3, 4]));
+                        // Grinder gives bonus: +1 to min and +2 to max
+                        let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
+                        let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
+                        let seed_amount = floor(random(seed_min, seed_max + 1));
+                        addItem(this, this.inv[this.hand].seed_num, seed_amount);
                         if (this.inv[this.hand].amount == 0) {
                             this.inv[this.hand] = 0;
                         }

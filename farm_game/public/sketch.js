@@ -437,14 +437,14 @@ function render_ui() {
         let amountS = str(player.coins)
         if(player.coins > 9999999){
             let amountS = str(round(player.coins/1000000) + 'B')
-            image(coin_img, (canvasWidth / 2) + (512 / 2) - 130 - (amountS.length > 3 ? ((amountS.length-3)*20):0), (canvasHeight - 95));
-            textSize(32.5 - ((amountS.length-4)*3));
-            text(round(player.coins/1000000) + 'B', (canvasWidth / 2) + (512 / 2) - 94 - (amountS.length > 3 ? ((amountS.length-3)*20):0), (canvasHeight - 92.5) + ((amountS.length-4)*2.8));
+            image(coin_img, (canvasWidth / 2) + (512 / 2) - 130 + (amountS.length > 3 ? ((amountS.length-3)*20):0), (canvasHeight - 95));
+            textSize(Math.max(12, 32.5 - ((amountS.length-4)*6)));
+            text(round(player.coins/1000000) + 'B', (canvasWidth / 2) + (512 / 2) - 94 + (amountS.length > 3 ? ((amountS.length-3)*20):0), (canvasHeight - 92.5) + ((amountS.length-4)*2.8));
         }
         else if(player.coins > 9999){
-            image(coin_img, (canvasWidth / 2) + (512 / 2) - 130 - (amountS.length-3)*20, (canvasHeight - 95));
-            textSize(32.5 - ((amountS.length-4)*3));
-            text(player.coins, (canvasWidth / 2) + (512 / 2) - 94 - (amountS.length-3)*20, (canvasHeight - 92.5) + ((amountS.length-4)*2.8));
+            image(coin_img, (canvasWidth / 2) + (512 / 2) - 130 + (amountS.length-3)*20, (canvasHeight - 95));
+            textSize(Math.max(14, 32.5 - ((amountS.length-4)*6)));
+            text(player.coins, (canvasWidth / 2) + (512 / 2) - 94 + (amountS.length-3)*20, (canvasHeight - 92.5) + ((amountS.length-4)*2.8));
         }
         else{
             image(coin_img, (canvasWidth / 2) + (512 / 2) - 130 - (amountS.length > 3 ? ((amountS.length-3)*25):0), (canvasHeight - 95));
@@ -538,8 +538,20 @@ function render_ui() {
                 player.inv[i].render(invBar.getSlotX(i), invBar.top);
                 if (i == player.hand) {
                     push();
+                    // Background box for item name
+                    fill(0, 0, 0, 200);
+                    stroke(100);
+                    strokeWeight(1);
+                    rectMode(CENTER);
+                    const itemNameLength = player.inv[i].name.length;
+                    const boxWidth = itemNameLength * 15;
+                    rect((9 * canvasWidth / 16), (canvasHeight - 80), boxWidth, 20);
+                    
+                    // Item name text
                     fill(255);
-                    textSize(13);
+                    textFont(player_2);
+                    const itemNameSize = itemNameLength > 20 ? 9 : (itemNameLength > 15 ? 11 : 13);
+                    textSize(itemNameSize);
                     textAlign(CENTER, CENTER);
                     text(player.inv[i].name, (9 * canvasWidth / 16), (canvasHeight - 80));
                     pop();

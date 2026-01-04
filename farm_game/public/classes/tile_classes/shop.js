@@ -56,7 +56,13 @@ class Shop extends Entity {
                     stroke(0);
                 }
                 image(all_imgs[this.inv[i].png], (canvasWidth / 20) + 10, (canvasHeight - 100) + (i * 32), 32, 32);
+                // Dynamically size item name text based on length
+                let itemNameLength = this.inv[i].name.length;
+                let itemNameSize = itemNameLength > 20 ? 9 : (itemNameLength > 15 ? 11 : 13);
+                textSize(itemNameSize);
                 text(this.inv[i].name, (canvasWidth / 20) + 42, (canvasHeight - 100) + (i * 32) + 8);
+                // Reset text size for price and amount
+                textSize(13);
                 text(this.inv[i].price, (canvasWidth / 20) + 332, (canvasHeight - 100) + (i * 32) + 8);
                 text(this.inv[i].amount, (canvasWidth / 20) + 492, (canvasHeight - 100) + (i * 32) + 8);
             }
@@ -81,7 +87,13 @@ class Shop extends Entity {
                     stroke(0);
                 }
                 image(all_imgs[this.inv[i].png], (canvasWidth / 20) + 10, (canvasHeight - 100) + ((i-(current_reply)+1) * 32), 32, 32);
+                // Dynamically size item name text based on length
+                let itemNameLength = this.inv[i].name.length;
+                let itemNameSize = itemNameLength > 20 ? 9 : (itemNameLength > 15 ? 11 : 13);
+                textSize(itemNameSize);
                 text(this.inv[i].name, (canvasWidth / 20) + 42, (canvasHeight - 100) + ((i-(current_reply)+1) * 32) + 8);
+                // Reset text size for price and amount
+                textSize(13);
                 text(this.inv[i].price, (canvasWidth / 20) + 332, (canvasHeight - 100) + ((i-(current_reply)+1) * 32) + 8);
                 text(this.inv[i].amount, (canvasWidth / 20) + 492, (canvasHeight - 100) + ((i-(current_reply)+1) * 32) + 8);
             }

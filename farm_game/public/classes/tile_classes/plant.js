@@ -29,46 +29,71 @@ class Plant extends Tile {
 
     grow(x, y) {
         this.growTimer++;
-        if (player.touching.name == 'bed') {
+        // Bonus growth rate when planted on beds
+        if (player && player.touching && player.touching.name == 'bed') {
             this.growTimer += 2;
         }
-        let water_found = 0;
-        for(let i = -1; i <= 1; i++){
-            for(let j = -1; j <= 1; j++){
-                if(levels[y][x].map[(this.pos.y/tileSize)+i][(this.pos.x/tileSize)+j].name == 'sprinkler'){
-                    water_found += 1;
-                }
-                else if(levels[y][x].map[(this.pos.y/tileSize)+i][(this.pos.x/tileSize)+j].under_tile != undefined && levels[y][x].map[(this.pos.y/tileSize)+i][(this.pos.x/tileSize)+j].under_tile.name == 'sprinkler'){
-                    water_found += 1;
-                }
-            }
-        }
-        this.watermet = (water_found >= this.waterneeded)
+        
+        // Only check for water when it's time to grow to avoid unnecessary iteration
         if (this.growTimer >= this.growthTime) {
-            if (this.watermet) {
-                this.age += 1;
-                if(this.age == all_imgs[this.png].length - 2){
-                    if(this.name == 'carrot'){
-                        let rand = random(0, 100);
-                        if(rand <= 0.1){
-                            levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = new_tile_from_num(91, this.pos.x, this.pos.y);
-                        }
+            let water_found = 0;
+            const plant_grid_x = this.pos.x / tileSize;
+            const plant_grid_y = this.pos.y / tileSize;
+            
+            // Check 3x3 area around plant for sprinklers with bounds checking
+            for(let i = -1; i <= 1; i++){
+                for(let j = -1; j <= 1; j++){
+                    const check_y = plant_grid_y + i;
+                    const check_x = plant_grid_x + j;
+                    
+                    // Bounds check
+                    if(check_y < 0 || check_y >= levels[y].map.length || 
+                       check_x < 0 || check_x >= levels[y].map[0].length) {
+                        continue;
+                    }
+                    
+                    const tile = levels[y][x].map[check_y][check_x];
+                    if(tile && tile.name == 'sprinkler'){
+                        water_found += 1;
+                    }
+                    else if(tile && tile.under_tile != undefined && tile.under_tile.name == 'sprinkler'){
+                        water_found += 1;
                     }
                 }
+            }
+            
+            this.watermet = (water_found >= this.waterneeded);
+            
+            if (this.watermet) {
+                this.age += 1;
+                
+                // Carrot special mutation case
+                if(this.name == 'carrot' && this.age == all_imgs[this.png].length - 2){
+                    let rand = random(0, 100);
+                    if(rand <= 0.1){
+                        levels[y][x].map[plant_grid_y][plant_grid_x] = new_tile_from_num(91, this.pos.x, this.pos.y);
+                    }
+                }
+                
+                // Plant overcrowding - cap age and start losing attempts
                 if (this.age > all_imgs[this.png].length - 2 && this.deathAttempts > 0) {
                     this.age = all_imgs[this.png].length - 2;
                     this.deathAttempts -= 1;
                 }
+                
+                // Plant died from overcrowding (stayed ripe too long without harvest)
                 if (this.age > all_imgs[this.png].length - 1 && this.deathAttempts <= 0) {
                     this.age = all_imgs[this.png].length - 1;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = new_tile_from_num(5, this.pos.x, this.pos.y);
+                    levels[y][x].map[plant_grid_y][plant_grid_x] = new_tile_from_num(5, this.pos.x, this.pos.y);
                 }
             }
             else {
+                // No water - lose an attempt
                 this.deathAttempts -= 1;
                 if (this.deathAttempts <= 0) {
-                    this.age = this.png.length - 1;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = new_tile_from_num(5, this.pos.x, this.pos.y);
+                    // Plant died from lack of water
+                    this.age = Math.min(all_imgs[this.png].length - 1, this.age);
+                    levels[y][x].map[plant_grid_y][plant_grid_x] = new_tile_from_num(5, this.pos.x, this.pos.y);
                 }
             }
             this.growTimer = 0;
