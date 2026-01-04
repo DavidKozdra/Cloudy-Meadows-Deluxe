@@ -105,7 +105,7 @@ const TILE_DEFINITIONS = [
     /*86*/  { name: 'Tool Shop', png: 126, inv: [{num: 1, amount: 2}, {num: 32, amount: 2}, {num: 45, amount: 2}], under_tile_num: 57, class: 'Shop'},
     /*87*/  { name: 'Rob Botus', png: 127, inv: [{num: 27, amount: 1}, {num: 28, amount: 1}, {num: 18, amount: 1}, {num: 19, amount: 4}, {num: 20, amount: 4}, {num: 21, amount: 4}, {num: 22, amount: 4}, {num: 23, amount: 2}, {num: 29, amount: 4}, {num: 30, amount: 4}, {num: 26, amount: 4}, {num: 34, amount: 4}], under_tile_num: 57, class: 'Shop'},
     /*88*/  { name: 'Jake', png: 128, inv: [{num: 25, amount: 3}, {num: 24, amount: 1}], under_tile_num: 57, class: 'Shop'},
-    /*89*/  { name: 'Dog', png: 129, inv: [0], under_tile_num: 57, instructions: [], moving_timer: 80, class: 'FreeMoveEntity'},
+    /*89*/  { name: 'Dog', png: 129, inv: [0], hand: 0, facing: 2, under_tile_num: 71, instructions: [], moving_timer: 80, random_move: true, class: 'NPC'},
     /*90*/  { name: 'David', png: 130, inv: [0], hand: 0, facing: 2, under_tile_num: 71, instructions: [], moving_timer: 100, class: 'NPC'},
     /*91*/  { name: 'bunny', png: 135, inv: [0], under_tile_num: 3, instructions: [], moving_timer: 80, class: 'FreeMoveEntity'},
     /*92*/  { name: 'carrot', png: 138, collide: false, age: 0, eat_num: 39, waterneed: 1, growthTime: 2200, class: 'Plant' },
@@ -117,7 +117,8 @@ const TILE_DEFINITIONS = [
     /*98*/  { name: 'Mr.C', png: 142, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['down', 'down', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'disappear', 'disappear', 'disappear'], moving_timer: 10, class: 'NPC'},
     /*99*/  { name: 'Pumpkin', png: 143, collide: false, age: 0, eat_num: 41, waterneed: 0, growthTime: 3000, class: 'Plant' },
     /*100*/ { name: 'Building Supplies', png: 42, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}, {num: 45, amount: 5}], under_tile_num: 1, class: 'Shop' },
-    /*101*/ { name: 'Building Supplies', png: 42, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}, {num: 45, amount: 5}], under_tile_num: 1, class: 'Shop' }
+    /*101*/ { name: 'Building Supplies', png: 42, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}, {num: 45, amount: 5}], under_tile_num: 1, class: 'Shop' },
+    /*102*/ { name: 'Ticket Master', png: 149, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 120, class: 'NPC' }
 ];
 
 /*

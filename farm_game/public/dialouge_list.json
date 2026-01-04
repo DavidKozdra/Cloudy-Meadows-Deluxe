@@ -1792,6 +1792,51 @@
       "hand_num": -1,
       "amount": 0
     }
+  ],
+  "Dog": [
+    {
+      "phrase": "Bark!",
+      "replies": [
+        {
+          "phrase": "Good dog!",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "See ya.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Arf arf!",
+      "replies": [
+        {
+          "phrase": "Who's a good pup?",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Ticket Master": [
+    {
+      "phrase": "Hi.",
+      "replies": [
+        {
+          "phrase": "Hi.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
   ]
 }
  

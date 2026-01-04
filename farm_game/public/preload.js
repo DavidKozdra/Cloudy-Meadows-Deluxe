@@ -248,6 +248,10 @@ function preload() {
     barry_left_img = loadImage('images/npc/cowboy_rick_left.png');
     barry_tile_imgs = [[barry_tile_up_img], [barry_tile_right_img], [barry_down_img], [barry_left_img]];
 
+    //Ticket Master
+    ticket_master_tile_img = loadImage('images/npc/Ticket_Master.png');
+    ticket_master_tile_imgs = [[ticket_master_tile_img], [ticket_master_tile_img], [ticket_master_tile_img], [ticket_master_tile_img]];
+
     //Mr.C
     mrC_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
     mrC_tile_right_img = loadImage('images/npc/mrC_Right.png');
@@ -646,7 +650,8 @@ function preload() {
     /*145*/pumpkin_seed_img,
     /*146*/bed_item_img,
     /*147*/wall_item_img,
-    /*148*/compost_bucket_tile_img
+    /*148*/compost_bucket_tile_img,
+    /*149*/ticket_master_tile_imgs
     ];
 
    /*
@@ -1158,7 +1163,7 @@ function setup() {
     extra_lvls = {map: [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0], 
+        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 102, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0], 
         [0, 0, 1, 12, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 12, 1, 0, 0], 
         [0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0], 
         [0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0], 
@@ -1983,7 +1988,7 @@ function newWorld(){
         [72, 72, 72, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71], 
         [72, 72, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71], 
         [72, 72, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 1, 1, 71, 71, 71, 71, 71], 
-        [72, 72, 71, 71, 71, 71, 71, 71, 71, 71, 71, 78, 71, 71, 71, 71, 1, 79, 71, 71, 71, 71, 71], 
+        [72, 72, 71, 71, 71, 71, 71, 71, 71, 71, 89, 78, 71, 71, 71, 71, 1, 79, 71, 71, 71, 71, 71], 
         [72, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 76, 71, 71, 71, 71, 71], 
         [72, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 76, 71, 71, 71, 71, 71], 
         [72, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 71, 77, 71, 76, 71, 71, 71, 71, 71], 

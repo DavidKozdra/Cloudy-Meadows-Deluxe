@@ -1,8 +1,10 @@
 class NPC extends GridMoveEntity {
 
-    constructor(name, png, x, y, inv = [], hand = 0, facing = 3, under_tile_num, instructions = [], moving_timer) {
+    constructor(name, png, x, y, inv = [], hand = 0, facing = 3, under_tile_num, instructions = [], moving_timer, random_move = false) {
         super(name, png, x, y, inv, hand, facing, under_tile_num, instructions, moving_timer);
         this.class = 'NPC';
+        this.random_move = random_move;
+        this.options = ['up', 'down', 'left', 'right'];
         if(this.name == 'Mr.C'){
             this.move_bool = false;
         }
@@ -11,6 +13,19 @@ class NPC extends GridMoveEntity {
             this.dialouges[i] = new Dialouge(this.dialouges[i].phrase, this.dialouges[i].replies, this.dialouges[i].hand_num, this.dialouges[i].amount);
         }
         this.current_dialouge = 0;
+    }
+
+    // Allow NPCs flagged as random movers to wander like FreeMoveEntity while staying talkable
+    move(x, y) {
+        if(this.random_move){
+            if(this.instructions.length < 1){
+                this.instructions.push(random(this.options));
+            }
+            super.move(x, y);
+            this.instructions = [];
+            return;
+        }
+        super.move(x, y);
     }
 
     // Check if this NPC has a quest the player doesn't have
@@ -72,8 +87,10 @@ class NPC extends GridMoveEntity {
         this.anim = obj.anim;
         this.facing = obj.facing;
         this.moving_timer = obj.moving_timer;
+        this.random_move = !!obj.random_move;
         this.instructions = obj.instructions;
         this.current_instruction = obj.current_instruction;
+        this.options = obj.options || this.options || ['up', 'down', 'left', 'right'];
         
         for(let i = 0; i < obj.dialouges.length; i++){
             this.dialouges[i].phrase2 = obj.dialouges[i].phrase2;
