@@ -80,7 +80,7 @@ var displayFps = 0;
 var showFpsDebug = false;
 
 // Weather system
-var currentWeather = 'fog'; // 'clear', 'overcast', 'rain'
+var currentWeather = 'clear'; // 'clear', 'overcast', 'rain'
 var weatherLog = []; // Log of weather for each day
 
 // Rain particle system
@@ -107,7 +107,7 @@ function initializeRain(dropletCount = 200) {
     }
     rainInitialized = true;
 }
-var currentWeather = 'frog-rain'; // 'clear', 'overcast', 'rain'
+var currentWeather = 'clear'; // 'clear', 'overcast', 'rain'
 var weatherLog = []; // Log of weather for each day
 
 // Generate random weather for the day
