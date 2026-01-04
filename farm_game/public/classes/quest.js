@@ -41,7 +41,7 @@ class Quest {
             else{
                 if(this.goals[i].class == 'TalkingGoal'){
                     const savedGoal = this.goals[i];
-                    this.goals[i] = new TalkingGoal(savedGoal.npc_name, savedGoal.item_name, savedGoal.amount, savedGoal.receive_type);
+                    this.goals[i] = new TalkingGoal(savedGoal.npc_name, savedGoal.item_name, savedGoal.amount, savedGoal.receive_type, savedGoal.required_location);
                     if(savedGoal.done !== undefined) {
                         this.goals[i].done = savedGoal.done;
                     }
@@ -349,6 +349,12 @@ class Quest {
                 itemLine.textContent = `Give: ${goal.amount}x ${goal.item_name}`;
                 itemLine.style.marginTop = '3px';
                 detailsDiv.appendChild(itemLine);
+            }
+            if (goal.required_location) {
+                const locationLine = document.createElement('div');
+                locationLine.textContent = `Requires visiting: ${goal.required_location}`;
+                locationLine.style.marginTop = '3px';
+                detailsDiv.appendChild(locationLine);
             }
         } else if (goal.class === 'LocationGoal') {
             detailsDiv.textContent = `Location: ${goal.level_name}`;
@@ -896,23 +902,25 @@ class Goal {
 
 class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(item_name) to _(npc_name)  or Get _(amount) _(item_name) from _(npc_name)
 
-    constructor(npc_name, item_name, amount, receive_type){
+    constructor(npc_name, item_name, amount, receive_type, required_location){
         // receive_type: undefined/false = give items, true = receive items from NPC
+        const requiresText = required_location ? ' after visiting ' + required_location : '';
         if(item_name && item_name != 0){
             if(receive_type){
-                super('Get ' + amount + ' ' + item_name + ' from ' + npc_name);
+                super('Get ' + amount + ' ' + item_name + ' from ' + npc_name + requiresText);
             }
             else{
-                super('Give ' + amount + ' ' + item_name + ' to ' + npc_name);
+                super('Give ' + amount + ' ' + item_name + ' to ' + npc_name + requiresText);
             }
         }
         else{
-            super('Talk to ' + npc_name);
+            super('Talk to ' + npc_name + requiresText);
         }
         this.npc_name = npc_name;
         this.item_name = item_name || 0;  // Default to 0 if undefined
         this.amount = amount || 0;  // Default to 0 if undefined
         this.receive_type = receive_type || false;  // true if receiving from NPC
+        this.required_location = required_location || null; // Require visiting a location first
         this.npc_gave_items = false;  // Track if NPC actually gave us the items
         this.class = 'TalkingGoal';
         
@@ -926,8 +934,11 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
         // Listen for NPC interaction events
         this.addEventListener('npcInteraction', (e) => {
             if(e.detail.npcName === this.npc_name && !this.done){
+                if(!this.hasVisitedRequiredLocation()){
+                    return;
+                }
                 if(this.item_name == 0){
-                    // Just need to talk
+                    // Just need to talk (after visiting required location if set)
                     this.done = true;
                 } else if(this.receive_type){
                     // For receive type: only complete if NPC actually gave us the items
@@ -957,7 +968,23 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
         });
     }
 
+    hasVisitedRequiredLocation(){
+        if(!this.required_location){
+            return true;
+        }
+        if(typeof levels !== 'undefined' && levels[currentLevel_y] && levels[currentLevel_y][currentLevel_x] && levels[currentLevel_y][currentLevel_x].name === this.required_location){
+            return true;
+        }
+        if(typeof visitedLocations !== 'undefined' && visitedLocations.has(this.required_location)){
+            return true;
+        }
+        return false;
+    }
+
     update(){
+        if(!this.hasVisitedRequiredLocation()){
+            return;
+        }
         // Check if talking to the right NPC (either looking at them OR already in conversation)
         const isTalkingToNPC = (player.talking != 0 && player.talking.name === this.npc_name) || 
                                (player.looking(currentLevel_x, currentLevel_y) != undefined && 

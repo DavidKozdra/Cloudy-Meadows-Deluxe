@@ -407,7 +407,7 @@
     "amount": 0
   },
   {
-      "phrase": "If you go try it, I'll give you a flower",
+      "phrase": "Ride the air balloon over to the park and then come tell me what you saw - I'll give you a flower",
       "replies": [
         {
           "phrase": "Will do.",
@@ -424,12 +424,12 @@
     "amount": 0
   },
   {
-      "phrase": "Ok but you gotta do it today!",
+      "phrase": "Head to Poly Park today and then come back to tell me about it!",
       "replies": [
         {
           "phrase": "Can do.",
           "dialouge_num": -1,
-          "quest": {"name": "Ride the Air Ballon", "goals": [{"class": "LocationGoal", "level_name": "Poly Park: Air ballon landing"}, {"class": "TalkingGoal", "npc_name": "Mira"}], "days": 3, "reward_item": {"num": 11, "amount": 1}, "reward_coins": 0}
+          "quest": {"name": "Ride the Air Ballon", "goals": [{"class": "LocationGoal", "level_name": "Poly Park: Air ballon landing"}, {"class": "TalkingGoal", "npc_name": "Mira", "required_location": "Poly Park: Air ballon landing"}], "days": 3, "reward_item": {"num": 11, "amount": 1}, "reward_coins": 0}
         },
         {
           "phrase": "No thanks.",
