@@ -85,7 +85,7 @@ const TILE_DEFINITIONS = [
     /*66*/  { name: 'bottom_left_corner_fence', png: 101, collide: true, age: -1, class: 'Tile'},
     /*67*/  { name: 'top_left_corner_fence', png: 102, collide: true, age: -1, class: 'Tile'},
     /*68*/  { name: 'tree_bottom', png: 105, collide: true, age: -1, class: 'Tile'},
-    /*69*/  { name: 'tree_top', png: 106, collide: true, age: -1, class: 'Tile'},
+    /*69*/  { name: 'tree_top', png: 106, collide: false, age: -1, class: 'Tile'},
     /*70*/  { name: 'Hotdog Stand', png: 108, inv: [{num: 35, amount: 4}], under_tile_num: 57, class: 'Shop' },
     /*71*/  { name: 'swamp_grass', png: 110, collide: false, age: -1, class: 'Tile'},
     /*72*/  { name: 'water', png: 109, collide: true, age: -1, class: 'Tile'},

@@ -92,6 +92,83 @@ class Level {
                 }
             }
         }
+
+        // After constructing tiles, optionally add extra trees then adjust park grass variants
+        this.sprinkleParkTrees();
+        this.applyParkGrassLeafVariants();
+    }
+
+    sprinkleParkTrees(){
+        // Quickly boost canopy coverage on park grass without hand-editing every map
+        const candidates = [];
+
+        // Start at row 1 so the row above exists for the tree top
+        for (let i = 1; i < this.map.length; i++) {
+            for (let j = 0; j < this.map[i].length; j++) {
+                if (!this.map[i][j] || !this.map[i - 1] || !this.map[i - 1][j]) continue;
+                if (this.map[i][j].name !== 'park_grass' || this.map[i - 1][j].name !== 'park_grass') continue;
+                candidates.push({ y: i, x: j });
+            }
+        }
+
+        // Skip small non-park levels that happen to use a few park grass tiles
+        if (candidates.length < 15) return;
+
+        // Scale trees to map size, lightly clamped so parks never feel empty or overstuffed
+        const target = Math.round(candidates.length * 0.04);
+        const clampedTarget = Math.min(Math.max(target, 4), 18);
+        const treesToPlace = Math.min(clampedTarget, candidates.length);
+
+        // Shuffle to spread randomness
+        for (let i = candidates.length - 1; i > 0; i--) {
+            const swap = Math.floor(Math.random() * (i + 1));
+            const temp = candidates[i];
+            candidates[i] = candidates[swap];
+            candidates[swap] = temp;
+        }
+
+        let placed = 0;
+        for (let idx = 0; idx < candidates.length && placed < treesToPlace; idx++) {
+            const { y, x } = candidates[idx];
+            const bottom = this.map[y][x];
+            const top = this.map[y - 1][x];
+
+            if (!bottom || !top) continue;
+            if (bottom.name !== 'park_grass' || top.name !== 'park_grass') continue;
+
+            this.map[y][x] = new_tile_from_num(68, x * tileSize, y * tileSize);
+            this.map[y - 1][x] = new_tile_from_num(69, x * tileSize, (y - 1) * tileSize);
+            placed += 1;
+        }
+    }
+
+    applyParkGrassLeafVariants(){
+        const leafIndex = all_imgs[94].length - 1; // Last variant is leaves
+        for (let i = 0; i < this.map.length; i++) {
+            for (let j = 0; j < this.map[i].length; j++) {
+                const tile = this.map[i][j];
+                if (!tile || tile.name !== 'park_grass') continue;
+
+                let nearTree = false;
+                for (let dy = -1; dy <= 1 && !nearTree; dy++) {
+                    for (let dx = -1; dx <= 1 && !nearTree; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        if (this.map[i + dy] && this.map[i + dy][j + dx]) {
+                            const neighbor = this.map[i + dy][j + dx];
+                            if (neighbor.name === 'tree_bottom' || neighbor.name === 'tree_top') {
+                                nearTree = true;
+                            }
+                        }
+                    }
+                }
+
+                if (nearTree) {
+                    tile.variant = leafIndex;
+                } else {
+                    tile.variant = round(random(0, all_imgs[tile.png].length - 2));
+                }
+            }
+        }
     }
 
     //Controls movement for top-left level box when you enter a new level (DOM version in shared container)
@@ -205,29 +282,42 @@ class Level {
     render() {
         for (let i = 0; i < this.map.length; i++) {
             for (let j = 0; j < this.map[i].length; j++) {
-                if (this.map[i][j] != 0) {
-                    this.map[i][j].render();
+                const tile = this.map[i][j];
+                if (tile === 0 || tile === undefined) continue;
+                if (tile.name === 'tree_top') continue; // Render canopy in a second pass above player
+
+                tile.render();
+                
+                // Show quest/gift icons above NPCs when not talking
+                if(tile.class === 'NPC' && player.talking === 0) {
+                    push();
+                    imageMode(CENTER);
                     
-                    // Show quest/gift icons above NPCs when not talking
-                    if(this.map[i][j].class === 'NPC' && player.talking === 0) {
-                        push();
-                        imageMode(CENTER);
-                        
-                        if(this.map[i][j].hasQuestForPlayer && this.map[i][j].hasQuestForPlayer()) {
-                            // Quest marker sprite
-                            image(quest_marker_img, this.map[i][j].pos.x + (tileSize / 2), this.map[i][j].pos.y - 8);
-                        } else if(this.map[i][j].hasGiftForPlayer && this.map[i][j].hasGiftForPlayer()) {
-                            // Gift indication sprite
-                            image(gift_indication_img, this.map[i][j].pos.x + (tileSize / 2), this.map[i][j].pos.y - 8);
-                        }
-                        
-                        pop();
+                    if(tile.hasQuestForPlayer && tile.hasQuestForPlayer()) {
+                        // Quest marker sprite
+                        image(quest_marker_img, tile.pos.x + (tileSize / 2), tile.pos.y - 8);
+                    } else if(tile.hasGiftForPlayer && tile.hasGiftForPlayer()) {
+                        // Gift indication sprite
+                        image(gift_indication_img, tile.pos.x + (tileSize / 2), tile.pos.y - 8);
                     }
+                    
+                    pop();
                 }
             }
         }
         for (let i = 0; i < this.lights.length; i++) {
             this.lights[i].render();
+        }
+    }
+
+    renderTreeTops(){
+        // Draw tree canopies in a late pass so they appear above the player
+        for (let i = 0; i < this.map.length; i++) {
+            for (let j = 0; j < this.map[i].length; j++) {
+                const tile = this.map[i][j];
+                if (!tile || tile.name !== 'tree_top') continue;
+                tile.render();
+            }
         }
     }
 

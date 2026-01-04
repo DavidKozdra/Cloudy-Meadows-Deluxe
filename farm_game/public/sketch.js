@@ -644,6 +644,7 @@ function draw() {
             animatedGifs.forEach(gif => gif.pause());
         }
         player.render();
+        levels[currentLevel_y][currentLevel_x].renderTreeTops();
         if(!player.dead){
             background(0, 0, 0, time);
             render_ui();

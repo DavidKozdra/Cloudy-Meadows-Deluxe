@@ -591,8 +591,8 @@ function preload() {
     /*91*/[fore_cloud_2_img],
     /*92*/[fore_building_img, fore_red_building_img, fore_red_grown_building_img, fore_gray_building_img, fore_street_img],
     /*93*/[plot_wet_tile_img],
-    // Park grass variants (leaves removed to avoid clutter)
-    /*94*/[park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile2_img, park_grass_tile2_img],
+    // Park grass variants (leaf variant present but placed intentionally near trees)
+    /*94*/[park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile_img, park_grass_tile2_img, park_grass_tile3_img],
     /*95*/[fence_horizontal_tile_img],
     /*96*/[fence_vertical_tile_img],
     /*97*/[fence_corner1_tile_img],

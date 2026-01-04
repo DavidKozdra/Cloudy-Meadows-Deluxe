@@ -5,7 +5,12 @@ class Tile {
         this.pos = createVector(x, y);
         this.collide = collide;
         this.age = age;
+        // Default variant selection
         this.variant = round(random(0, all_imgs[this.png].length-1));
+        // For park grass, avoid the leaf variant by default; it will be set contextually
+        if (this.name === 'park_grass' && all_imgs[this.png].length > 1) {
+            this.variant = round(random(0, all_imgs[this.png].length-2));
+        }
         this.class = "Tile";
         // Only create under_tile for specific tiles that should have one (wall, bed, etc.)
         // Not for base tiles like grass, concrete, plot to avoid infinite recursion
