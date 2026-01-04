@@ -23,7 +23,16 @@ class Tile {
         if (this.name == 'bed' || this.name == 'lamppost' || this.name == 'compost_bucket' || this.name == 'cart_s' || this.name == "bush" || this.name == 'Veggie_Press' || this.name == 'table' || this.name == 'grinder' || this.name == 'computer') {
             image(all_imgs[0][0], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2)); //concrete under
         }
-        if (this.name == 'sprinkler' || this.name == 'Flower_Done'){
+        if (this.name == 'sprinkler'){
+            // Use the tile underneath the sprinkler, or default to grass
+            if(this.under_tile && typeof this.under_tile === 'object'){
+                image(all_imgs[this.under_tile.png][0], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2)); //use under_tile image
+            }
+            else{
+                image(all_imgs[1][0], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2)); //grass under
+            }
+        }
+        if (this.name == 'Flower_Done'){
             image(all_imgs[1][0], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2)); //grass under
         }
         if (this.name == 'junk') {

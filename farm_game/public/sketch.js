@@ -79,6 +79,14 @@ var lastFpsUpdate = 0;
 var displayFps = 0;
 var showFpsDebug = false;
 
+// Day of week system (0-4: blue, green, yellow, orange, red)
+var dayOfWeek = 0; // Calculated as days % 5
+var dayOfWeekColors = ['blue', 'green', 'yellow', 'orange', 'red'];
+
+// Weather tracking for economy effects
+var lastRainDay = -999; // Track when rain last occurred
+var lastFrogRainDay = -999; // Track when frog-rain last occurred
+
 // Weather system
 var currentWeather = 'clear'; // 'clear', 'overcast', 'rain'
 var weatherLog = []; // Log of weather for each day
@@ -113,12 +121,16 @@ function generateDailyWeather() {
     
     if (weatherRoll < 0.5) {
         currentWeather = 'frog-rain'; // 0.5% - FROGS FALL FROM THE SKY
+        lastFrogRainDay = days; // Track frog-rain
     } else if (weatherRoll < 2.5) {
         currentWeather = 'thunderstorm'; // 2% - Heavy rain with lightning
+        lastRainDay = days; // Track rain
     } else if (weatherRoll < 10.5) {
         currentWeather = 'rain'; // 8% - Regular rain
+        lastRainDay = days; // Track rain
     } else if (weatherRoll < 18.5) {
         currentWeather = 'sunshower'; // 8% - Rain during day (bright)
+        lastRainDay = days; // Track rain
     } else if (weatherRoll < 28.5) {
         currentWeather = 'overcast'; // 10% - Dark and cloudy
     } else if (weatherRoll < 43.5) {
@@ -665,6 +677,7 @@ function draw() {
                     time = 200;
                     timephase = 1;
                     days += 1;
+                    dayOfWeek = days % 5; // Update day of week (0-4)
                     
                     // Generate weather for the new day
                     generateDailyWeather();
@@ -719,6 +732,15 @@ function draw() {
                         for (let x = 0; x < levels[y].length; x++) {
                             if (levels[y][x] != 0) {
                                 levels[y][x].daily_update();
+                                // Update all shops in this level's map with day/weather info
+                                for(let my = 0; my < levels[y][x].map.length; my++){
+                                    for(let mx = 0; mx < levels[y][x].map[my].length; mx++){
+                                        const tile = levels[y][x].map[my][mx];
+                                        if(tile && tile.class == 'Shop'){
+                                            tile.daily_update(dayOfWeek, lastRainDay, lastFrogRainDay);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -739,18 +761,29 @@ function draw() {
 
 //Christian's function to make UI more readible, positioning + math stuff
 function render_ui() {
-    //calendar
+    //calendar with day-of-week color
     push();
     image(calendar_img, canvasWidth - 70, 6);
     textFont(player_2);
-    fill(255, 0, 0);
+    
+    // Color based on day of week (0=blue, 1=green, 2=yellow, 3=orange, 4=red)
+    const dayColors = [
+        [0, 0, 255],      // 0: blue
+        [0, 255, 0],      // 1: green
+        [255, 255, 0],    // 2: yellow
+        [255, 165, 0],    // 3: orange
+        [255, 0, 0]       // 4: red
+    ];
+    const color = dayColors[dayOfWeek];
+    fill(color[0], color[1], color[2]);
     textAlign(CENTER, CENTER);
+    stroke(0);
+    strokeWeight(2);
     textSize(13);
     text('days', canvasWidth - 39, 30);
     textSize(15);
     text(days, canvasWidth - 40, 50);
     if(days == 69){
-        
         text("nice !", canvasWidth - 40, 60);
     }
 

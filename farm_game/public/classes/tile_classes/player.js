@@ -1,5 +1,5 @@
 class Player extends MoveableEntity {
-    constructor(name, png, x, y, inv = [{ num: 1, amount: 1 }, { num: 2, amount: 5 }, { num: 3, amount: 5}, 0, 0, 0, 0, { num: 42, amount: 1}]) {
+    constructor(name, png, x, y, inv = [{ num: 1, amount: 1 }, { num: 2, amount: 5 }, { num: 3, amount: 5}, 0, 0, 0, 0, 0]) {
         super(name, png, x, y, inv, 0, 3, 0, 0);
         this.quests = [new Quest("Save Cloudy Meadows", [{class: "TalkingGoal", npc_name: "Mr.C", item_name: 0, amount: 0}, {class: "FundingGoal", amount: 10000}], 100, 0, 0),
         new Quest("Talk to some people", [{class: "TalkingGoal", npc_name: "OldManJ", item_name: 0, amount: 0}, {class: "TalkingGoal", npc_name: "Deb", item_name: 0, amount: 0}, {class: "TalkingGoal", npc_name: "Meb",item_name: 0,amount: 0}, {"class": "TalkingGoal",npc_name: "Rick",item_name: 0,amount: 0}], 0, 0, 10)];
@@ -458,7 +458,6 @@ class Player extends MoveableEntity {
             this.talking = this.inv[this.hand];
             return;
         }
-        console.log(this.looking(currentLevel_x, currentLevel_y));
         if(this.looking(currentLevel_x, currentLevel_y) != undefined && this.looking(currentLevel_x, currentLevel_y) != 0 && this.talking == 0){
             if(((this.looking(currentLevel_x, currentLevel_y).class == 'NPC' || this.looking(currentLevel_x, currentLevel_y).class == 'Shop' || this.looking(currentLevel_x, currentLevel_y).class == 'Chest' || this.looking(currentLevel_x, currentLevel_y).class == 'Robot' || this.looking(currentLevel_x, currentLevel_y).class == 'AirBallon'))){
                 temp_move_bool = this.looking(currentLevel_x, currentLevel_y).move_bool;
@@ -503,9 +502,48 @@ class Player extends MoveableEntity {
                 if(keyIsDown(special_key)){
                     current_amount = this.inv[this.hand].amount;
                 }
-                const moneyGained = this.inv[this.hand].price * current_amount;
+                
+                // Find the current shop's sell price for this item (25% discount on BASE price)
+                let sellPrice = round(this.inv[this.hand].price * 0.75); // Default fallback
+                const currentLevel = levels[currentLevel_y][currentLevel_x];
+                if(currentLevel && currentLevel.map) {
+                    for(let my = 0; my < currentLevel.map.length; my++){
+                        for(let mx = 0; mx < currentLevel.map[my].length; mx++){
+                            const tile = currentLevel.map[my][mx];
+                            if(tile && tile.class == 'Shop'){
+                                // Use shop's getSellPrice method (uses base price)
+                                let price = tile.getSellPrice(this.inv[this.hand].name);
+                                if(price > 0) {
+                                    sellPrice = price;
+                                    break;
+                                }
+                            }
+                        }
+                        // Break outer loop if found
+                        if(sellPrice !== round(this.inv[this.hand].price * 0.75)) break;
+                    }
+                }
+                
+                const moneyGained = sellPrice * current_amount;
                 addMoney(moneyGained);
                 moneySound.play();
+                
+                // Track what was sold to all shops and update their prices
+                for(let i = 0; i < levels.length; i++){
+                    for(let j = 0; j < levels[i].length; j++){
+                        const level = levels[i][j];
+                        if(level && level.map){
+                            for(let my = 0; my < level.map.length; my++){
+                                for(let mx = 0; mx < level.map[my].length; mx++){
+                                    const tile = level.map[my][mx];
+                                    if(tile && tile.class == 'Shop'){
+                                        tile.recordItemSold(this.inv[this.hand].name, current_amount);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 this.inv[this.hand].amount -= current_amount;
                 if(this.quests != undefined && this.quests.length > 0){
                 if(this.current_quest != undefined && this.quests[this.current_quest].goals[this.quests[this.current_quest].current_Goal] != undefined){
@@ -593,8 +631,6 @@ class Player extends MoveableEntity {
             }
         }
         else if (this.touching.name == 'compost_bucket') {
-            console.log('🪣 Interacting with compost bucket');
-            console.log('Current hand item:', this.inv[this.hand]);
                if (this.inv[this.hand].name == 'Shovel'){
                 if(checkForSpace(this, 46)){
                     addItem(this, 46, 1);
@@ -1091,11 +1127,13 @@ function takeInput() {
                 }
                 else if (player.talking.class == 'Shop'){
                     if(player.talking.inv[current_reply].amount >= 1){
-                        if(player.coins >= player.talking.inv[current_reply].price && checkForSpace(player, item_name_to_num(player.talking.inv[current_reply].name))){    //check if you have the money
+                        // Use getBuyPrice for market-based pricing with 10% markup
+                        const buyPrice = player.talking.getBuyPrice(player.talking.inv[current_reply].name);
+                        if(player.coins >= buyPrice && checkForSpace(player, item_name_to_num(player.talking.inv[current_reply].name))){    //check if you have the money
                             moneySound.play()
                             addItem(player, item_name_to_num(player.talking.inv[current_reply].name), 1);
-                            player.coins -= player.talking.inv[current_reply].price; //reduce money
-                            player.talking.inv[current_reply].amount -= 1; //shop.inv -1 amount
+                            player.coins -= buyPrice; //reduce money by buy price
+                            player.talking.updateItemStock(player.talking.inv[current_reply].name, player.talking.inv[current_reply].amount - 1); //shop.inv -1 and recalc prices
                         }
                     }
                 }

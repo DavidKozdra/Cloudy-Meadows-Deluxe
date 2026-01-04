@@ -56,6 +56,22 @@ class MoveableEntity extends Entity {
             if (this.inv[this.hand].price != 0 && this.inv[this.hand] != 0) {
                 addMoney(this.inv[this.hand].price);
                 moneySound.play();
+                // Track what was sold to all shops
+                for(let i = 0; i < levels.length; i++){
+                    for(let j = 0; j < levels[i].length; j++){
+                        const level = levels[i][j];
+                        if(level && level.map){
+                            for(let my = 0; my < level.map.length; my++){
+                                for(let mx = 0; mx < level.map[my].length; mx++){
+                                    const tile = level.map[my][mx];
+                                    if(tile && tile.class == 'Shop'){
+                                        tile.recordItemSold(this.inv[this.hand].name, 1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 this.inv[this.hand].amount -= 1;
                 if (this.inv[this.hand].amount == 0) {
                     this.inv[this.hand] = 0;
