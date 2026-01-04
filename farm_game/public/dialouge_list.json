@@ -858,6 +858,11 @@
           "quest": -1
         },
         {
+          "phrase": "Liam sent you a love letter",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
           "phrase": "Bye.",
           "dialouge_num": -1,
           "quest": -1
@@ -904,6 +909,18 @@
         },
         {
           "phrase": "Bye.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "A love letter from Liam? Thanks for telling me. Thanks for your help, take cherry.",
+      "replies": [
+        {
+          "phrase": "Glad to help.",
           "dialouge_num": -1,
           "quest": -1
         }
@@ -992,7 +1009,7 @@
         {
           "phrase": "Will do.",
           "dialouge_num": -1,
-          "quest": {"name": "Love letter Delivery", "goals": [{"class": "LocationGoal", "level_name": "Cloudy Meadows: Market"}, {"class": "TalkingGoal", "npc_name": "James", "item_name": 0, "amount": 0, "required_location": "Cloudy Meadows: Market"}], "days": 3, "reward_item": {"num": 10, "amount": 1}, "reward_coins": 0}
+          "quest": {"name": "Love letter Delivery", "goals": [{"class": "LocationGoal", "level_name": "Cloudy Meadows: Market"}, {"class": "TellGoal", "npc_name": "James", "reply_phrase": "Liam sent you a love letter", "required_location": "Cloudy Meadows: Market"}], "days": 3, "reward_item": {"num": 10, "amount": 1}, "reward_coins": 0}
         }
       ],
       "hand_num": -1,

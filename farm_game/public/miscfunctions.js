@@ -1102,6 +1102,17 @@ function showQuests(){
         const questIndex = player.quests.indexOf(e.detail.quest);
         const btn = document.querySelector(`[data-quest-index="${questIndex}"]`)?.closest('.quest-item');
         if (btn) updateQuestProgressBar(btn);
+
+        // Auto-select next incomplete quest if current was just completed
+        if (questIndex === player.current_quest) {
+            for (let i = 0; i < player.quests.length; i++) {
+                if (!player.quests[i].done && !player.quests[i].failed) {
+                    player.current_quest = i;
+                    updateQuestButtonHighlight();
+                    break;
+                }
+            }
+        }
     });
 }
 
