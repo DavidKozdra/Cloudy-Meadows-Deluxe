@@ -1253,6 +1253,8 @@ function item_name_to_num(item_name) {
             return i;
         }
     }
+    console.warn('Item name not found: ' + item_name);
+    return undefined;
 }
 
 function tile_name_to_num(tile_name) {
@@ -1405,6 +1407,8 @@ function loadAll(){
         if (isNaN(days)) {
             days = 0;
         }
+        // Recalculate dayOfWeek from days
+        dayOfWeek = days % 5;
         currentLevel_x = localData.get('Day_curLvl_Dif').currentLevel_x;
         currentLevel_y = localData.get('Day_curLvl_Dif').currentLevel_y;
         dificulty = localData.get('Day_curLvl_Dif').dificulty;

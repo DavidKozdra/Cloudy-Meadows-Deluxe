@@ -727,10 +727,30 @@ class Quest {
             detail: { quest: this }
         }));
         
-        // Give item reward if inventory has space
+        // Give item reward - force into inventory even if full
         if(this.reward_item != 0){
-            if(checkForSpace(player, item_name_to_num(this.reward_item.name))){
-                addItem(player, item_name_to_num(this.reward_item.name), this.reward_item.amount)
+            const itemNum = item_name_to_num(this.reward_item.name);
+            if(itemNum !== undefined) {
+                // Try to add normally first
+                if(checkForSpace(player, itemNum)){
+                    addItem(player, itemNum, this.reward_item.amount);
+                }
+                else {
+                    // Inventory full - drop in hand or force stack
+                    let added = false;
+                    // Try to stack with existing item
+                    for(let i = 0; i < player.inv.length; i++){
+                        if(player.inv[i] != 0 && player.inv[i].name === this.reward_item.name){
+                            player.inv[i].amount += this.reward_item.amount;
+                            added = true;
+                            break;
+                        }
+                    }
+                    // If can't stack, drop in first empty slot or show warning
+                    if(!added) {
+                        console.warn('Quest reward inventory full, reward not given: ' + this.reward_item.name);
+                    }
+                }
                 this.reward_item = 0;
             }
         }

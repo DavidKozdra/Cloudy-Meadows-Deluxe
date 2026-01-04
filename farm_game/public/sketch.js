@@ -967,7 +967,25 @@ function render_ui() {
             }
             if (player.inv[player.hand].price > 0) {
                 fill(255);
-                text(player.inv[player.hand].price, player.looking(currentLevel_x, currentLevel_y).pos.x + (tileSize), player.looking(currentLevel_x, currentLevel_y).pos.y - (tileSize / 2));
+                // Find shop and calculate actual sell price
+                let sellPrice = round(player.inv[player.hand].price * 0.75); // Default fallback
+                const currentLevel = levels[currentLevel_y][currentLevel_x];
+                if(currentLevel && currentLevel.map) {
+                    for(let my = 0; my < currentLevel.map.length; my++){
+                        for(let mx = 0; mx < currentLevel.map[my].length; mx++){
+                            const tile = currentLevel.map[my][mx];
+                            if(tile && tile.class == 'Shop'){
+                                let price = tile.getSellPrice(player.inv[player.hand].name);
+                                if(price > 0) {
+                                    sellPrice = price;
+                                    break;
+                                }
+                            }
+                        }
+                        if(sellPrice !== round(player.inv[player.hand].price * 0.75)) break;
+                    }
+                }
+                text(sellPrice, player.looking(currentLevel_x, currentLevel_y).pos.x + (tileSize), player.looking(currentLevel_x, currentLevel_y).pos.y - (tileSize / 2));
             }
             pop()
         }
