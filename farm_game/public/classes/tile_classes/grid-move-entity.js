@@ -116,6 +116,9 @@ class GridMoveEntity extends MoveableEntity{
             }
             else if (this.instructions[this.current_instruction] == 'disappear') {
                 levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
+                if (this.name === 'Mr.C' && typeof restoreMainQuestNPCs === 'function') {
+                    restoreMainQuestNPCs();
+                }
             }
 
             this.anim += 1;

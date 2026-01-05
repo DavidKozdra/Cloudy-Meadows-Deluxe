@@ -10,7 +10,7 @@ class Player extends MoveableEntity {
         this.lastFoodnum = 2;
         this.hunger_timer = all_items[this.lastFoodnum].hunger_timer;
         this.hunger_counter = 0;
-        this.coins = 20000;
+        this.coins = 9999;
         this.hp = 100;
         this.dead = false;
         this.deaths = 0;
@@ -981,7 +981,7 @@ function takeInput() {
                             }
                             player.talking.dialouges[i].new_replies = -1;
                         }
-                        if(player.talking.name == 'Mr.C'){
+                        if(player.talking.name == 'Mr.C' && !window.mainQuestNPCs){
                             if(days >= 99){
                                 player.talking.move_bool = false;
                                 if(player.quests[0].done){
@@ -1041,6 +1041,9 @@ function takeInput() {
                     robotBoomButton.hide();
                 }
                 player.oldlooking_name = player.talking.name;
+                if (player.talking.name === 'Mr.C' && window.mainQuestNPCs) {
+                    restoreMainQuestNPCs();
+                }
                 player.talking = 0;
                 current_reply = 0;
                 lastMili = millis();
@@ -1124,7 +1127,7 @@ function takeInput() {
                         player.talking.move_bool = true;
                         player.talking.current_dialouge = 0;
                         player.oldlooking_name = player.talking.name;
-                        if(player.talking.name == 'Mr.C'){
+                        if(player.talking.name == 'Mr.C' && !window.mainQuestNPCs){
                             if(days >= 99){
                                 player.talking.move_bool = false;
                                 if(player.quests[0].done){
@@ -1138,6 +1141,9 @@ function takeInput() {
                                 player.show_quests = true;
                                 player.talking.move_bool = true;
                             }
+                        }
+                        if (player.talking.name === 'Mr.C' && window.mainQuestNPCs) {
+                            restoreMainQuestNPCs();
                         }
                         player.talking = 0;
                         current_reply = 0;

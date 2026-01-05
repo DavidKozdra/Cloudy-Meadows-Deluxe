@@ -134,7 +134,7 @@ function showMainMenu(){
     let container = document.getElementById('main-menu-container');
     let startBtn = document.getElementById('start-btn');
     if (!container) {
-        // Create structure once
+        // Create structure =J BN,/
         container = document.createElement('div');
         container.id = 'main-menu-container';
         container.className = 'main-menu';
@@ -1567,4 +1567,56 @@ function deleteWorld(){
             }
         }
     }
+}
+
+function restoreMainQuestNPCs() {
+    if (!window.mainQuestNPCs) return;
+    
+    const marketLevel = levels[0][5];
+    
+    // Remove Mr.C from market if he exists
+    for (let i = 0; i < marketLevel.map.length; i++) {
+        for (let j = 0; j < marketLevel.map[i].length; j++) {
+            if (marketLevel.map[i][j] && marketLevel.map[i][j].name === 'Mr.C') {
+                marketLevel.map[i][j] = marketLevel.map[i][j].under_tile || 0;
+            }
+        }
+    }
+    
+    for (const data of window.mainQuestNPCs) {
+        const npc = data.npc;
+        // Remove from market if still there
+        let foundInMarket = false;
+        for (let i = 0; i < marketLevel.map.length; i++) {
+            for (let j = 0; j < marketLevel.map[i].length; j++) {
+                if (marketLevel.map[i][j] === npc) {
+                    marketLevel.map[i][j] = npc.under_tile || 0;
+                    foundInMarket = true;
+                    break;
+                }
+            }
+            if (foundInMarket) break;
+        }
+        
+        // Restore to original level and position
+        npc.pos.x = data.originalPos.x;
+        npc.pos.y = data.originalPos.y;
+        const targetLvl = levels[data.lvlY][data.lvlX];
+        if (targetLvl && targetLvl.map) {
+            npc.under_tile = targetLvl.map[data.y][data.x];
+            targetLvl.map[data.y][data.x] = npc;
+        }
+    }
+    
+    // Restore player position
+    if (window.playerOriginalPos) {
+        currentLevel_x = window.playerOriginalPos.lvlX;
+        currentLevel_y = window.playerOriginalPos.lvlY;
+        player.pos.x = window.playerOriginalPos.x;
+        player.pos.y = window.playerOriginalPos.y;
+        window.playerOriginalPos = null;
+    }
+    
+    window.mainQuestNPCs = null;
+    console.log('Cloudy Meadows NPCs and Player restored to original positions.');
 }

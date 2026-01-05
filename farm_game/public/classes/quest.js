@@ -892,6 +892,93 @@ class Quest {
             addMoney(this.reward_coins);
             this.reward_coins = 0;
         }
+
+        if (this.og_name === "Save Cloudy Meadows") {
+            this.triggerMainQuestEnding();
+        }
+    }
+
+    triggerMainQuestEnding() {
+        const marketLevel = levels[0][5];
+        const npcsToMove = [];
+        window.mainQuestNPCs = []; // Store for restoration
+        
+        // Store player's original position
+        window.playerOriginalPos = {
+            x: player.pos.x,
+            y: player.pos.y,
+            lvlX: currentLevel_x,
+            lvlY: currentLevel_y
+        };
+
+        // 1. Collect all NPCs from Cloudy Meadows levels
+        for (let y = 0; y < levels.length; y++) {
+            for (let x = 0; x < levels[y].length; x++) {
+                const lvl = levels[y][x];
+                if (lvl && lvl.name && lvl.name.startsWith("Cloudy Meadows") && lvl !== marketLevel) {
+                    for (let i = 0; i < lvl.map.length; i++) {
+                        for (let j = 0; j < lvl.map[i].length; j++) {
+                            const tile = lvl.map[i][j];
+                            if (tile && tile.class === 'NPC' && tile.name !== 'Mr.C') {
+                                // Store original position and level
+                                window.mainQuestNPCs.push({
+                                    npc: tile,
+                                    x: j,
+                                    y: i,
+                                    lvlX: x,
+                                    lvlY: y,
+                                    originalPos: {x: tile.pos.x, y: tile.pos.y}
+                                });
+                                npcsToMove.push(tile);
+                                lvl.map[i][j] = tile.under_tile || 0; // Remove from current level
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Find empty spots in Market (concrete tiles)
+        const emptySpots = [];
+        for (let i = 0; i < marketLevel.map.length; i++) {
+            for (let j = 0; j < marketLevel.map[i].length; j++) {
+                if (marketLevel.map[i][j] && marketLevel.map[i][j].name === 'concrete') {
+                    emptySpots.push({x: j, y: i});
+                }
+            }
+        }
+
+        // 3. Place NPCs in Market
+        for (let i = 0; i < npcsToMove.length && i < emptySpots.length; i++) {
+            const spot = emptySpots.splice(Math.floor(Math.random() * emptySpots.length), 1)[0];
+            const npc = npcsToMove[i];
+            npc.pos.x = spot.x * tileSize;
+            npc.pos.y = spot.y * tileSize;
+            npc.under_tile = marketLevel.map[spot.y][spot.x];
+            marketLevel.map[spot.y][spot.x] = npc;
+        }
+
+        // 4. Spawn Mr.C in Market
+        const mrCSpot = {x: 11, y: 8}; 
+        const mrC = new_tile_from_num(98, mrCSpot.x * tileSize, mrCSpot.y * tileSize);
+        mrC.under_tile = marketLevel.map[mrCSpot.y][mrCSpot.x];
+        marketLevel.map[mrCSpot.y][mrCSpot.x] = mrC;
+
+        // 5. Move player to Market
+        currentLevel_x = 5;
+        currentLevel_y = 0;
+        player.pos.x = 11 * tileSize;
+        player.pos.y = 10 * tileSize;
+        player.facing = 0; // Face up towards Mr.C
+
+        // 6. Trigger dialogue
+        mrC.dialouges = [new Dialouge(["it doesnt matter that you got the money IM gonna sue YOU for every penny YOU have"], [], -1, 0)];
+        mrC.current_dialouge = 0;
+        player.talking = mrC;
+
+        // 7. Mr.C will be removed immediately after dialogue ends via player.js
+        mrC.move_bool = false;
+        mrC.instructions = [];
     }
 
     update(){

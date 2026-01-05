@@ -17,6 +17,7 @@ class NPC extends GridMoveEntity {
 
     // Allow NPCs flagged as random movers to wander like FreeMoveEntity while staying talkable
     move(x, y) {
+        if (typeof player !== 'undefined' && player.talking === this) return;
         if(this.random_move){
             if(this.instructions.length < 1){
                 this.instructions.push(random(this.options));
