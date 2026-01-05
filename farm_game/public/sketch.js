@@ -25,6 +25,7 @@ var days = 0;
 var title_screen = true;
 var dificulty_screen = false;
 var dificulty = 0;
+var customRules = null;
 var save_anim = 0;
 var all_tiles = [];
 var all_items = [];

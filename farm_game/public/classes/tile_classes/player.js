@@ -1,7 +1,15 @@
 class Player extends MoveableEntity {
     constructor(name, png, x, y, inv = [{ num: 1, amount: 1 }, { num: 2, amount: 5 }, { num: 3, amount: 5}, 0, 0, 0, 0, 0]) {
         super(name, png, x, y, inv, 0, 3, 0, 0);
-        this.quests = [new Quest("Save Cloudy Meadows", [{class: "TalkingGoal", npc_name: "Mr.C", item_name: 0, amount: 0}, {class: "FundingGoal", amount: 10000}], 100, 0, 0),
+        
+        let mainQuestCoins = 10000;
+        let mainQuestDays = 100;
+        if (window.customRules) {
+            if (window.customRules.mainQuestCoins !== undefined) mainQuestCoins = window.customRules.mainQuestCoins;
+            if (window.customRules.mainQuestDays !== undefined) mainQuestDays = window.customRules.mainQuestDays;
+        }
+
+        this.quests = [new Quest("Save Cloudy Meadows", [{class: "TalkingGoal", npc_name: "Mr.C", item_name: 0, amount: 0}, {class: "FundingGoal", amount: mainQuestCoins}], mainQuestDays, 0, 0),
         new Quest("Talk to some people", [{class: "TalkingGoal", npc_name: "OldManJ", item_name: 0, amount: 0}, {class: "TalkingGoal", npc_name: "Deb", item_name: 0, amount: 0}, {class: "TalkingGoal", npc_name: "Meb",item_name: 0,amount: 0}, {"class": "TalkingGoal",npc_name: "Rick",item_name: 0,amount: 0}], 0, 0, 10)];
         this.current_quest = 0;
         this.show_quests = false;
@@ -205,6 +213,31 @@ class Player extends MoveableEntity {
     }
 
     deathConsequence(dif){
+        if(dif == 3 && window.customRules){
+            if(window.customRules.permaDeath){
+                title_screen = true;
+                localStorage.clear();
+                newWorld();
+                return;
+            }
+            if(window.customRules.moneyLoss){
+                this.coins -= ceil(this.coins * 0.1);
+            }
+            if(window.customRules.foodRot){
+                for(let i = 0; i < this.inv.length; i++){
+                    if(this.inv[i].class == 'Eat'){
+                        let rand_rot = round(random(0, this.inv[i].amount-2));
+                        if (rand_rot > 0){
+                            this.inv[i].amount -= rand_rot;
+                            if(checkForSpace(this, 4)){
+                                addItem(this, 4, rand_rot);
+                            }
+                        }
+                    }
+                }
+            }
+            return;
+        }
         if(dif == 0){
             this.coins -= ceil(this.coins * 0.1);
         }

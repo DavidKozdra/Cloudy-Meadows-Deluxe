@@ -268,7 +268,9 @@ function showDifficultyMenu(){
                 features: [
                     { label: 'Money Loss', icon: 'checkmark.png', enabled: true, toggleable: true },
                     { label: 'Food Rot', icon: 'checkmark.png', enabled: true, toggleable: true },
-                    { label: 'Perma Death', icon: 'x.png', enabled: false, toggleable: true }
+                    { label: 'Perma Death', icon: 'x.png', enabled: false, toggleable: true },
+                    { label: 'Quest Coins', type: 'number', value: 10000, id: 'custom-quest-coins' },
+                    { label: 'Quest Days', type: 'number', value: 100, id: 'custom-quest-days' }
                 ],
                 difficulty: 3
             }
@@ -313,6 +315,22 @@ function showDifficultyMenu(){
                     });
                     
                     featureDiv.appendChild(toggleBtn);
+                } else if (feature.type === 'number') {
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.value = feature.value;
+                    input.id = feature.id;
+                    input.style.width = '80px';
+                    input.style.marginLeft = '10px';
+                    input.style.padding = '2px 5px';
+                    input.style.borderRadius = '4px';
+                    input.style.border = '1px solid #ccc';
+                    input.style.fontSize = '14px';
+                    
+                    // Prevent clicks on input from selecting the difficulty
+                    input.addEventListener('click', (e) => e.stopPropagation());
+                    
+                    featureDiv.appendChild(input);
                 } else {
                     const img = document.createElement('img');
                     img.src = `images/ui/${feature.icon}`;
@@ -373,11 +391,16 @@ function selectDifficulty(difficulty){
 function selectCustomDifficulty(features){
     dificulty = 3; // Custom difficulty
     
+    const questCoinsInput = document.getElementById('custom-quest-coins');
+    const questDaysInput = document.getElementById('custom-quest-days');
+
     // Store custom rules globally
     window.customRules = {
         moneyLoss: features[0].enabled,
         foodRot: features[1].enabled,
-        permaDeath: features[2].enabled
+        permaDeath: features[2].enabled,
+        mainQuestCoins: questCoinsInput ? parseInt(questCoinsInput.value) : 10000,
+        mainQuestDays: questDaysInput ? parseInt(questDaysInput.value) : 100
     };
     
     try {
@@ -394,6 +417,26 @@ function selectCustomDifficulty(features){
     paused = false;
     
     console.log('Starting game with custom difficulty:', window.customRules);
+    
+    // Update player quests if player already exists
+    if (typeof player !== 'undefined' && player.quests) {
+        for (let q of player.quests) {
+            if (q.og_name === "Save Cloudy Meadows") {
+                q.days = window.customRules.mainQuestDays;
+                q.maxDays = q.days;
+                for (let goal of q.goals) {
+                    if (goal.class === 'FundingGoal') {
+                        goal.amount = window.customRules.mainQuestCoins;
+                    }
+                }
+                // Refresh name with new days
+                if (q.maxDays > 0) {
+                    q.name = q.og_name + ' ' + q.days + ' days left';
+                }
+            }
+        }
+    }
+
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
 }
 
@@ -1463,6 +1506,7 @@ function loadAll(){
         currentLevel_x = localData.get('Day_curLvl_Dif').currentLevel_x;
         currentLevel_y = localData.get('Day_curLvl_Dif').currentLevel_y;
         dificulty = localData.get('Day_curLvl_Dif').dificulty;
+        window.customRules = localData.get('Day_curLvl_Dif').customRules || null;
     }
     if(localData.get('Controls') != null){
         Controls_Interact_button_key = localData.get('Controls').Controls_Interact_button_key
