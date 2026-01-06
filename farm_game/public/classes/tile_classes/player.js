@@ -264,7 +264,7 @@ class Player extends MoveableEntity {
 
     move() {
         if(!this.dead){
-            if (keyIsDown(move_right_button)) {
+            if (keyIsDown(move_right_button) || virtualInput.right) {
                 if (millis() - this.lastmoveMili > 130) {
                     this.facing = 1;
                     if (this.pos.x + tileSize >= canvasWidth) {
@@ -320,7 +320,7 @@ class Player extends MoveableEntity {
                     this.lastmoveMili = millis();
                 }
             }
-            if (keyIsDown(move_left_button)) {
+            if (keyIsDown(move_left_button) || virtualInput.left) {
                 if (millis() - this.lastmoveMili > 130) {
                     this.facing = 3;
                     if (this.pos.x - tileSize < 0) {
@@ -349,7 +349,7 @@ class Player extends MoveableEntity {
                     this.lastmoveMili = millis();
                 }
             }
-            if (keyIsDown(move_up_button)) {
+            if (keyIsDown(move_up_button) || virtualInput.up) {
                 if (millis() - this.lastmoveMili > 130) {
                     this.facing = 0;
                     if (this.pos.y - tileSize < 0) {
@@ -388,7 +388,7 @@ class Player extends MoveableEntity {
                     this.lastmoveMili = millis();
                 }
             }
-            if (keyIsDown(move_down_button)) {
+            if (keyIsDown(move_down_button) || virtualInput.down) {
                 if (millis() - this.lastmoveMili > 130) {
                     this.facing = 2;
                     if (this.pos.y + tileSize >= canvasHeight) {
@@ -536,7 +536,7 @@ class Player extends MoveableEntity {
         if (this.looking(x, y) != undefined && this.looking(x, y).name == 'cart_s') {
             var current_amount = 1
             if (this.inv[this.hand].price != 0 && this.inv[this.hand] != 0) {
-                if(keyIsDown(special_key)){
+                if(keyIsDown(special_key) || virtualInput.special){
                     current_amount = this.inv[this.hand].amount;
                 }
                 
@@ -689,7 +689,7 @@ class Player extends MoveableEntity {
                 
                 let amountToProcess = 1;
                 // SPECIAL KEY: Process all items
-                if (keyIsDown(special_key)) {
+                if (keyIsDown(special_key) || virtualInput.special) {
                     amountToProcess = this.inv[this.hand].amount;
                 }
                 
@@ -719,7 +719,7 @@ class Player extends MoveableEntity {
                 let amountToProcess = 1;
 
                 // SPECIAL KEY: Process all items
-                if (keyIsDown(special_key)) {
+                if (keyIsDown(special_key) || virtualInput.special) {
                     amountToProcess = this.inv[this.hand].amount;
                 }
 
@@ -787,7 +787,7 @@ class Player extends MoveableEntity {
                     let amountToProcess = 1;
                     
                     // SPECIAL KEY: Process all items
-                    if (keyIsDown(special_key)) {
+                    if (keyIsDown(special_key) || virtualInput.special) {
                         amountToProcess = this.inv[this.hand].amount;
                     }
                     
@@ -1000,7 +1000,7 @@ function takeInput() {
             saveOptions();
         }
         else if (control_set == 0){
-            if (keyIsDown(interact_button) && !showOptions) {
+            if ((keyIsDown(interact_button) || virtualInput.interact) && !showOptions) {
                 title_screen = false;
             }
         }
@@ -1054,7 +1054,7 @@ function takeInput() {
             control_set = 0;
             saveOptions();
         }
-        if(keyIsDown(pause_button)){
+        if(keyIsDown(pause_button) || virtualInput.pause){
             if (millis() - lastMili > 200) {
                 paused = false;
                 lastMili = millis();
@@ -1062,13 +1062,13 @@ function takeInput() {
         }
     }
     else if(player.talking != 0){
-        if(keyIsDown(pause_button)){
+        if(keyIsDown(pause_button) || virtualInput.pause){
             if (millis() - lastMili > 200 && !player.dead) {
                 paused = true;
                 lastMili = millis();
             }
         }
-        if (keyIsDown(eat_button)) {
+        if (keyIsDown(eat_button) || virtualInput.eat) {
             if (millis() - lastMili > 200) {
                 if(player.talking.class == 'NPC'){
                     player.talking.move_bool = true;
@@ -1156,7 +1156,7 @@ function takeInput() {
                 player.lasteatMili = millis();
             }
         }
-        if (keyIsDown(move_up_button)){
+        if (keyIsDown(move_up_button) || virtualInput.up){
             if ((millis() - lastMili > 200) && player.talking.class != 'Chest') {
                 current_reply -= 1;
                 if (current_reply < 0){
@@ -1165,7 +1165,7 @@ function takeInput() {
                 lastMili = millis();
             }
         }
-        if (keyIsDown(move_down_button)){
+        if (keyIsDown(move_down_button) || virtualInput.down){
             if (millis() - lastMili > 200) {
                 current_reply += 1;
                 if (player.talking.class == 'NPC'){
@@ -1182,7 +1182,7 @@ function takeInput() {
                 lastMili = millis();
             }
         }
-        if (keyIsDown(interact_button)){
+        if (keyIsDown(interact_button) || virtualInput.interact){
             if (millis() - player.lastinteractMili > 200) {
                 if (player.talking.class == 'NPC'){
                     const activeReplies = player.talking.dialouges[player.talking.current_dialouge].getActiveReplies(player.talking.name);
@@ -1324,7 +1324,7 @@ function takeInput() {
     }
     else{
         if(!player.show_quests){
-            if(keyIsDown(pause_button)){
+            if(keyIsDown(pause_button) || virtualInput.pause){
                 if (millis() - lastMili > 200 && !player.dead) {
                     paused = true;
                     lastMili = millis();
@@ -1332,10 +1332,10 @@ function takeInput() {
             }
             //basic movement  
             player.move();
-            if (keyIsDown(eat_button)) {
+            if (keyIsDown(eat_button) || virtualInput.eat) {
                 player.eat();
             }
-            if (keyIsDown(interact_button)) {
+            if (keyIsDown(interact_button) || virtualInput.interact) {
                 player.interactCall();
             }
             //mc style hotbar

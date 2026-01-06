@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Cloudy Meadows: Deluxe Edition</title>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/p5.min.js"></script>
 
@@ -74,6 +76,32 @@
 </head>
   <body>
     <div id="game-container"></div>
+    
+    <!-- Mobile Controls Overlay -->
+    <div id="mobile-controls">
+      <!-- D-Pad -->
+      <div id="dpad">
+        <button id="dpad-up" class="dpad-btn">▲</button>
+        <button id="dpad-left" class="dpad-btn">◀</button>
+        <button id="dpad-right" class="dpad-btn">▶</button>
+        <button id="dpad-down" class="dpad-btn">▼</button>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div id="action-buttons">
+        <button id="btn-interact" class="action-btn">E</button>
+        <button id="btn-eat" class="action-btn">Q</button>
+        <button id="btn-special" class="action-btn">⇧</button>
+        <button id="btn-pause" class="action-btn">⏸</button>
+      </div>
+      
+      <!-- Hotbar Controls -->
+      <div id="hotbar-controls">
+        <button id="hotbar-prev" class="hotbar-btn">←</button>
+        <button id="hotbar-next" class="hotbar-btn">→</button>
+      </div>
+    </div>
+    
     <div id="travelOverlay">
       <div class="travel-cloud travel-cloud-1"></div>
       <div class="travel-cloud travel-cloud-2"></div>

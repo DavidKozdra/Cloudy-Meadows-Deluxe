@@ -20,6 +20,10 @@ body {
     padding: 0;
     overflow: hidden;
     font-family: pixelFont, monospace;
+    touch-action: none; /* Prevent default touch behaviors on mobile */
+    -webkit-touch-callout: none; /* Prevent callout on long press */
+    -webkit-user-select: none; /* Prevent text selection */
+    user-select: none;
 }
 
 /* Custom Scrollbar Styles */
@@ -1570,4 +1574,256 @@ button {
 
 .lose-btn:hover {
     background-color: #666;
+}
+/* ==================== MOBILE CONTROLS ==================== */
+
+#mobile-controls {
+    display: none; /* Hidden by default, shown via JS on mobile */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allow clicks through to canvas */
+    z-index: 1000;
+    touch-action: none;
+}
+
+#mobile-controls.active {
+    display: block;
+}
+
+/* D-Pad Container */
+#dpad {
+    position: absolute;
+    bottom: 100px;
+    left: 30px;
+    width: 140px;
+    height: 140px;
+    pointer-events: auto;
+}
+
+.dpad-btn {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 3px solid rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+}
+
+.dpad-btn:active, .dpad-btn.pressed {
+    background: rgba(100, 200, 100, 0.8);
+    transform: scale(0.95);
+}
+
+#dpad-up {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#dpad-down {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#dpad-left {
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#dpad-right {
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#dpad-up:active, #dpad-up.pressed { transform: translateX(-50%) scale(0.95); }
+#dpad-down:active, #dpad-down.pressed { transform: translateX(-50%) scale(0.95); }
+#dpad-left:active, #dpad-left.pressed { transform: translateY(-50%) scale(0.95); }
+#dpad-right:active, #dpad-right.pressed { transform: translateY(-50%) scale(0.95); }
+
+/* Action Buttons Container */
+#action-buttons {
+    position: absolute;
+    bottom: 100px;
+    right: 30px;
+    width: 140px;
+    height: 140px;
+    pointer-events: auto;
+}
+
+.action-btn {
+    position: absolute;
+    width: 55px;
+    height: 55px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 3px solid rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    font-family: pixelFont, monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+}
+
+.action-btn:active, .action-btn.pressed {
+    background: rgba(100, 200, 100, 0.8);
+    transform: scale(0.95);
+}
+
+/* Interact button (E) - right side, primary */
+#btn-interact {
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(100, 200, 255, 0.7);
+}
+
+#btn-interact:active, #btn-interact.pressed {
+    background: rgba(50, 150, 255, 0.9);
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Eat button (Q) - top */
+#btn-eat {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 200, 100, 0.7);
+}
+
+#btn-eat:active, #btn-eat.pressed {
+    background: rgba(255, 150, 50, 0.9);
+    transform: translateX(-50%) scale(0.95);
+}
+
+/* Special/Shift button - left side */
+#btn-special {
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(200, 100, 255, 0.7);
+}
+
+#btn-special:active, #btn-special.pressed {
+    background: rgba(150, 50, 255, 0.9);
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Pause button - bottom */
+#btn-pause {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 100, 100, 0.7);
+}
+
+#btn-pause:active, #btn-pause.pressed {
+    background: rgba(255, 50, 50, 0.9);
+    transform: translateX(-50%) scale(0.95);
+}
+
+/* Hotbar Controls */
+#hotbar-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 200px;
+    pointer-events: auto;
+}
+
+.hotbar-btn {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 3px solid rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.1s;
+}
+
+.hotbar-btn:active, .hotbar-btn.pressed {
+    background: rgba(100, 200, 100, 0.8);
+    transform: scale(0.95);
+}
+
+/* Mobile controls are shown via JavaScript adding .active class */
+/* This media query only hides on true desktop with mouse */
+@media (min-width: 1025px) and (hover: hover) and (pointer: fine) {
+    #mobile-controls:not(.active) {
+        display: none;
+    }
+}
+
+/* Adjust for smaller screens */
+@media (max-width: 600px) {
+    #dpad {
+        bottom: 80px;
+        left: 15px;
+        width: 120px;
+        height: 120px;
+    }
+    
+    .dpad-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 16px;
+    }
+    
+    #action-buttons {
+        bottom: 80px;
+        right: 15px;
+        width: 120px;
+        height: 120px;
+    }
+    
+    .action-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 14px;
+    }
+    
+    .hotbar-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    
+    #hotbar-controls {
+        gap: 150px;
+        bottom: 15px;
+    }
 }

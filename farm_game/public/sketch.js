@@ -5,6 +5,26 @@
 
 //main stuff starts here
 
+// Mobile detection - check screen size as fallback for DevTools emulation
+var isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+    || ('ontouchstart' in window) 
+    || (navigator.maxTouchPoints > 0)
+    || (window.innerWidth <= 1024 && window.matchMedia("(pointer: coarse)").matches)
+    || (window.innerWidth <= 768); // Fallback: treat small screens as mobile
+
+// Virtual input state for mobile controls
+var virtualInput = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    interact: false,
+    eat: false,
+    special: false,
+    pause: false,
+    quest: false
+};
+
 var cloudCount = 8;
 var clouds = [];
 var tileSize = 32;
@@ -52,6 +72,146 @@ function handleHotbarScroll(event) {
 
 // Attach event listener
 window.addEventListener('wheel', handleHotbarScroll, { passive: false });
+
+// ==================== MOBILE CONTROLS SETUP ====================
+function setupMobileControls() {
+    const mobileControls = document.getElementById('mobile-controls');
+    if (!mobileControls) {
+        console.log('Mobile controls element not found');
+        return;
+    }
+    
+    console.log('Setting up mobile controls, isMobile:', isMobile);
+    
+    // Show controls on mobile (or small screens)
+    if (isMobile) {
+        mobileControls.classList.add('active');
+        console.log('Mobile controls activated');
+    }
+    
+    // Helper to setup touch events for a button
+    function setupButton(id, inputKey, isToggle = false) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        
+        // Prevent default touch behaviors
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            virtualInput[inputKey] = true;
+            btn.classList.add('pressed');
+        }, { passive: false });
+        
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!isToggle) {
+                virtualInput[inputKey] = false;
+            }
+            btn.classList.remove('pressed');
+        }, { passive: false });
+        
+        btn.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            virtualInput[inputKey] = false;
+            btn.classList.remove('pressed');
+        }, { passive: false });
+        
+        // Also support mouse for testing on desktop
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            virtualInput[inputKey] = true;
+            btn.classList.add('pressed');
+        });
+        
+        btn.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            if (!isToggle) {
+                virtualInput[inputKey] = false;
+            }
+            btn.classList.remove('pressed');
+        });
+        
+        btn.addEventListener('mouseleave', (e) => {
+            virtualInput[inputKey] = false;
+            btn.classList.remove('pressed');
+        });
+    }
+    
+    // D-Pad buttons
+    setupButton('dpad-up', 'up');
+    setupButton('dpad-down', 'down');
+    setupButton('dpad-left', 'left');
+    setupButton('dpad-right', 'right');
+    
+    // Action buttons
+    setupButton('btn-interact', 'interact');
+    setupButton('btn-eat', 'eat');
+    setupButton('btn-special', 'special');
+    setupButton('btn-pause', 'pause');
+    
+    // Hotbar scroll buttons
+    const hotbarPrev = document.getElementById('hotbar-prev');
+    const hotbarNext = document.getElementById('hotbar-next');
+    
+    if (hotbarPrev) {
+        hotbarPrev.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (typeof player !== 'undefined' && player.inv && !title_screen) {
+                player.hand = (player.hand - 1 + 8) % 8;
+            }
+            hotbarPrev.classList.add('pressed');
+        }, { passive: false });
+        hotbarPrev.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            hotbarPrev.classList.remove('pressed');
+        }, { passive: false });
+        hotbarPrev.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof player !== 'undefined' && player.inv && !title_screen) {
+                player.hand = (player.hand - 1 + 8) % 8;
+            }
+        });
+    }
+    
+    if (hotbarNext) {
+        hotbarNext.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (typeof player !== 'undefined' && player.inv && !title_screen) {
+                player.hand = (player.hand + 1) % 8;
+            }
+            hotbarNext.classList.add('pressed');
+        }, { passive: false });
+        hotbarNext.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            hotbarNext.classList.remove('pressed');
+        }, { passive: false });
+        hotbarNext.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof player !== 'undefined' && player.inv && !title_screen) {
+                player.hand = (player.hand + 1) % 8;
+            }
+        });
+    }
+}
+
+// Show/hide mobile controls based on game state
+function updateMobileControlsVisibility() {
+    const mobileControls = document.getElementById('mobile-controls');
+    if (!mobileControls || !isMobile) return;
+    
+    if (title_screen || paused) {
+        mobileControls.classList.remove('active');
+    } else {
+        mobileControls.classList.add('active');
+    }
+}
+
+// Initialize mobile controls after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMobileControls);
+} else {
+    setupMobileControls();
+}
+
 var musicSlider;
 var fxSlider;
 var startButton;
@@ -587,6 +747,9 @@ function triggerMenuFadeOut(callback) {
 function draw() {
     musicplayer.update()
 
+    // Update mobile controls visibility
+    updateMobileControlsVisibility();
+
     takeInput();
     if (title_screen) {
         showTitle();
@@ -1078,7 +1241,7 @@ function mouseReleased() {
         if(mouseButton == LEFT){
             console.log("left click");
             if(!player.show_quests){
-                if(keyIsDown(special_key)){ //16 == shift
+                if(keyIsDown(special_key) || virtualInput.special){ //16 == shift
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
                         const inv = UI_BOUNDS.inventoryBar;
                         console.log(inv);
