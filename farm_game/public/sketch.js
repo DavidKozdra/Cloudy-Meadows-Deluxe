@@ -792,7 +792,7 @@ function render_ui() {
     stroke(0);
     strokeWeight(2);
     textSize(13);
-    text('days', canvasWidth - 39, 30);
+    text('day', canvasWidth - 39, 30);
     textSize(15);
     text(days, canvasWidth - 40, 50);
     if(days == 69){

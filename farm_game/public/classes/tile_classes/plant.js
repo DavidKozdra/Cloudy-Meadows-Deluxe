@@ -1,3 +1,4 @@
+
 class Plant extends Tile {
     constructor(name, png, x, y, collide, eat_num, waterneeded, growthTime) {
         super(name, png, x, y, collide, 0);
@@ -9,6 +10,7 @@ class Plant extends Tile {
         this.growTimer = 0;
         this.growthTime = growthTime;
         this.class = 'Plant';
+
     }
 
 
@@ -40,10 +42,7 @@ class Plant extends Tile {
             circle(this.pos.x + (tileSize / 2) + 5, this.pos.y - 2, 3);
             
             // Draw red X through it
-            stroke(255, 0, 0);
-            strokeWeight(2);
-            line(this.pos.x + (tileSize / 2) - 6, this.pos.y - 14, this.pos.x + (tileSize / 2) + 6, this.pos.y);
-            line(this.pos.x + (tileSize / 2) + 6, this.pos.y - 14, this.pos.x + (tileSize / 2) - 6, this.pos.y);
+            image(x_img, this.pos.x + (tileSize / 2), this.pos.y - (tileSize / 4));
         }
         
         if(this.age == all_imgs[this.png].length - 2){
