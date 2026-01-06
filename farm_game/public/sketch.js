@@ -793,7 +793,9 @@ function render_ui() {
     strokeWeight(2);
     textSize(13);
     text('day', canvasWidth - 39, 30);
+    stroke(255);
     textSize(15);
+    fill(0);
     text(days, canvasWidth - 40, 50);
     if(days == 69){
         text("nice !", canvasWidth - 40, 60);
