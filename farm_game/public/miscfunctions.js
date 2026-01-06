@@ -1452,7 +1452,7 @@ function new_item_from_num(num, amount) {
             return new Eat(all_items[num].name, amount, all_items[num].png, all_items[num].price, all_items[num].hunger, all_items[num].hunger_timer, all_items[num].seed_num);
         }
         else if (all_items[num].class == 'Seed') {
-            return new Seed(all_items[num].name, amount, all_items[num].png, all_items[num].plant_num);
+            return new Seed(all_items[num].name, amount, all_items[num].png, all_items[num].plant_num, all_items[num].price);
         }
         else if (all_items[num].class == 'Placeable') {
             return new Placeable(all_items[num].name, amount, all_items[num].png, all_items[num].price, all_items[num].tile_num, all_items[num].tile_need_num);

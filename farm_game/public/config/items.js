@@ -54,7 +54,7 @@ const ITEM_DEFINITIONS = [
     /*38*/ { name: 'Veggie Press', png: 125, price: 130, tile_num: 48, tile_need_num: 1, class: 'Placeable'},
     /*39*/ { name: 'Carrot', png: 136, price: 6, hunger: 1, hunger_timer: 2000, seed_num: 40, seed_min: 1, seed_max: 2, class: 'Eat' },
     /*40*/ { name: 'Carrot Seed', png: 137, plant_num: 92, class: 'Seed'},
-    /*41*/ { name: 'Pumpkin', png: 144, price: 5, hunger: 3, hunger_timer: 2000, seed_num: 42, seed_min: 5, seed_max: 6, class: 'Eat'},
+    /*41*/ { name: 'Pumpkin', png: 144, price: 15, hunger: 3, hunger_timer: 2000, seed_num: 42, seed_min: 5, seed_max: 6, class: 'Eat'},
     /*42*/ { name: 'Pumpkin Seed', png: 145, plant_num: 99, class: 'Seed'},
     /*43*/ { name: 'Bed', png: 146, price: 70, tile_num: 7, tile_need_num: 0, class: 'Placeable'},
     /*44*/ { name: 'Wall', png: 147, price: 12, tile_num: 6, tile_need_num: 0, class: 'Placeable'},

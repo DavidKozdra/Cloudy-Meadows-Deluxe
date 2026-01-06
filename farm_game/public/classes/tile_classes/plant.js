@@ -146,4 +146,12 @@ class Plant extends Tile {
         this.deathAttempts = obj.deathAttempts;
         this.growTimer = obj.growTimer;
     }
+
+    getHarvestYield() {
+        let baseYield = 1;
+        if (this.name === 'watermelon') {
+            baseYield = floor(random(2, 6)); // Yields 2-5 watermelons
+        }
+        return baseYield;
+    }
 }

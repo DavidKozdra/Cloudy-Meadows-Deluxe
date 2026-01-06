@@ -56,8 +56,8 @@ class Item {
 }
 
 class Seed extends Item {
-	constructor(name, amount, png, plant_num) {
-		super(name, amount, png, 1);
+	constructor(name, amount, png, plant_num, price=1) {
+		super(name, amount, png, price);
 		this.class = "Seed";
 		this.plant_num = plant_num;
 	}

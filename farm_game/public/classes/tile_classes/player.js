@@ -519,7 +519,11 @@ class Player extends MoveableEntity {
         if (this.touching.class == 'Plant') {
             if(this.touching.age == all_imgs[this.touching.png].length - 2){
                 if(checkForSpace(this, this.touching.eat_num)){
-                    addItem(this, this.touching.eat_num, 1 + round(random((levels[y][x].ladybugs > 4 ? 1:0), levels[y][x].ladybugs)));
+                    let baseYield = 1;
+                    if(typeof this.touching.getHarvestYield === 'function') {
+                         baseYield = this.touching.getHarvestYield();
+                    }
+                    addItem(this, this.touching.eat_num, baseYield + round(random((levels[y][x].ladybugs > 4 ? 1:0), levels[y][x].ladybugs)));
                     levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(3, this.touching.pos.x, this.touching.pos.y);
                     PlantingSound.play()
                 }
@@ -594,6 +598,11 @@ class Player extends MoveableEntity {
         }
         if (this.inv[this.hand] != 0 && this.inv[this.hand].class == 'Placeable') {
             if (tile_name_to_num(this.touching.name) == this.inv[this.hand].tile_need_num || this.inv[this.hand].tile_need_num == 0) {
+                 // Prevent placing Sprinkler on top of an existing Plant
+                 if (this.inv[this.hand].name == 'Sprinkler' && this.touching.class == 'Plant') {
+                     return;
+                 }
+
                 if(this.inv[this.hand].name == 'Robot1' || this.inv[this.hand].name == 'Robot2' || this.inv[this.hand].name == 'Robot3' || this.inv[this.hand].name == 'Chest'){
                     if(this.looking(x, y) != undefined && this.looking(x, y).collide == false){
                         let temp = this.looking(x, y);
@@ -695,34 +704,67 @@ class Player extends MoveableEntity {
         }
         else if (this.touching.name == 'Veggie_Press') {
             if (this.inv[this.hand].class == 'Eat') {
+                let amountToProcess = 1;
+
+                // SPECIAL KEY: Process all items
+                if (keyIsDown(special_key)) {
+                    amountToProcess = this.inv[this.hand].amount;
+                }
+
                 // Hemp flower produces hemp oil
                 if (this.inv[this.hand].name == 'Hemp Flower') {
                     if(checkForSpace(this, 47)){
-                        this.inv[this.hand].amount -= 1;
-                        if (this.inv[this.hand].amount == 0) {
-                            this.inv[this.hand] = 0;
+                        let processed = 0;
+                        while(processed < amountToProcess && this.inv[this.hand] != 0){
+                           this.inv[this.hand].amount -= 1;
+                           if (this.inv[this.hand].amount == 0) {
+                               this.inv[this.hand] = 0;
+                           }
+                           addItem(this, 47, 1);
+                           processed++;
                         }
-                        addItem(this, 47, 1);
                     }
                 }
                 // Fruits produce fruit juice
                 else if (['Strawberries', 'Tomato', 'Watermelon'].includes(this.inv[this.hand].name)) {
-                    if(checkForSpace(this, 48)){
-                        this.inv[this.hand].amount -= 1;
-                        if (this.inv[this.hand].amount == 0) {
-                            this.inv[this.hand] = 0;
+                     if(checkForSpace(this, 48)){
+                        let processed = 0;
+                        while(processed < amountToProcess && this.inv[this.hand] != 0){
+                            this.inv[this.hand].amount -= 1;
+                            if (this.inv[this.hand].amount == 0) {
+                                this.inv[this.hand] = 0;
+                            }
+                            addItem(this, 48, 1);
+                            processed++;
                         }
-                        addItem(this, 48, 1);
+                    }
+                }
+                // Pumpkin produces oil
+                else if (this.inv[this.hand].name == 'Pumpkin') {
+                    if(checkForSpace(this, 31)){
+                        let processed = 0;
+                        while(processed < amountToProcess && this.inv[this.hand] != 0){
+                            this.inv[this.hand].amount -= 1;
+                            if (this.inv[this.hand].amount == 0) {
+                                this.inv[this.hand] = 0;
+                            }
+                            addItem(this, 31, 2); // Produces 2 oil
+                            processed++;
+                        }
                     }
                 }
                 // Other eat items produce veggie oil
                 else {
                     if(checkForSpace(this, 31)){
-                        this.inv[this.hand].amount -= 1;
-                        if (this.inv[this.hand].amount == 0) {
-                            this.inv[this.hand] = 0;
+                        let processed = 0;
+                        while(processed < amountToProcess && this.inv[this.hand] != 0){
+                            this.inv[this.hand].amount -= 1;
+                            if (this.inv[this.hand].amount == 0) {
+                                this.inv[this.hand] = 0;
+                            }
+                            addItem(this, 31, 1);
+                            processed++;
                         }
-                        addItem(this, 31, 1);
                     }
                 }
             }
@@ -730,26 +772,45 @@ class Player extends MoveableEntity {
         else if (this.touching.name == 'grinder'){
             if (this.inv[this.hand].class == 'Eat'){
                 if(this.inv[this.hand].seed_num != 0){
-                    if(this.inv[this.hand].amount == 1){
-                        this.inv[this.hand].amount -= 1;
-                        // Grinder gives bonus: +1 to min and +2 to max
-                        let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
-                        let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
-                        let seed_amount = floor(random(seed_min, seed_max + 1));
-                        addItem(this, this.inv[this.hand].seed_num, seed_amount);
-                        if (this.inv[this.hand].amount == 0) {
-                            this.inv[this.hand] = 0;
-                        }
+                    let amountToProcess = 1;
+                    
+                    // SPECIAL KEY: Process all items
+                    if (keyIsDown(special_key)) {
+                        amountToProcess = this.inv[this.hand].amount;
                     }
-                    else if(checkForSpace(this, this.inv[this.hand].seed_num)){
-                        this.inv[this.hand].amount -= 1;
-                        // Grinder gives bonus: +1 to min and +2 to max
-                        let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
-                        let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
-                        let seed_amount = floor(random(seed_min, seed_max + 1));
-                        addItem(this, this.inv[this.hand].seed_num, seed_amount);
-                        if (this.inv[this.hand].amount == 0) {
-                            this.inv[this.hand] = 0;
+                    
+                    // Loop up to amountToProcess, breaking if output inventory gets full or ran out of input
+                    // We check if we can process one unit at a time.
+                    let processed = 0;
+                    while(processed < amountToProcess && this.inv[this.hand] != 0){
+                        // Logic refactored to handle single unit processing per loop
+                        if(this.inv[this.hand].amount == 1){
+                            this.inv[this.hand].amount -= 1;
+                            // Grinder gives bonus: +1 to min and +2 to max
+                            let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
+                            let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
+                            let seed_amount = floor(random(seed_min, seed_max + 1));
+                            addItem(this, this.inv[this.hand].seed_num, seed_amount);
+                            if (this.inv[this.hand].amount == 0) {
+                                this.inv[this.hand] = 0;
+                            }
+                            processed++;
+                        }
+                        else if(checkForSpace(this, this.inv[this.hand].seed_num)){
+                            this.inv[this.hand].amount -= 1;
+                            // Grinder gives bonus: +1 to min and +2 to max
+                            let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
+                            let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
+                            let seed_amount = floor(random(seed_min, seed_max + 1));
+                            addItem(this, this.inv[this.hand].seed_num, seed_amount);
+                            if (this.inv[this.hand].amount == 0) {
+                                this.inv[this.hand] = 0;
+                            }
+                            processed++;
+                        }
+                        else {
+                            // No space for more seeds
+                            break;
                         }
                     }
                 }
