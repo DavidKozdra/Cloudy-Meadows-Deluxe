@@ -2289,10 +2289,11 @@ button {
         flex-direction: row;
         max-height: fit-content;
         padding-top: 100px;
+
+        padding-top: 1000px !important;
     }
     
     .difficulty-card {
-        max-height: 100px;
         width: 28%;
     }
 }
