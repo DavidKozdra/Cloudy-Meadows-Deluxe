@@ -1494,7 +1494,13 @@ function saveAll(){
     if(player.talking == 0){
         player.save()
     }
-    localData.set('Day_curLvl_Dif', {days: days, currentLevel_x: currentLevel_x, currentLevel_y: currentLevel_y, dificulty: dificulty});
+    localData.set('Day_curLvl_Dif', {
+        days: days, 
+        currentLevel_x: currentLevel_x, 
+        currentLevel_y: currentLevel_y, 
+        dificulty: dificulty,
+        currentWeather: currentWeather
+    });
     let lvlLength = 0;
     for(let i = 0; i < levels.length; i++){
         for(let j = 0; j < levels[i].length; j++){
@@ -1561,6 +1567,9 @@ function loadAll(){
         currentLevel_y = localData.get('Day_curLvl_Dif').currentLevel_y;
         dificulty = localData.get('Day_curLvl_Dif').dificulty;
         window.customRules = localData.get('Day_curLvl_Dif').customRules || null;
+        
+        // Load weather state
+        currentWeather = localData.get('Day_curLvl_Dif').currentWeather || 'clear';
     }
     if(localData.get('Controls') != null){
         Controls_Interact_button_key = localData.get('Controls').Controls_Interact_button_key
