@@ -205,6 +205,38 @@ function updateMobileControlsVisibility() {
     }
 }
 
+// Update mobile status on window resize
+function updateMobileStatus() {
+    const wasMobile = isMobile;
+    isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        || ('ontouchstart' in window) 
+        || (navigator.maxTouchPoints > 0)
+        || (window.innerWidth <= 1024 && window.matchMedia("(pointer: coarse)").matches)
+        || (window.innerWidth <= 768);
+    
+    // If mobile status changed, update controls
+    if (wasMobile !== isMobile) {
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) {
+            if (isMobile && !title_screen && !paused) {
+                mobileControls.classList.add('active');
+            } else {
+                mobileControls.classList.remove('active');
+            }
+        }
+        console.log('Mobile status changed:', isMobile);
+    }
+}
+
+// p5.js window resize callback
+function windowResized() {
+    // Canvas resize is handled by resizeCanvasForFullscreen in preload.js
+    // This function is here for any additional p5.js resize handling needed
+    if (typeof resizeCanvasForFullscreen === 'function') {
+        resizeCanvasForFullscreen();
+    }
+}
+
 // Initialize mobile controls after DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupMobileControls);

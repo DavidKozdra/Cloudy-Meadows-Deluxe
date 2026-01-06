@@ -693,7 +693,32 @@ function setupFullscreen() {
         }
     });
     
+    // Listen for window resize events
+    window.addEventListener('resize', () => {
+        resizeCanvasForFullscreen();
+        // Re-check mobile status on resize
+        if (typeof updateMobileStatus === 'function') {
+            updateMobileStatus();
+        }
+    });
+    
+    // Listen for fullscreen change events (all browser prefixes)
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+}
 
+// Handle fullscreen state changes
+function onFullscreenChange() {
+    // Small delay to let the browser finish transitioning
+    setTimeout(() => {
+        resizeCanvasForFullscreen();
+        if (typeof updateMobileStatus === 'function') {
+            updateMobileStatus();
+        }
+        console.log('Fullscreen changed, resizing canvas');
+    }, 100);
 }
 
 function toggleFullscreen() {
@@ -729,10 +754,29 @@ function resizeCanvasForFullscreen() {
         const canvas = document.querySelector('canvas');
         if (!canvas) return;
         
+        // Check if we're in fullscreen mode
+        const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                            document.mozFullScreenElement || document.msFullscreenElement;
+        
         // Calculate scale to fill screen while maintaining aspect ratio
         const scaleX = window.innerWidth / canvasWidth;
         const scaleY = window.innerHeight / canvasHeight;
-        const scale = Math.max(scaleX, scaleY) * .7; // Use max to fill screen completely
+        
+        // On mobile/small screens, use a larger scale factor to fill more of the screen
+        const isMobileSize = window.innerWidth <= 768 || window.innerHeight <= 600;
+        
+        // Use different scale factors based on context
+        let scaleFactor;
+        if (isFullscreen) {
+            scaleFactor = 0.98; // Nearly fill the screen in fullscreen
+        } else if (isMobileSize) {
+            scaleFactor = 0.90; // Fill most of mobile screen
+        } else {
+            scaleFactor = 0.85; // Desktop windowed mode
+        }
+        
+        // Use min to fit within screen (contain)
+        const scale = Math.min(scaleX, scaleY) * scaleFactor;
         
         // Apply CSS transform to scale canvas
         canvas.style.width = (canvasWidth * scale) + 'px';
@@ -741,7 +785,13 @@ function resizeCanvasForFullscreen() {
         canvas.style.left = '50%';
         canvas.style.top = '50%';
         canvas.style.transform = 'translate(-50%, -50%)';
-  
+        
+        // On mobile with controls visible, position canvas a bit higher to leave room for controls
+        if (isMobileSize && typeof isMobile !== 'undefined' && isMobile && !isFullscreen) {
+            canvas.style.top = '42%';
+        }
+        
+        console.log(`Canvas resized: ${Math.round(canvasWidth * scale)}x${Math.round(canvasHeight * scale)}, fullscreen: ${!!isFullscreen}`);
 }
 
 function setup() {
