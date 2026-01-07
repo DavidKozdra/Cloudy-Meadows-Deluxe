@@ -1821,7 +1821,7 @@ button {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 200px;
+    gap: 500px;
     pointer-events: auto;
 }
 
