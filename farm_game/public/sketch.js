@@ -321,6 +321,775 @@ if (document.readyState === 'loading') {
     setupMobileControls();
 }
 
+// ============================================
+// Mobile Inventory UI System
+// ============================================
+var mobileInventoryState = {
+    isOpen: false,
+    selectedSlot: null,  // { source: 'container'|'player'|'instructions', row: number, col: number }
+    containerType: null, // 'Chest', 'Backpack', 'Robot'
+    containerRef: null   // Reference to the actual container object
+};
+
+function setupMobileInventoryUI() {
+    const overlay = document.getElementById('mobile-inventory-overlay');
+    const closeBtn = document.getElementById('mobile-inv-close');
+    const transferAllBtn = document.getElementById('mobile-inv-transfer-all');
+    const splitBtn = document.getElementById('mobile-inv-split');
+    
+    if (!overlay) return;
+    
+    // Close button
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeMobileInventory);
+        closeBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            closeMobileInventory();
+        });
+    }
+    
+    // Transfer all button
+    if (transferAllBtn) {
+        transferAllBtn.addEventListener('click', mobileTransferAll);
+        transferAllBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            mobileTransferAll();
+        });
+    }
+    
+    // Split button
+    if (splitBtn) {
+        splitBtn.addEventListener('click', mobileSplitStack);
+        splitBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            mobileSplitStack();
+        });
+    }
+}
+
+function openMobileInventory(containerType, containerRef) {
+    if (!isMobile) return; // Only on mobile
+    
+    const overlay = document.getElementById('mobile-inventory-overlay');
+    if (!overlay) return;
+    
+    mobileInventoryState.isOpen = true;
+    mobileInventoryState.containerType = containerType;
+    mobileInventoryState.containerRef = containerRef;
+    mobileInventoryState.selectedSlot = null;
+    
+    overlay.style.display = 'flex';
+    
+    // Hide the p5 buttons
+    robotPlayButton.hide();
+    robotPauseButton.hide();
+    robotBoomButton.hide();
+    
+    // Update the panel based on container type
+    updateMobileInventoryUI();
+}
+
+function closeMobileInventory() {
+    const overlay = document.getElementById('mobile-inventory-overlay');
+    if (!overlay) return;
+    
+    mobileInventoryState.isOpen = false;
+    mobileInventoryState.selectedSlot = null;
+    mobileInventoryState.containerType = null;
+    mobileInventoryState.containerRef = null;
+    
+    overlay.style.display = 'none';
+    
+    // Clear mouse item if any on mobile
+    if (isMobile && mouse_item !== 0) {
+        // Return mouse_item to player inventory if possible
+        if (checkForSpace(player, item_name_to_num(mouse_item.name))) {
+            addItem(player, item_name_to_num(mouse_item.name), mouse_item.amount);
+        }
+        mouse_item = 0;
+    }
+    
+    // Close the talking state
+    if (player && player.talking) {
+        if (player.talking.class === 'Robot') {
+            player.talking.fuel_timer = player.talking.max_fuel_timer;
+            player.talking.move_bool = temp_move_bool;
+        }
+        player.oldlooking_name = player.talking.name;
+        player.talking = 0;
+    }
+}
+
+function updateMobileInventoryUI() {
+    const titleEl = document.getElementById('mobile-inv-title');
+    const containerGrid = document.getElementById('mobile-inv-container-grid');
+    const playerGrid = document.getElementById('mobile-inv-player-grid');
+    const containerSection = document.getElementById('mobile-inv-container-section');
+    const containerLabel = document.getElementById('mobile-inv-container-label');
+    const actionsDiv = document.getElementById('mobile-inv-actions');
+    const infoDiv = document.getElementById('mobile-inv-selected-info');
+    const instructionsEl = document.getElementById('mobile-inv-instructions');
+    
+    if (!containerGrid || !playerGrid) return;
+    
+    const container = mobileInventoryState.containerRef;
+    const containerType = mobileInventoryState.containerType;
+    
+    // Update title
+    if (titleEl) {
+        titleEl.textContent = container ? container.name : 'Inventory';
+    }
+    
+    // Clear existing grids
+    containerGrid.innerHTML = '';
+    playerGrid.innerHTML = '';
+    
+    // Remove any existing robot sections
+    const existingRobotInfo = document.getElementById('mobile-inv-robot-info');
+    const existingRobotControls = document.getElementById('mobile-inv-robot-controls');
+    const existingInstructionsSection = document.getElementById('mobile-inv-instructions-section');
+    if (existingRobotInfo) existingRobotInfo.remove();
+    if (existingRobotControls) existingRobotControls.remove();
+    if (existingInstructionsSection) existingInstructionsSection.remove();
+    
+    // Update instructions text
+    if (instructionsEl) {
+        if (containerType === 'Robot') {
+            instructionsEl.textContent = 'Tap to select, tap destination to move. Add commands to instruction slots.';
+        } else {
+            instructionsEl.textContent = 'Tap an item to select, tap destination to move';
+        }
+    }
+    
+    // Build container inventory grid
+    if (containerType === 'Chest' || containerType === 'Backpack') {
+        containerLabel.textContent = containerType === 'Chest' ? 'Chest Storage' : 'Backpack Storage';
+        containerGrid.style.gridTemplateColumns = 'repeat(4, 60px)';
+        
+        // Container has 2D array [row][col]
+        for (let row = 0; row < container.inv.length; row++) {
+            for (let col = 0; col < container.inv[row].length; col++) {
+                const slot = createMobileSlot('container', row, col, container.inv[row][col]);
+                containerGrid.appendChild(slot);
+            }
+        }
+    } else if (containerType === 'Robot') {
+        // Robot has different structure: inv is 1D, and instructions are separate
+        containerLabel.textContent = 'Robot Storage';
+        containerGrid.style.gridTemplateColumns = `repeat(${Math.min(container.inv.length, 8)}, 60px)`;
+        
+        // Robot storage (1D)
+        for (let i = 0; i < container.inv.length; i++) {
+            const slot = createMobileSlot('container', 0, i, container.inv[i]);
+            containerGrid.appendChild(slot);
+        }
+        
+        // Add robot info section (fuel, status)
+        const robotInfo = document.createElement('div');
+        robotInfo.id = 'mobile-inv-robot-info';
+        robotInfo.innerHTML = `
+            <span class="mobile-inv-fuel-label">Fuel</span>
+            <div class="mobile-inv-fuel-bar">
+                <div class="mobile-inv-fuel-fill" style="width: ${(container.fuel / container.max_fuel) * 100}%"></div>
+            </div>
+            <span class="mobile-inv-fuel-label">${Math.round(container.fuel)}/${container.max_fuel}</span>
+        `;
+        containerSection.appendChild(robotInfo);
+        
+        // Add robot controls
+        const robotControls = document.createElement('div');
+        robotControls.id = 'mobile-inv-robot-controls';
+        robotControls.innerHTML = `
+            <button class="mobile-inv-robot-btn ${temp_move_bool ? 'active' : ''}" id="mobile-robot-play">▶ Play</button>
+            <button class="mobile-inv-robot-btn ${!temp_move_bool ? 'active' : ''}" id="mobile-robot-pause">⏸ Pause</button>
+            <button class="mobile-inv-robot-btn destroy" id="mobile-robot-destroy">🗑 Destroy</button>
+        `;
+        containerSection.appendChild(robotControls);
+        
+        // Setup robot control handlers
+        setTimeout(() => {
+            const playBtn = document.getElementById('mobile-robot-play');
+            const pauseBtn = document.getElementById('mobile-robot-pause');
+            const destroyBtn = document.getElementById('mobile-robot-destroy');
+            
+            if (playBtn) {
+                playBtn.onclick = () => {
+                    temp_move_bool = true;
+                    updateMobileInventoryUI();
+                };
+            }
+            if (pauseBtn) {
+                pauseBtn.onclick = () => {
+                    temp_move_bool = false;
+                    updateMobileInventoryUI();
+                };
+            }
+            if (destroyBtn) {
+                destroyBtn.onclick = () => {
+                    if (confirm('Destroy this robot? Items inside will be lost!')) {
+                        // Destroy robot logic (same as robotBoomButton)
+                        levels[currentLevel_y][currentLevel_x].map[container.pos.y / tileSize][container.pos.x / tileSize] = container.under_tile;
+                        closeMobileInventory();
+                    }
+                };
+            }
+        }, 0);
+        
+        // Add instructions grid section
+        const instructionsSection = document.createElement('div');
+        instructionsSection.id = 'mobile-inv-instructions-section';
+        instructionsSection.innerHTML = `
+            <div id="mobile-inv-instructions-label">Robot Instructions</div>
+            <div id="mobile-inv-instructions-grid"></div>
+        `;
+        containerSection.appendChild(instructionsSection);
+        
+        const instructionsGrid = instructionsSection.querySelector('#mobile-inv-instructions-grid');
+        for (let i = 0; i < container.instructions.length; i++) {
+            const slot = createMobileInstructionSlot(i, container.instructions[i], container.current_instruction === i);
+            instructionsGrid.appendChild(slot);
+        }
+    }
+    
+    // Build player inventory grid (1D array with 8 slots)
+    playerGrid.style.gridTemplateColumns = 'repeat(4, 60px)';
+    for (let i = 0; i < 8; i++) {
+        const row = Math.floor(i / 4);
+        const col = i % 4;
+        const slot = createMobileSlot('player', row, col, player.inv[i], i);
+        playerGrid.appendChild(slot);
+    }
+    
+    // Update selected info
+    updateMobileSelectedInfo();
+}
+
+function createMobileSlot(source, row, col, item, flatIndex = null) {
+    const slot = document.createElement('div');
+    slot.className = 'mobile-inv-slot' + (item === 0 ? ' empty' : '');
+    slot.dataset.source = source;
+    slot.dataset.row = row;
+    slot.dataset.col = col;
+    if (flatIndex !== null) slot.dataset.flatIndex = flatIndex;
+    
+    // Check if this slot is selected
+    const selected = mobileInventoryState.selectedSlot;
+    if (selected && selected.source === source && selected.row === row && selected.col === col) {
+        slot.classList.add('selected');
+    }
+    
+    if (item !== 0 && item) {
+        // Create image
+        const img = document.createElement('img');
+        img.className = 'mobile-inv-slot-img';
+        
+        // Get the p5 image - all_imgs[png] may be an array or a single image
+        try {
+            let p5Img = all_imgs[item.png];
+            // If it's an array, get the first element
+            if (Array.isArray(p5Img)) {
+                p5Img = p5Img[0];
+            }
+            // p5.Image has a canvas property
+            if (p5Img && p5Img.canvas) {
+                img.src = p5Img.canvas.toDataURL();
+            } else if (p5Img && p5Img.elt) {
+                // Sometimes it's an HTML element
+                img.src = p5Img.elt.src || p5Img.elt.toDataURL();
+            }
+        } catch (e) {
+            console.warn('Could not get image for item:', item.name, e);
+        }
+        slot.appendChild(img);
+        
+        // Create amount text
+        if (item.amount > 1) {
+            const amount = document.createElement('span');
+            amount.className = 'mobile-inv-slot-amount';
+            amount.textContent = item.amount > 999 ? Math.floor(item.amount / 1000) + 'K' : item.amount;
+            slot.appendChild(amount);
+        }
+    }
+    
+    // Touch/click handler
+    const handleSelect = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleMobileSlotTap(source, row, col, flatIndex);
+    };
+    
+    slot.addEventListener('touchend', handleSelect, { passive: false });
+    slot.addEventListener('click', handleSelect);
+    
+    return slot;
+}
+
+function createMobileInstructionSlot(index, item, isCurrent) {
+    const slot = document.createElement('div');
+    slot.className = 'mobile-inv-instruction-slot' + (isCurrent ? ' current' : '');
+    slot.dataset.source = 'instructions';
+    slot.dataset.index = index;
+    
+    // Check if selected
+    const selected = mobileInventoryState.selectedSlot;
+    if (selected && selected.source === 'instructions' && selected.col === index) {
+        slot.classList.add('selected');
+    }
+    
+    if (item !== 0 && item) {
+        const img = document.createElement('img');
+        img.className = 'mobile-inv-instruction-img';
+        try {
+            let p5Img = all_imgs[item.png];
+            if (Array.isArray(p5Img)) {
+                p5Img = p5Img[0];
+            }
+            if (p5Img && p5Img.canvas) {
+                img.src = p5Img.canvas.toDataURL();
+            } else if (p5Img && p5Img.elt) {
+                img.src = p5Img.elt.src || p5Img.elt.toDataURL();
+            }
+        } catch (e) {
+            console.warn('Could not get image for instruction:', item.name, e);
+        }
+        slot.appendChild(img);
+    }
+    
+    const handleSelect = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleMobileSlotTap('instructions', 0, index, null);
+    };
+    
+    slot.addEventListener('touchend', handleSelect, { passive: false });
+    slot.addEventListener('click', handleSelect);
+    
+    return slot;
+}
+
+function handleMobileSlotTap(source, row, col, flatIndex) {
+    const container = mobileInventoryState.containerRef;
+    const containerType = mobileInventoryState.containerType;
+    const selected = mobileInventoryState.selectedSlot;
+    
+    // Get the item in this slot
+    let tappedItem = 0;
+    if (source === 'player') {
+        const idx = flatIndex !== null ? flatIndex : (row * 4 + col);
+        tappedItem = player.inv[idx];
+    } else if (source === 'container') {
+        if (containerType === 'Robot') {
+            tappedItem = container.inv[col];
+        } else {
+            tappedItem = container.inv[row][col];
+        }
+    } else if (source === 'instructions') {
+        tappedItem = container.instructions[col];
+    }
+    
+    // If nothing is selected yet
+    if (!selected) {
+        // Select this slot if it has an item
+        if (tappedItem !== 0) {
+            mobileInventoryState.selectedSlot = { source, row, col, flatIndex };
+            updateMobileInventoryUI();
+        }
+        return;
+    }
+    
+    // Something is selected - try to move/swap
+    const srcSource = selected.source;
+    const srcRow = selected.row;
+    const srcCol = selected.col;
+    const srcFlatIndex = selected.flatIndex;
+    
+    // Get source item
+    let srcItem = 0;
+    if (srcSource === 'player') {
+        const idx = srcFlatIndex !== null ? srcFlatIndex : (srcRow * 4 + srcCol);
+        srcItem = player.inv[idx];
+    } else if (srcSource === 'container') {
+        if (containerType === 'Robot') {
+            srcItem = container.inv[srcCol];
+        } else {
+            srcItem = container.inv[srcRow][srcCol];
+        }
+    } else if (srcSource === 'instructions') {
+        srcItem = container.instructions[srcCol];
+    }
+    
+    // Same slot tapped - deselect
+    if (srcSource === source && srcRow === row && srcCol === col) {
+        mobileInventoryState.selectedSlot = null;
+        updateMobileInventoryUI();
+        return;
+    }
+    
+    // Handle movement based on source and destination
+    let moved = false;
+    
+    // Player to container
+    if (srcSource === 'player' && source === 'container') {
+        const playerIdx = srcFlatIndex !== null ? srcFlatIndex : (srcRow * 4 + srcCol);
+        
+        if (containerType === 'Robot') {
+            // Player to robot storage
+            if (tappedItem === 0) {
+                container.inv[col] = srcItem;
+                player.inv[playerIdx] = 0;
+                moved = true;
+            } else if (tappedItem.name === srcItem.name) {
+                container.inv[col].amount += srcItem.amount;
+                player.inv[playerIdx] = 0;
+                moved = true;
+            } else {
+                // Swap
+                container.inv[col] = srcItem;
+                player.inv[playerIdx] = tappedItem;
+                moved = true;
+            }
+        } else {
+            // Player to chest/backpack
+            // Don't allow putting backpack in backpack
+            if (containerType === 'Backpack' && srcItem.class === 'Backpack') {
+                // Not allowed
+            } else if (tappedItem === 0) {
+                container.inv[row][col] = srcItem;
+                player.inv[playerIdx] = 0;
+                moved = true;
+            } else if (tappedItem.name === srcItem.name) {
+                container.inv[row][col].amount += srcItem.amount;
+                player.inv[playerIdx] = 0;
+                moved = true;
+            } else {
+                // Swap
+                container.inv[row][col] = srcItem;
+                player.inv[playerIdx] = tappedItem;
+                moved = true;
+            }
+        }
+    }
+    // Container to player
+    else if (srcSource === 'container' && source === 'player') {
+        const playerIdx = flatIndex !== null ? flatIndex : (row * 4 + col);
+        
+        if (containerType === 'Robot') {
+            if (tappedItem === 0) {
+                player.inv[playerIdx] = srcItem;
+                container.inv[srcCol] = 0;
+                moved = true;
+            } else if (tappedItem.name === srcItem.name) {
+                player.inv[playerIdx].amount += srcItem.amount;
+                container.inv[srcCol] = 0;
+                moved = true;
+            } else {
+                // Swap
+                player.inv[playerIdx] = srcItem;
+                container.inv[srcCol] = tappedItem;
+                moved = true;
+            }
+        } else {
+            if (tappedItem === 0) {
+                player.inv[playerIdx] = srcItem;
+                container.inv[srcRow][srcCol] = 0;
+                moved = true;
+            } else if (tappedItem.name === srcItem.name) {
+                player.inv[playerIdx].amount += srcItem.amount;
+                container.inv[srcRow][srcCol] = 0;
+                moved = true;
+            } else {
+                // Swap (check backpack rule)
+                if (containerType === 'Backpack' && tappedItem.class === 'Backpack') {
+                    // Not allowed
+                } else {
+                    player.inv[playerIdx] = srcItem;
+                    container.inv[srcRow][srcCol] = tappedItem;
+                    moved = true;
+                }
+            }
+        }
+    }
+    // Player to instructions (Robot only)
+    else if (srcSource === 'player' && source === 'instructions') {
+        const playerIdx = srcFlatIndex !== null ? srcFlatIndex : (srcRow * 4 + srcCol);
+        
+        // Only command items can go to instructions
+        if (srcItem.class === 'Command') {
+            if (tappedItem === 0) {
+                container.instructions[col] = new_item_from_num(item_name_to_num(srcItem.name), 1);
+                srcItem.amount -= 1;
+                if (srcItem.amount <= 0) {
+                    player.inv[playerIdx] = 0;
+                }
+                moved = true;
+            } else if (tappedItem.name === srcItem.name) {
+                // Remove from instructions, add to player
+                srcItem.amount += 1;
+                container.instructions[col] = 0;
+                moved = true;
+            } else {
+                // Swap - take from instruction, put new one
+                const oldInstr = tappedItem;
+                container.instructions[col] = new_item_from_num(item_name_to_num(srcItem.name), 1);
+                srcItem.amount -= 1;
+                if (srcItem.amount <= 0) {
+                    player.inv[playerIdx] = 0;
+                }
+                // Add old instruction back to player
+                if (checkForSpace(player, item_name_to_num(oldInstr.name))) {
+                    addItem(player, item_name_to_num(oldInstr.name), 1);
+                }
+                moved = true;
+            }
+        }
+    }
+    // Instructions to player (Robot only)
+    else if (srcSource === 'instructions' && source === 'player') {
+        const playerIdx = flatIndex !== null ? flatIndex : (row * 4 + col);
+        
+        if (tappedItem === 0) {
+            player.inv[playerIdx] = new_item_from_num(item_name_to_num(srcItem.name), 1);
+            container.instructions[srcCol] = 0;
+            moved = true;
+        } else if (tappedItem.name === srcItem.name) {
+            player.inv[playerIdx].amount += 1;
+            container.instructions[srcCol] = 0;
+            moved = true;
+        } else if (tappedItem.class === 'Command') {
+            // Swap instructions
+            player.inv[playerIdx] = new_item_from_num(item_name_to_num(srcItem.name), 1);
+            container.instructions[srcCol] = new_item_from_num(item_name_to_num(tappedItem.name), 1);
+            tappedItem.amount -= 1;
+            if (tappedItem.amount <= 0) {
+                // Already swapped
+            }
+            moved = true;
+        }
+    }
+    // Within same container
+    else if (srcSource === source) {
+        if (source === 'player') {
+            const srcIdx = srcFlatIndex !== null ? srcFlatIndex : (srcRow * 4 + srcCol);
+            const dstIdx = flatIndex !== null ? flatIndex : (row * 4 + col);
+            
+            if (tappedItem === 0) {
+                player.inv[dstIdx] = srcItem;
+                player.inv[srcIdx] = 0;
+                moved = true;
+            } else if (tappedItem.name === srcItem.name) {
+                player.inv[dstIdx].amount += srcItem.amount;
+                player.inv[srcIdx] = 0;
+                moved = true;
+            } else {
+                // Swap
+                player.inv[dstIdx] = srcItem;
+                player.inv[srcIdx] = tappedItem;
+                moved = true;
+            }
+        } else if (source === 'container') {
+            if (containerType === 'Robot') {
+                if (tappedItem === 0) {
+                    container.inv[col] = srcItem;
+                    container.inv[srcCol] = 0;
+                    moved = true;
+                } else if (tappedItem.name === srcItem.name) {
+                    container.inv[col].amount += srcItem.amount;
+                    container.inv[srcCol] = 0;
+                    moved = true;
+                } else {
+                    container.inv[col] = srcItem;
+                    container.inv[srcCol] = tappedItem;
+                    moved = true;
+                }
+            } else {
+                if (tappedItem === 0) {
+                    container.inv[row][col] = srcItem;
+                    container.inv[srcRow][srcCol] = 0;
+                    moved = true;
+                } else if (tappedItem.name === srcItem.name) {
+                    container.inv[row][col].amount += srcItem.amount;
+                    container.inv[srcRow][srcCol] = 0;
+                    moved = true;
+                } else {
+                    container.inv[row][col] = srcItem;
+                    container.inv[srcRow][srcCol] = tappedItem;
+                    moved = true;
+                }
+            }
+        } else if (source === 'instructions') {
+            // Swap or move within instructions
+            if (tappedItem === 0) {
+                container.instructions[col] = srcItem;
+                container.instructions[srcCol] = 0;
+                moved = true;
+            } else {
+                container.instructions[col] = srcItem;
+                container.instructions[srcCol] = tappedItem;
+                moved = true;
+            }
+        }
+    }
+    
+    // Clear selection after move attempt
+    mobileInventoryState.selectedSlot = null;
+    updateMobileInventoryUI();
+}
+
+function mobileTransferAll() {
+    const container = mobileInventoryState.containerRef;
+    const containerType = mobileInventoryState.containerType;
+    
+    if (!container) return;
+    
+    // Transfer all from player to container
+    for (let i = 0; i < player.inv.length; i++) {
+        if (player.inv[i] !== 0) {
+            // Don't transfer backpack into backpack
+            if (containerType === 'Backpack' && player.inv[i].class === 'Backpack') continue;
+            
+            if (containerType === 'Robot') {
+                // 1D array
+                for (let j = 0; j < container.inv.length; j++) {
+                    if (container.inv[j] === 0) {
+                        container.inv[j] = player.inv[i];
+                        player.inv[i] = 0;
+                        break;
+                    } else if (container.inv[j].name === player.inv[i].name) {
+                        container.inv[j].amount += player.inv[i].amount;
+                        player.inv[i] = 0;
+                        break;
+                    }
+                }
+            } else {
+                // 2D array
+                let placed = false;
+                for (let r = 0; r < container.inv.length && !placed; r++) {
+                    for (let c = 0; c < container.inv[r].length && !placed; c++) {
+                        if (container.inv[r][c] === 0) {
+                            container.inv[r][c] = player.inv[i];
+                            player.inv[i] = 0;
+                            placed = true;
+                        } else if (container.inv[r][c].name === player.inv[i].name) {
+                            container.inv[r][c].amount += player.inv[i].amount;
+                            player.inv[i] = 0;
+                            placed = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    updateMobileInventoryUI();
+}
+
+function mobileSplitStack() {
+    const selected = mobileInventoryState.selectedSlot;
+    if (!selected) {
+        updateMobileSelectedInfo('Select an item first');
+        return;
+    }
+    
+    const container = mobileInventoryState.containerRef;
+    const containerType = mobileInventoryState.containerType;
+    
+    let item = null;
+    let setItem = null;
+    
+    if (selected.source === 'player') {
+        const idx = selected.flatIndex !== null ? selected.flatIndex : (selected.row * 4 + selected.col);
+        item = player.inv[idx];
+        setItem = (newItem) => { player.inv[idx] = newItem; };
+    } else if (selected.source === 'container') {
+        if (containerType === 'Robot') {
+            item = container.inv[selected.col];
+            setItem = (newItem) => { container.inv[selected.col] = newItem; };
+        } else {
+            item = container.inv[selected.row][selected.col];
+            setItem = (newItem) => { container.inv[selected.row][selected.col] = newItem; };
+        }
+    }
+    
+    if (!item || item === 0 || item.amount <= 1) {
+        updateMobileSelectedInfo('Cannot split - need 2+ items');
+        return;
+    }
+    
+    // Split in half
+    const halfAmount = Math.ceil(item.amount / 2);
+    const remainingAmount = item.amount - halfAmount;
+    
+    // Create a new item for the split portion
+    const newItem = new_item_from_num(item_name_to_num(item.name), halfAmount);
+    
+    // Try to find empty slot for the split portion
+    let placed = false;
+    
+    // Try player inventory first
+    for (let i = 0; i < player.inv.length && !placed; i++) {
+        if (player.inv[i] === 0) {
+            player.inv[i] = newItem;
+            item.amount = remainingAmount;
+            if (item.amount <= 0) setItem(0);
+            placed = true;
+        }
+    }
+    
+    if (!placed) {
+        updateMobileSelectedInfo('No empty slot for split');
+        return;
+    }
+    
+    mobileInventoryState.selectedSlot = null;
+    updateMobileInventoryUI();
+}
+
+function updateMobileSelectedInfo(message = null) {
+    const infoDiv = document.getElementById('mobile-inv-selected-info');
+    if (!infoDiv) return;
+    
+    if (message) {
+        infoDiv.textContent = message;
+        return;
+    }
+    
+    const selected = mobileInventoryState.selectedSlot;
+    if (!selected) {
+        infoDiv.textContent = '';
+        return;
+    }
+    
+    const container = mobileInventoryState.containerRef;
+    const containerType = mobileInventoryState.containerType;
+    
+    let item = null;
+    if (selected.source === 'player') {
+        const idx = selected.flatIndex !== null ? selected.flatIndex : (selected.row * 4 + selected.col);
+        item = player.inv[idx];
+    } else if (selected.source === 'container') {
+        if (containerType === 'Robot') {
+            item = container.inv[selected.col];
+        } else {
+            item = container.inv[selected.row][selected.col];
+        }
+    } else if (selected.source === 'instructions') {
+        item = container.instructions[selected.col];
+    }
+    
+    if (item && item !== 0) {
+        infoDiv.textContent = `Selected: ${item.name} x${item.amount}`;
+    } else {
+        infoDiv.textContent = '';
+    }
+}
+
+// Initialize mobile inventory UI after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMobileInventoryUI);
+} else {
+    setupMobileInventoryUI();
+}
+
 var musicSlider;
 var fxSlider;
 var startButton;

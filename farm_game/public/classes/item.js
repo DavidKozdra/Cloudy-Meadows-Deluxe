@@ -111,6 +111,14 @@ class Backpack extends Item {
 	}
 
 	bag_render(){
+        // On mobile, use the DOM-based inventory UI
+        if (typeof isMobile !== 'undefined' && isMobile && typeof openMobileInventory === 'function') {
+            if (typeof mobileInventoryState !== 'undefined' && !mobileInventoryState.isOpen) {
+                openMobileInventory('Backpack', this);
+            }
+            return; // Don't render p5 UI on mobile
+        }
+        
         const chest = UI_BOUNDS.chestGrid;
         const cellSize = chest.cellSize;
         const gridLeft = (canvasWidth/4) + 10;

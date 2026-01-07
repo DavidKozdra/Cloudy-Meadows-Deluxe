@@ -18,7 +18,7 @@ class Player extends MoveableEntity {
         this.lastFoodnum = 2;
         this.hunger_timer = all_items[this.lastFoodnum].hunger_timer;
         this.hunger_counter = 0;
-        this.coins = 0;
+        this.coins = 1000;
         this.hp = 100;
         this.dead = false;
         this.deaths = 0;
@@ -1105,6 +1105,12 @@ function takeInput() {
                     }
                 }
                 else if(player.talking.class == 'Chest' || player.talking.class == 'Backpack'){
+                    // On mobile, close the mobile inventory overlay
+                    if (typeof isMobile !== 'undefined' && isMobile && typeof closeMobileInventory === 'function') {
+                        closeMobileInventory();
+                        return; // closeMobileInventory handles the cleanup
+                    }
+                    
                     if(mouse_item != 0){
                         if(checkForSpace(player, item_name_to_num(mouse_item.name))){
                             addItem(player, item_name_to_num(mouse_item.name), mouse_item.amount);
@@ -1140,6 +1146,12 @@ function takeInput() {
                     robotBoomButton.hide();
                 }
                 else if (player.talking.class == 'Robot'){
+                    // On mobile, close the mobile inventory overlay
+                    if (typeof isMobile !== 'undefined' && isMobile && typeof closeMobileInventory === 'function') {
+                        closeMobileInventory();
+                        return; // closeMobileInventory handles the cleanup
+                    }
+                    
                     player.talking.fuel_timer = player.talking.max_fuel_timer;
                     player.talking.move_bool = temp_move_bool;
                     robotPlayButton.hide();

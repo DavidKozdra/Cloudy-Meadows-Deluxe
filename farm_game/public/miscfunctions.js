@@ -772,23 +772,7 @@ function showTitleOptions(){
         controlsSection.appendChild(controlsContainer);
         optionsMenu.appendChild(controlsSection);
         
-        // Mobile touch controls info (shown only on mobile)
-        const mobileControlsInfo = document.createElement('div');
-        mobileControlsInfo.className = 'options-section options-mobile-info';
-        mobileControlsInfo.id = 'options-mobile-info';
-        mobileControlsInfo.innerHTML = `
-            <h3 class="options-section-title">Touch Controls</h3>
-            <div class="mobile-info-grid">
-                <div class="mobile-info-item">D-Pad: Move around</div>
-                <div class="mobile-info-item">E Button: Interact with objects</div>
-                <div class="mobile-info-item">Q Button: Eat food from hotbar</div>
-                <div class="mobile-info-item">⇧ Button: Sprint / Special action</div>
-                <div class="mobile-info-item">⏸ Button: Pause the game</div>
-                <div class="mobile-info-item">← → Arrows: Scroll through hotbar</div>
-            </div>
-        `;
-        optionsMenu.appendChild(mobileControlsInfo);
-        
+  
         // Buttons section
         const buttonGroup = document.createElement('div');
         buttonGroup.className = 'options-button-group';
@@ -871,6 +855,13 @@ function showPaused(){
     if (pauseMenu) {
         pauseMenu.style.display = 'flex';
         updateCanvasPointerEvents();
+        
+        // Show/hide quit button based on whether we're in game or title screen
+        const quitBtn = document.getElementById('pause-quit-btn');
+        if (quitBtn) {
+            // Show the quit button when in-game (not on title screen)
+            quitBtn.style.display = title_screen ? 'none' : 'block';
+        }
         
         // Update sliders
         const musicSliderDOM = document.getElementById('pause-music-slider');
@@ -974,21 +965,7 @@ function ensurePauseMenuContainer() {
     
     // Render control buttons once (only on desktop)
     renderControlButtons(controlsSection);
-    
-    // Mobile touch controls info section (hidden on desktop)
-    const mobileInfoSection = document.createElement('div');
-    mobileInfoSection.className = 'pause-mobile-info';
-    mobileInfoSection.id = 'pause-mobile-info';
-    mobileInfoSection.innerHTML = `
-        <div class="mobile-info-title">Touch Controls</div>
-        <div class="mobile-info-item">D-Pad: Move around</div>
-        <div class="mobile-info-item">E Button: Interact</div>
-        <div class="mobile-info-item">Q Button: Eat food</div>
-        <div class="mobile-info-item">⇧ Button: Sprint</div>
-        <div class="mobile-info-item">⏸ Button: Pause game</div>
-        <div class="mobile-info-item">← → Arrows: Change hotbar</div>
-    `;
-    pauseMenu.appendChild(mobileInfoSection);
+
     
     //back button
     const backBtn = document.createElement('button');
@@ -1015,7 +992,6 @@ function ensurePauseMenuContainer() {
         creditsButton.show();
         optionsButton.show();
         clearButton.hide();
-        quitBtn.style.display = 'none';
         saveAll();
     });
     pauseMenu.appendChild(quitBtn);

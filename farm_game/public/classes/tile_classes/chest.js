@@ -6,6 +6,14 @@ class Chest extends Entity{
     }
 
     chest_render(){
+        // On mobile, use the DOM-based inventory UI
+        if (typeof isMobile !== 'undefined' && isMobile && typeof openMobileInventory === 'function') {
+            if (typeof mobileInventoryState !== 'undefined' && !mobileInventoryState.isOpen) {
+                openMobileInventory('Chest', this);
+            }
+            return; // Don't render p5 UI on mobile
+        }
+        
         robotBoomButton.show();
         robotBoomButton.style('background-color','rgb(187, 132, 75)');
         robotBoomButton.style('color','rgb(255, 0, 0)');

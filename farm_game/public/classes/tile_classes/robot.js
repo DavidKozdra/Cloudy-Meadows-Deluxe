@@ -41,6 +41,14 @@ class Robot extends GridMoveEntity{
     }
 
     render_pc(){
+        // On mobile, use the DOM-based inventory UI
+        if (typeof isMobile !== 'undefined' && isMobile && typeof openMobileInventory === 'function') {
+            if (typeof mobileInventoryState !== 'undefined' && !mobileInventoryState.isOpen) {
+                openMobileInventory('Robot', this);
+            }
+            return; // Don't render p5 UI on mobile
+        }
+        
         robotPlayButton.show();
         robotPauseButton.show();
         robotBoomButton.show();
