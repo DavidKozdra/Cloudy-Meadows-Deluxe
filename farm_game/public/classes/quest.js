@@ -163,23 +163,36 @@ class Quest {
                 if (container) container.appendChild(goalPopup);
             }
             
-            // Calculate panel dimensions
-            const panelWidth = Math.max((goalName.length * 12), 150);
-            const panelHeight = 50;
+            // Check for mobile to use smaller dimensions
+            const isMobileOrSmall = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
+            
+            // Calculate panel dimensions (smaller on mobile)
+            const charWidth = isMobileOrSmall ? 8 : 12;
+            const minWidth = isMobileOrSmall ? 100 : 150;
+            const panelWidth = Math.max((goalName.length * charWidth), minWidth);
+            const panelHeight = isMobileOrSmall ? 35 : 50;
             
             // Determine stroke color
             const strokeColor = (strokeC == 'yellow') ? 'rgb(255, 255, 0)' : 'rgb(139, 98, 55)';
+            
+            // Font size (smaller on mobile)
+            let fontSize;
+            if (isMobileOrSmall) {
+                fontSize = goalName.length > 25 ? '8px' : '10px';
+            } else {
+                fontSize = goalName.length > 25 ? '11px' : '13px';
+            }
             
             // Style the popup
             goalPopup.style.width = panelWidth + 'px';
             goalPopup.style.height = panelHeight + 'px';
             goalPopup.style.backgroundColor = 'rgb(187, 132, 75)';
-            goalPopup.style.border = '5px solid ' + strokeColor;
+            goalPopup.style.border = (isMobileOrSmall ? '3px' : '5px') + ' solid ' + strokeColor;
             goalPopup.style.padding = '0px';
             goalPopup.style.boxSizing = 'border-box';
             goalPopup.style.fontFamily = 'pixelFont, monospace';
             goalPopup.style.color = 'rgb(255, 255, 255)';
-            goalPopup.style.fontSize = (goalName.length > 25 ? '11px' : '13px');
+            goalPopup.style.fontSize = fontSize;
             goalPopup.style.display = 'flex';
             goalPopup.style.alignItems = 'center';
             goalPopup.style.justifyContent = 'center';

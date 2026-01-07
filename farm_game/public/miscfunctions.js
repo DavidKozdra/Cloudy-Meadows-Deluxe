@@ -92,9 +92,22 @@ function hasGameSave(){
     }
 }
 
-
+// Hide UI popups (goal and location) when not in gameplay
+function hideUIPopups() {
+    const goalPopup = document.getElementById('current-goal-popup');
+    if (goalPopup) {
+        goalPopup.style.display = 'none';
+    }
+    const levelPopup = document.getElementById('level-name-popup');
+    if (levelPopup) {
+        levelPopup.style.display = 'none';
+    }
+}
 
 function showTitle(){
+    // Hide UI popups on title screen
+    hideUIPopups();
+    
     // Render background on canvas
   
         /*
@@ -373,6 +386,9 @@ function hideDifficultyMenu(){
 }
 
 function showLoseScreen() {
+    // Hide UI popups on lose screen
+    hideUIPopups();
+    
     let loseScreen = document.getElementById('lose-screen');
     if (!loseScreen) {
         loseScreen = document.createElement('div');

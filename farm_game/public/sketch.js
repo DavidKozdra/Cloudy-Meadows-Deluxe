@@ -1694,6 +1694,9 @@ function draw() {
         if(!player.dead){
             background(0, 0, 0, time);
             render_ui();
+        } else {
+            // Hide UI popups when player is dead
+            hideUIPopups();
         }
         
         if (!paused){

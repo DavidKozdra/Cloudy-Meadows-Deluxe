@@ -218,25 +218,31 @@ class Level {
             }
         }
         
-        const panelWidth = (this.name.length * 17) + 6;
-        const panelHeight = 50;
+        // Check for mobile to use smaller dimensions
+        const isMobileOrSmall = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
+        
+        const charWidth = isMobileOrSmall ? 11 : 17;
+        const panelWidth = (this.name.length * charWidth) + 6;
+        const panelHeight = isMobileOrSmall ? 35 : 50;
+        const fontSize = isMobileOrSmall ? '11px' : '15px';
+        const borderWidth = isMobileOrSmall ? '3px' : '5px';
         
         // Apply styling to match original canvas rendering
         levelPopup.style.width = panelWidth + 'px';
         levelPopup.style.height = panelHeight + 'px';
         levelPopup.style.backgroundColor = 'rgb(187, 132, 75)';
-        levelPopup.style.border = '5px solid rgb(149, 108, 65)';
+        levelPopup.style.border = borderWidth + ' solid rgb(149, 108, 65)';
         levelPopup.style.padding = '0px';
         levelPopup.style.boxSizing = 'border-box';
         levelPopup.style.fontFamily = 'pixelFont, monospace';
         levelPopup.style.color = 'rgb(255, 255, 255)';
-        levelPopup.style.fontSize = '15px';
+        levelPopup.style.fontSize = fontSize;
         levelPopup.style.display = 'flex';
         levelPopup.style.alignItems = 'center';
         levelPopup.style.justifyContent = 'center';
         levelPopup.style.textAlign = 'center';
         levelPopup.style.fontWeight = 'bold';
-        levelPopup.style.textShadow = '4px 4px 0px rgba(0, 0, 0, 0.5)';
+        levelPopup.style.textShadow = (isMobileOrSmall ? '2px 2px' : '4px 4px') + ' 0px rgba(0, 0, 0, 0.5)';
         levelPopup.style.marginBottom = '5px';
         // Animate position based on y value
         levelPopup.style.transform = 'translateY(' + this.y + 'px)';
