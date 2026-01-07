@@ -1273,7 +1273,7 @@ function takeInput() {
                 }
                 else if (player.talking.class == 'AirBallon'){
                     const selectedPlace = player.talking.availablePlaces[current_reply];
-                    if(selectedPlace == 'Park'){
+                    if(selectedPlace == 'Poly Park'){
                         triggerTravelTransition(() => {
                             player.touching.collide = false;
                             player.pos.x = tileSize*17;
@@ -1285,7 +1285,7 @@ function takeInput() {
                             player.oldlooking_name = player.talking.name;
                             player.talking = 0;
                             current_reply = 0;
-                        }, 'Park');
+                        }, 'Poly Park');
                     }
                     else if (selectedPlace == 'Swamp'){
                         triggerTravelTransition(() => {

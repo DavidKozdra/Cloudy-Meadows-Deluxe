@@ -1,7 +1,7 @@
 class AirBallon extends Entity {
 	constructor(name, png, x, y, under_tile) {
 		super(name, png, x, y, -1, [], 0, under_tile);
-        this.places = ['Park', 'Swamp', 'Cloudy Meadows'];
+        this.places = ['Poly Park', 'Swamp', 'Cloudy Meadows'];
         this.class = 'AirBallon';
 	}
 
