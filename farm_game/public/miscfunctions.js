@@ -374,7 +374,32 @@ function showDifficultyMenu(){
             
             container.appendChild(card);
         }
+        
+        // Add back button
+        const backBtn = document.createElement('button');
+        backBtn.className = 'difficulty-back-btn';
+        backBtn.textContent = 'Back';
+        backBtn.addEventListener('click', () => {
+            dificulty_screen = false;
+            title_screen = true;
+            hideDifficultyMenu();
+            showMainMenu();
+        });
+        difficultyMenu.appendChild(backBtn);
     }
+    
+    // Add mobile scroll hint if on mobile and not already present (check every time)
+    const isMobileOrSmall = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
+    let scrollHint = difficultyMenu.querySelector('.difficulty-scroll-hint');
+    if (isMobileOrSmall && !scrollHint) {
+        scrollHint = document.createElement('div');
+        scrollHint.className = 'difficulty-scroll-hint';
+        scrollHint.innerHTML = 'Scroll for more ↓';
+        difficultyMenu.insertBefore(scrollHint, difficultyMenu.firstChild);
+    } else if (!isMobileOrSmall && scrollHint) {
+        scrollHint.remove();
+    }
+    
     difficultyMenu.style.display = 'flex';
     updateCanvasPointerEvents();
 }

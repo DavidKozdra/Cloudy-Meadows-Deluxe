@@ -821,6 +821,25 @@ button {
     padding: 20px;
 }
 
+.difficulty-scroll-hint {
+    display: block;
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: #333;
+    text-align: center;
+    padding: 8px 16px;
+    background: rgba(255, 255, 200, 0.9);
+    border: 2px solid #8B6237;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    animation: difficultyBounce 1.5s ease-in-out infinite;
+}
+
+@keyframes difficultyBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(5px); }
+}
+
 .difficulty-title {
     font-family: pixelFont, monospace;
     font-size: 32px;
@@ -2617,4 +2636,28 @@ button {
     .difficulty-card {
         width: 28%;
     }
+}
+
+/* Difficulty Back Button */
+.difficulty-back-btn {
+    font-family: pixelFont, monospace;
+    font-size: 16px;
+    color: rgb(255, 255, 255);
+    background-color: rgb(100, 100, 100);
+    border: 3px solid rgb(70, 70, 70);
+    border-radius: 4px;
+    padding: 10px 30px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    margin-top: 20px;
+}
+
+.difficulty-back-btn:hover {
+    background-color: rgb(130, 130, 130);
+    border-color: rgb(100, 100, 100);
+}
+
+.difficulty-back-btn:active {
+    transform: translateY(2px);
 }
