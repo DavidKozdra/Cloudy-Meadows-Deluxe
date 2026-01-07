@@ -386,18 +386,12 @@ function showDifficultyMenu(){
             showMainMenu();
         });
         difficultyMenu.appendChild(backBtn);
-    }
-    
-    // Add mobile scroll hint if on mobile and not already present (check every time)
-    const isMobileOrSmall = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
-    let scrollHint = difficultyMenu.querySelector('.difficulty-scroll-hint');
-    if (isMobileOrSmall && !scrollHint) {
-        scrollHint = document.createElement('div');
+        
+        // Add scroll hint (CSS controls visibility based on screen size)
+        const scrollHint = document.createElement('div');
         scrollHint.className = 'difficulty-scroll-hint';
         scrollHint.innerHTML = 'Scroll for more ↓';
         difficultyMenu.insertBefore(scrollHint, difficultyMenu.firstChild);
-    } else if (!isMobileOrSmall && scrollHint) {
-        scrollHint.remove();
     }
     
     difficultyMenu.style.display = 'flex';
