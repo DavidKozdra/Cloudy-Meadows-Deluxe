@@ -1015,7 +1015,7 @@ function ensurePauseMenuContainer() {
         creditsButton.show();
         optionsButton.show();
         clearButton.hide();
-        quitButton.hide();
+        quitBtn.style.display = 'none';
         saveAll();
     });
     pauseMenu.appendChild(quitBtn);
