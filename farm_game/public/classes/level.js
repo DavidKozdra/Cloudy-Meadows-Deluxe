@@ -316,6 +316,9 @@ class Level {
                 }
             }
         }
+    }
+
+    renderLights() {
         for (let i = 0; i < this.lights.length; i++) {
             this.lights[i].render();
         }
@@ -464,7 +467,7 @@ class Light {
 
     render() {
         noStroke();
-        fill(this.r, this.g, this.b, time / 1.5);
+        fill(this.r/2, this.g/2, this.b/2, time / 1.5);
         circle(this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2), this.size);
     }
 }

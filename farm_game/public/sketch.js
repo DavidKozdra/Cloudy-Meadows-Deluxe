@@ -1690,9 +1690,22 @@ function draw() {
             animatedGifs.forEach(gif => gif.pause());
         }
         player.render();
-        levels[currentLevel_y][currentLevel_x].renderTreeTops();
+        
+        // Apply night overlay (but not to tree tops or lights)
         if(!player.dead){
-            background(0, 0, 0, time);
+            push();
+            fill(0, 0, 0, time);
+            noStroke();
+            rect(0, 0, canvasWidth, canvasHeight);
+            pop();
+            
+            // Lights and tree tops render after night overlay so they stay bright
+            // Only render when player is alive
+            levels[currentLevel_y][currentLevel_x].renderLights();
+            levels[currentLevel_y][currentLevel_x].renderTreeTops();
+        }
+        
+        if(!player.dead){
             render_ui();
         } else {
             // Hide UI popups when player is dead

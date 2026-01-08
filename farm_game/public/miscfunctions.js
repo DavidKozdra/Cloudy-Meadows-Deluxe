@@ -1580,7 +1580,9 @@ function saveAll(){
         currentLevel_x: currentLevel_x, 
         currentLevel_y: currentLevel_y, 
         dificulty: dificulty,
-        currentWeather: currentWeather
+        currentWeather: currentWeather,
+        time: time,
+        timephase: timephase
     });
     let lvlLength = 0;
     for(let i = 0; i < levels.length; i++){
@@ -1651,6 +1653,10 @@ function loadAll(){
         
         // Load weather state
         currentWeather = localData.get('Day_curLvl_Dif').currentWeather || 'clear';
+        
+        // Load time of day
+        time = localData.get('Day_curLvl_Dif').time || 0;
+        timephase = localData.get('Day_curLvl_Dif').timephase || 0;
     }
     if(localData.get('Controls') != null){
         Controls_Interact_button_key = localData.get('Controls').Controls_Interact_button_key
