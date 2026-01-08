@@ -310,22 +310,23 @@ button {
 
 /* Quests UI styles */
 .quests-container {
-    top : -20dvw;
+    top: 50%;
     position: absolute;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     background-color: rgb(187, 132, 75);
     border: 5px solid rgb(149, 108, 65);
     border-radius: 4px;
     padding: 15px;
     min-width: 40dvw;
     max-width: 45dvw;
-    min-height: 40dvh;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     gap: 15px;
     z-index: 1000;
     pointer-events: auto;
+    overflow-y: auto;
 }
 
 .quests-header-wrapper {
@@ -530,6 +531,8 @@ button {
     flex-shrink: 0;
     height: 28px;
     line-height: 1;
+    pointer-events: auto;
+    z-index: 10;
 }
 
 .quest-details-button:hover {

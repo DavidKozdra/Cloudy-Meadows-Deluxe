@@ -1800,6 +1800,11 @@ function draw() {
                         }
                     }
                     
+                    // Dispatch new day event for UI updates
+                    window.dispatchEvent(new CustomEvent('newDay', {
+                        detail: { day: days }
+                    }));
+                    
                     // Remove temporary frog rain frogs from yesterday
                     for(let y = 0; y < levels.length; y++){
                         for(let x = 0; x < levels[y].length; x++){
@@ -2030,7 +2035,10 @@ function render_ui() {
             pop()
         }
         if(player.show_quests){
-            showQuests();
+            if(!questsContainer || questsContainer.style.display === 'none'){
+                // Only call showQuests when opening the panel or if container doesn't exist
+                showQuests();
+            }
         }
         else{
             questSlider.hide();
@@ -2160,7 +2168,6 @@ function render_ui() {
 function mouseReleased() {
     if(!title_screen){
         if(mouseButton == LEFT){
-            console.log("left click");
             if(!player.show_quests){
                 if(keyIsDown(special_key) || virtualInput.special){ //16 == shift
                     if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){

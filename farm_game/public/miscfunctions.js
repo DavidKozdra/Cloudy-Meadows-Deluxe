@@ -1213,6 +1213,15 @@ function updateQuestsDisplay() {
         
         // Add click handler
         questButton.addEventListener('click', (e) => {
+            // Don't handle clicks on the details button or its children
+            if (e.target.classList.contains('quest-details-button') || 
+                e.target.closest('.quest-details-button') ||
+                (e.target.tagName === 'BUTTON' && e.target.textContent.includes('Details')) ||
+                (e.target.tagName === 'BUTTON' && e.target.textContent.includes('Hide'))) {
+                // Let the details button handle its own click
+                return;
+            }
+            
             console.log('Quest button clicked');
             e.preventDefault();
             e.stopPropagation();
@@ -1245,6 +1254,8 @@ function updateQuestsDisplay() {
         detailsButton.className = 'quest-details-button';
         detailsButton.textContent = 'Details';
         detailsButton.onclick = (e) => {
+            console.log(e , 'Details button clicked for quest index:', i);
+            e.preventDefault();
             e.stopPropagation();
             const isOpen = detailsContainer.style.display === 'flex';
             if (isOpen) {
@@ -1323,31 +1334,43 @@ function updateQuestsDisplay() {
     questsContainer.style.display = 'flex';
     updateCanvasPointerEvents();
     
-    // Set up event listeners for quest updates
-    window.addEventListener('questGoalCompleted', (e) => {
-        // Find which quest button this is and update it
-        const quest = e.detail.quest;
-        const questIndex = player.quests.indexOf(quest);
-        const btn = document.querySelector(`[data-quest-index="${questIndex}"]`)?.closest('.quest-item');
-        if (btn) updateQuestProgressBar(btn);
-    });
-    
-    window.addEventListener('questCompleted', (e) => {
-        const questIndex = player.quests.indexOf(e.detail.quest);
-        const btn = document.querySelector(`[data-quest-index="${questIndex}"]`)?.closest('.quest-item');
-        if (btn) updateQuestProgressBar(btn);
+    // Set up event listeners for quest updates (only once)
+    if (!window._questEventsRegistered) {
+        window._questEventsRegistered = true;
+        
+        window.addEventListener('questGoalCompleted', (e) => {
+            if (!questsContainer || questsContainer.style.display === 'none') return;
+            // Find which quest button this is and update it
+            const quest = e.detail.quest;
+            const questIndex = player.quests.indexOf(quest);
+            const btn = document.querySelector(`[data-quest-index="${questIndex}"]`)?.closest('.quest-item');
+            if (btn) updateQuestProgressBar(btn);
+        });
+        
+        window.addEventListener('questCompleted', (e) => {
+            if (!questsContainer || questsContainer.style.display === 'none') return;
+            const questIndex = player.quests.indexOf(e.detail.quest);
+            const btn = document.querySelector(`[data-quest-index="${questIndex}"]`)?.closest('.quest-item');
+            if (btn) updateQuestProgressBar(btn);
 
-        // Auto-select next incomplete quest if current was just completed
-        if (questIndex === player.current_quest) {
-            for (let i = 0; i < player.quests.length; i++) {
-                if (!player.quests[i].done && !player.quests[i].failed) {
-                    player.current_quest = i;
-                    updateQuestButtonHighlight();
-                    break;
+            // Auto-select next incomplete quest if current was just completed
+            if (questIndex === player.current_quest) {
+                for (let i = 0; i < player.quests.length; i++) {
+                    if (!player.quests[i].done && !player.quests[i].failed) {
+                        player.current_quest = i;
+                        updateQuestButtonHighlight();
+                        break;
+                    }
                 }
             }
-        }
-    });
+        });
+        
+        window.addEventListener('newDay', (e) => {
+            if (!questsContainer || questsContainer.style.display === 'none') return;
+            // Full refresh when new day occurs to update quest names with day counts
+            updateQuestsDisplay();
+        });
+    }
 }
 
 function updateQuestProgressBar(btn) {
