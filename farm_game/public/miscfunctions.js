@@ -794,18 +794,20 @@ function showTitleOptions(){
         optionsMenu.appendChild(audioSection);
         
         // Controls section (hidden on mobile)
-        const controlsSection = document.createElement('div');
-        controlsSection.className = 'options-section options-controls-section';
-        controlsSection.id = 'options-controls-section';
-        const controlsTitle = document.createElement('h3');
-        controlsTitle.className = 'options-section-title';
-        controlsTitle.textContent = 'Controls';
-        controlsSection.appendChild(controlsTitle);
-        const controlsContainer = document.createElement('div');
-        controlsContainer.id = 'title-controls-container';
-        controlsContainer.className = 'title-controls-container';
-        controlsSection.appendChild(controlsContainer);
-        optionsMenu.appendChild(controlsSection);
+        if (!isMobile) {
+            const controlsSection = document.createElement('div');
+            controlsSection.className = 'options-section options-controls-section';
+            controlsSection.id = 'options-controls-section';
+            const controlsTitle = document.createElement('h3');
+            controlsTitle.className = 'options-section-title';
+            controlsTitle.textContent = 'Controls';
+            controlsSection.appendChild(controlsTitle);
+            const controlsContainer = document.createElement('div');
+            controlsContainer.id = 'title-controls-container';
+            controlsContainer.className = 'title-controls-container';
+            controlsSection.appendChild(controlsContainer);
+            optionsMenu.appendChild(controlsSection);
+        }
         
   
         // Buttons section

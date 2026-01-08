@@ -874,15 +874,36 @@ function setup() {
     robotBoomButton.parent('game-container');
     robotBoomButton.position(((14*canvasWidth)/16) - 30, canvasHeight/8 - 5);
     robotBoomButton.mousePressed(() => {
-        if(checkForSpace(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name))){
-            addItem(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name), 1);
-            if (player.touching != 0) {
-                levels[currentLevel_y][currentLevel_x].map[(player.looking(currentLevel_x, currentLevel_y).pos.y / tileSize)][player.looking(currentLevel_x, currentLevel_y).pos.x / tileSize] = player.looking(currentLevel_x, currentLevel_y).under_tile;
+        // Handle chest destruction
+        if (player.talking && player.talking.class === 'Chest') {
+            if (confirm('Are you sure? Booming the chest will REMOVE EVERYTHING inside it!')) {
+                // Try to add the chest to player inventory
+                if(checkForSpace(player, item_name_to_num('Chest'))){
+                    addItem(player, item_name_to_num('Chest'), 1);
+                    // Remove chest from map and replace with under_tile
+                    let chestTile = player.talking;
+                    levels[currentLevel_y][currentLevel_x].map[(chestTile.pos.y / tileSize)][(chestTile.pos.x / tileSize)] = chestTile.under_tile;
+                    player.talking = 0;
+                    robotBoomButton.hide();
+                }
             }
-            robotPlayButton.hide();
-            robotPauseButton.hide();
-            robotBoomButton.hide();
-            player.talking = 0;
+            return;
+        }
+        
+        // Handle robot destruction
+        if (player.looking(currentLevel_x, currentLevel_y) && player.looking(currentLevel_x, currentLevel_y).class === 'Robot') {
+            if (confirm('Are you sure? Booming the robot will REMOVE ALL its inventory and it cannot be recovered!')) {
+                if(checkForSpace(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name))){
+                    addItem(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name), 1);
+                    if (player.touching != 0) {
+                        levels[currentLevel_y][currentLevel_x].map[(player.looking(currentLevel_x, currentLevel_y).pos.y / tileSize)][player.looking(currentLevel_x, currentLevel_y).pos.x / tileSize] = player.looking(currentLevel_x, currentLevel_y).under_tile;
+                    }
+                    robotPlayButton.hide();
+                    robotPauseButton.hide();
+                    robotBoomButton.hide();
+                    player.talking = 0;
+                }
+            }
         }
     });
     robotBoomButton.style("font-family","pixelFont");

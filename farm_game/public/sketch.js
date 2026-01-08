@@ -473,6 +473,32 @@ function updateMobileInventoryUI() {
                 containerGrid.appendChild(slot);
             }
         }
+        
+        // Add boom button for chest
+        if (containerType === 'Chest') {
+            const chestActionsDiv = document.createElement('div');
+            chestActionsDiv.id = 'mobile-inv-chest-actions';
+            chestActionsDiv.style.marginTop = '10px';
+            chestActionsDiv.innerHTML = `
+                <button class="mobile-inv-action-btn destroy" id="mobile-chest-boom">💥 Boom</button>
+            `;
+            containerSection.appendChild(chestActionsDiv);
+            
+            setTimeout(() => {
+                const boomBtn = document.getElementById('mobile-chest-boom');
+                if (boomBtn) {
+                    boomBtn.onclick = () => {
+                        if (confirm('Are you sure? Booming the chest will REMOVE EVERYTHING inside it!')) {
+                            if (checkForSpace(player, item_name_to_num('Chest'))) {
+                                addItem(player, item_name_to_num('Chest'), 1);
+                                levels[currentLevel_y][currentLevel_x].map[container.pos.y / tileSize][container.pos.x / tileSize] = container.under_tile;
+                                closeMobileInventory();
+                            }
+                        }
+                    };
+                }
+            }, 0);
+        }
     } else if (containerType === 'Robot') {
         // Robot has different structure: inv is 1D, and instructions are separate
         containerLabel.textContent = 'Robot Storage';
@@ -526,10 +552,12 @@ function updateMobileInventoryUI() {
             }
             if (destroyBtn) {
                 destroyBtn.onclick = () => {
-                    if (confirm('Destroy this robot? Items inside will be lost!')) {
-                        // Destroy robot logic (same as robotBoomButton)
-                        levels[currentLevel_y][currentLevel_x].map[container.pos.y / tileSize][container.pos.x / tileSize] = container.under_tile;
-                        closeMobileInventory();
+                    if (confirm('Are you sure? Booming the robot will REMOVE ALL its inventory and it cannot be recovered!')) {
+                        if (checkForSpace(player, item_name_to_num(container.name))) {
+                            addItem(player, item_name_to_num(container.name), 1);
+                            levels[currentLevel_y][currentLevel_x].map[container.pos.y / tileSize][container.pos.x / tileSize] = container.under_tile;
+                            closeMobileInventory();
+                        }
                     }
                 };
             }
@@ -1708,7 +1736,6 @@ function draw() {
         if(!player.dead){
             render_ui();
         } else {
-            // Hide UI popups when player is dead
             hideUIPopups();
         }
         

@@ -1144,6 +1144,7 @@ function takeInput() {
                             }
                         }
                     }
+                    player.talking = 0;
                     robotBoomButton.hide();
                 }
                 else if (player.talking.class == 'Robot'){
