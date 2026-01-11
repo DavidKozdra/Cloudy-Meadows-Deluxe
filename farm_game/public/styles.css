@@ -2333,7 +2333,7 @@ button {
     
     /* Quest Screen Mobile Adjustments */
     .quests-container {
-        min-width: 85vw;
+        min-width: 5vw;
         max-width: 92vw;
         padding: 12px;
         gap: 10px;
@@ -2495,82 +2495,101 @@ button {
     
     /* Quest Screen - Very Small Screens */
     .quests-container {
-        min-width: 90vw;
-        max-width: 95vw;
-        max-height: 80vh;
-        padding: 10px;
-        gap: 8px;
+        min-width: 2vw;
+        max-width: 20vw;
+        max-height: 85vh;
+        padding: 12px 8px;
+        gap: 6px;
         border-width: 3px;
         font-size: 11px;
-        top: 55%;
+        top: auto;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 8px 8px 0 0;
     }
     
     .quests-header-wrapper {
-        padding-bottom: 8px;
+        padding-bottom: 6px;
         gap: 5px;
     }
     
     .quests-header h2 {
-        font-size: 14px;
+        font-size: 15px;
     }
     
     .quests-close-btn {
-        width: 26px;
-        height: 26px;
-        font-size: 18px;
+        width: 28px;
+        height: 28px;
+        font-size: 20px;
     }
     
     .quests-list {
-        gap: 8px;
+        gap: 6px;
         flex: 1;
         min-height: 0;
         overflow-y: auto;
     }
     
     .quest-item {
-        padding: 6px;
-        gap: 6px;
+        padding: 8px;
+        gap: 5px;
+        margin-bottom: 0;
     }
     
     .quest-content {
-        gap: 6px;
+        gap: 5px;
     }
     
     .quest-title {
-        font-size: 11px;
-        margin-bottom: 4px;
+        font-size: 12px;
+        margin-bottom: 3px;
     }
     
     .quest-status {
-        font-size: 9px;
-        margin-top: 4px;
+        font-size: 10px;
+        margin-top: 3px;
     }
     
     .quest-progress-container {
-        gap: 6px;
-        margin: 4px 0;
+        gap: 5px;
+        margin: 3px 0;
     }
     
     .quest-details-button {
-        font-size: 9px;
-        padding: 4px 6px;
-        height: 22px;
+        font-size: 10px;
+        padding: 5px 8px;
+        height: 24px;
     }
     
     .quest-progress-bar {
         flex: 1 1 100px;
-        height: 6px;
+        height: 8px;
     }
     
     .quest-goal-card {
         padding: 6px;
-        gap: 6px;
+        gap: 5px;
     }
     
     .quests-close-instruction {
-        font-size: 9px;
-        margin-top: 8px;
-        padding-top: 8px;
+        font-size: 10px;
+        margin-top: 6px;
+        padding-top: 6px;
+    }
+    
+    .quest-pagination {
+        padding: 8px;
+        gap: 10px;
+    }
+    
+    .quest-page-btn {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+    
+    .quest-page-info {
+        font-size: 10px;
     }
     
     /* Difficulty Menu - Very Small Screens */
@@ -2683,6 +2702,7 @@ button {
     .quests-container {
         min-height: 70vh;
         max-height: 85vh;
+        max-width: 50vw;
     }
     
     .quests-list {
