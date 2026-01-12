@@ -144,25 +144,10 @@ class Player extends MoveableEntity {
         pop();
         if (this.hp <= 0) { // Player Death
             //turn player death screen on
-            
-            push();
-            
             robotPlayButton.hide();
             robotPauseButton.hide();
             robotBoomButton.hide();
             questSlider.hide();
-
-            fill(10, this.a);
-            rect(0, 0, canvasWidth, canvasHeight);
-            tint(255, this.a);
-            imageMode(CENTER);
-            image(skull_img, canvasWidth/2, canvasHeight/2);
-            textSize(90);
-            fill(255, 0, 0, this.a);
-            textAlign(CENTER, CENTER);
-            textFont(player_2);
-            text('YOU DIED', canvasWidth/2, canvasHeight/4);
-            textSize(20);
             if(!paused){
                 this.ticks += 1;
                 if(this.transphase == 0){
@@ -176,7 +161,6 @@ class Player extends MoveableEntity {
                         this.ticks = 0;
                     }
                     this.a += 5;
-                    text('Respawn in 10', canvasWidth/2, (3*canvasHeight)/4);
                 }
                 if(this.transphase == 1){
                     if(this.ticks >= 600){
@@ -194,7 +178,6 @@ class Player extends MoveableEntity {
                         saveAll(); // Auto-save after respawn
                         this.deathConsequence(dificulty)
                     }
-                    text('Respawn in ' + floor((600-this.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
                 }
                 if(this.transphase == 2){
                     this.a -= 5;
@@ -207,7 +190,6 @@ class Player extends MoveableEntity {
                 }
                 
             }
-            pop();
             
         }
     }

@@ -1780,6 +1780,32 @@ function draw() {
         // End camera transformation
         pop();
         
+        // Render death screen in screen space (not affected by camera zoom)
+        if(player.hp <= 0){
+            push();
+            fill(10, player.a);
+            rect(0, 0, canvasWidth, canvasHeight);
+            tint(255, player.a);
+            imageMode(CENTER);
+            image(skull_img, canvasWidth/2, canvasHeight/2);
+            textSize(90);
+            fill(255, 0, 0, player.a);
+            textAlign(CENTER, CENTER);
+            textFont(player_2);
+            text('YOU DIED', canvasWidth/2, canvasHeight/4);
+            textSize(20);
+            if(player.transphase == 0){
+                text('Respawn in 10', canvasWidth/2, (3*canvasHeight)/4);
+            }
+            else if(player.transphase == 1){
+                text('Respawn in ' + floor((600-player.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
+            }
+            else if(player.transphase == 2){
+                text('Respawn in 0', canvasWidth/2, (3*canvasHeight)/4);
+            }
+            pop();
+        }
+        
         // Render UI in screen space (outside camera transformation)
         if(!player.dead){
             render_ui();
