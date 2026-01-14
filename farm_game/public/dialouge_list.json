@@ -2156,6 +2156,615 @@
       "hand_num": -1,
       "amount": 0
     }
+  ],
+  "Sarah": [
+    {
+      "phrase": "Welcome to Sarah's Fashion Boutique! I design the most stylish clothes in the Big City.",
+      "replies": [
+        {
+          "phrase": "I'd love to see your collection!",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Do you have any work for me?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Bye!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I have the latest fashion magazines, designer clothes, business suits, and briefcases. Perfect for the sophisticated city lifestyle!",
+      "replies": [
+        {
+          "phrase": "I'll take a look at your shop.",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "What kind of work do you have?",
+          "dialouge_num": 2,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Actually, I'm preparing for Fashion Week and need someone to help gather materials. Can you collect 50 vegetables for my organic fabric dyes?",
+      "replies": [
+        {
+          "phrase": "I'll help you with Fashion Week preparations!",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "That sounds like too much work.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Wonderful! I'll need various vegetables - corn, tomatoes, strawberries, anything from your farm. You have 7 days to collect them!",
+      "replies": [
+        {
+          "phrase": "Consider it done!",
+          "dialouge_num": -1,
+          "quest": {"name": "Fashion Week Preparation", "goals": [{"class": "SellGoal", "item_name": "Vegetables", "amount": 50}], "days": 7, "reward_item": {"num": 45, "amount": 1}, "reward_coins": 100}
+        },
+        {
+          "phrase": "Maybe I should think about this more.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Thank you so much! These organic dyes will make my designs stand out at Fashion Week. Here's a designer outfit as your reward!",
+      "replies": [
+        {
+          "phrase": "Thank you! I can't wait to see your designs.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Marcus": [
+    {
+      "phrase": "Hey there! Welcome to Marcus's Cafe - the best coffee spot in the Big City!",
+      "replies": [
+        {
+          "phrase": "What do you serve?",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Looking for work?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Just browsing.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I serve fresh coffee, strawberries, hotdogs, and gourmet meals. Perfect for a quick bite or a full dining experience!",
+      "replies": [
+        {
+          "phrase": "Sounds delicious! I'll check out your menu.",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "What kind of work do you have?",
+          "dialouge_num": 2,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Actually, I'm looking to expand my cafe's menu. Could you bring me some fresh farm produce? I need 30 strawberries to create new dessert recipes.",
+      "replies": [
+        {
+          "phrase": "I'd be happy to supply strawberries for your cafe!",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "I'm not sure I have time for that.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Perfect! I'll pay well for quality strawberries. Can you deliver them within 5 days?",
+      "replies": [
+        {
+          "phrase": "You can count on me!",
+          "dialouge_num": -1,
+          "quest": {"name": "Cafe Supply Run", "goals": [{"class": "SellGoal", "item_name": "Strawberries", "amount": 30}], "days": 5, "reward_item": {"num": 35, "amount": 3}, "reward_coins": 75}
+        },
+        {
+          "phrase": "Let me think about it.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Excellent! Your strawberries are perfect for my new dessert menu. Here's some fresh coffee as thanks!",
+      "replies": [
+        {
+          "phrase": "Thanks! I look forward to trying your new desserts.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Dante": [
+    {
+      "phrase": "Welcome to Dante's Fine Dining! I serve the most exquisite full course meals in the city.",
+      "replies": [
+        {
+          "phrase": "What's on the menu?",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Any business opportunities?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Just looking around.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I offer gourmet meals, full course dinners, fine wines, and fresh corn. Everything a discerning palate could desire!",
+      "replies": [
+        {
+          "phrase": "That sounds amazing! I'll check your selection.",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "What kind of opportunities?",
+          "dialouge_num": 2,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm planning to expand my restaurant chain across the region. I need someone to establish supply routes - can you prove your reliability by earning 200 coins?",
+      "replies": [
+        {
+          "phrase": "I'm interested in the restaurant expansion plan!",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "That's beyond my capabilities right now.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Show me you can handle serious business by earning 200 coins in 10 days. This will prove you're ready for restaurant management!",
+      "replies": [
+        {
+          "phrase": "I accept this business challenge!",
+          "dialouge_num": -1,
+          "quest": {"name": "Restaurant Chain Expansion", "goals": [{"class": "FundingGoal", "amount": 200}], "days": 10, "reward_item": {"num": 13, "amount": 2}, "reward_coins": 150}
+        },
+        {
+          "phrase": "This is too much responsibility.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Outstanding! You have the business acumen I'm looking for. Here are some fine wines and coins to start our partnership!",
+      "replies": [
+        {
+          "phrase": "I look forward to our business partnership!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Elena": [
+    {
+      "phrase": "Hi! I'm Elena, the street artist. I capture the soul of the Big City in my paintings.",
+      "replies": [
+        {
+          "phrase": "I'd love to see your art!",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Do you need any help with your art?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Nice to meet you.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I sell art supplies and finished paintings. Every piece tells a story about city life!",
+      "replies": [
+        {
+          "phrase": "I'd love to buy some art!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "How can I help with your art?",
+          "dialouge_num": 2,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm planning a city art exhibition but I'm running low on supplies. Could you help me gather some materials?",
+      "replies": [
+        {
+          "phrase": "I'd love to help with your art exhibition!",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "I don't know much about art.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I need someone to collect 25 items from around the city - visit different locations and bring back interesting objects for my art installation!",
+      "replies": [
+        {
+          "phrase": "I'll help collect materials for your installation!",
+          "dialouge_num": -1,
+          "quest": {"name": "City Art Exhibition", "goals": [{"class": "LocationGoal", "level_name": "The Big City"}, {"class": "HaveGoal", "item_name": "Any", "amount": 25}], "days": 6, "reward_item": {"num": 35, "amount": 1}, "reward_coins": 80}
+        },
+        {
+          "phrase": "That sounds complicated.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Thank you! These materials will create an amazing installation. Here's one of my paintings as thanks!",
+      "replies": [
+        {
+          "phrase": "I'm honored to have one of your paintings!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Thomas": [
+    {
+      "phrase": "Need a ride? I'm Thomas, your reliable taxi driver for the Big City!",
+      "replies": [
+        {
+          "phrase": "Where can you take me?",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Looking for transportation work?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Just looking around.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I provide taxi fares for quick trips around the city. Much faster than walking!",
+      "replies": [
+        {
+          "phrase": "I'll take a taxi fare!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "What kind of transportation work?",
+          "dialouge_num": 2,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm looking to expand my taxi service to other areas. First, I need to build trust with city residents - can you make 10 trips around different parts of the city?",
+      "replies": [
+        {
+          "phrase": "I'll help test your city transportation routes!",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "I'm not really interested in taxi work.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Visit different areas of the city and surrounding regions to help me map out efficient routes. Complete this in 8 days!",
+      "replies": [
+        {
+          "phrase": "I'll be your route tester!",
+          "dialouge_num": -1,
+          "quest": {"name": "City Transportation Network", "goals": [{"class": "LocationGoal", "level_name": "The Big City"}, {"class": "LocationGoal", "level_name": "Cloudy Meadows"}, {"class": "LocationGoal", "level_name": "Beach"}], "days": 8, "reward_item": {"num": 35, "amount": 5}, "reward_coins": 60}
+        },
+        {
+          "phrase": "This seems too involved.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Excellent work! You've helped me map out great routes. Here are some complimentary taxi fares as thanks!",
+      "replies": [
+        {
+          "phrase": "Thanks! I'll use these for future trips.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Victoria": [
+    {
+      "phrase": "Greetings. I'm Victoria, a tech entrepreneur and business consultant.",
+      "replies": [
+        {
+          "phrase": "What kind of business do you do?",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Any investment opportunities?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Nice to meet you.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I deal in technology - smartphones, laptops, and digital infrastructure for modern businesses.",
+      "replies": [
+        {
+          "phrase": "I'm interested in your technology products!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "What investment opportunities?",
+          "dialouge_num": 2,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm launching a startup incubator for city entrepreneurs. I need someone with proven business sense - earn 300 coins to show you're ready for entrepreneurship!",
+      "replies": [
+        {
+          "phrase": "I'm ready for the entrepreneurship challenge!",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "That's way beyond my current level.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Prove your business acumen by earning 300 coins in 12 days. This will qualify you for my startup program!",
+      "replies": [
+        {
+          "phrase": "I accept this entrepreneurship challenge!",
+          "dialouge_num": -1,
+          "quest": {"name": "Tech Startup Incubator", "goals": [{"class": "FundingGoal", "amount": 300}], "days": 12, "reward_item": {"num": 33, "amount": 1}, "reward_coins": 200}
+        },
+        {
+          "phrase": "This is too advanced for me.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Impressive! You have what it takes to succeed in business. Here's a smartphone to get you started in the tech world!",
+      "replies": [
+        {
+          "phrase": "Thank you! I'm excited about this opportunity.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Kai": [
+    {
+      "phrase": "Hey! I'm Kai, the official Big City tour guide. I know all the best spots in town!",
+      "replies": [
+        {
+          "phrase": "What can you show me?",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Any tour guide opportunities?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Just exploring.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I sell city maps, concert tickets, and museum passes. I can show you all the hidden gems and popular attractions!",
+      "replies": [
+        {
+          "phrase": "I'd like to buy a city map!",
+          "dialouge_num": -1,
+          "quest": -1
+        },
+        {
+          "phrase": "What tour guide opportunities?",
+          "dialouge_num": 2,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm organizing a city tourism campaign. I need someone to help promote local attractions - can you visit 15 different locations to gather information for tour materials?",
+      "replies": [
+        {
+          "phrase": "I'd love to help with the tourism campaign!",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "That sounds like too much travel.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Explore various locations around the city and surrounding areas to help me create comprehensive tour materials. You have 9 days!",
+      "replies": [
+        {
+          "phrase": "I'll help promote the city's attractions!",
+          "dialouge_num": -1,
+          "quest": {"name": "City Tourism Campaign", "goals": [{"class": "LocationGoal", "level_name": "The Big City"}, {"class": "LocationGoal", "level_name": "Beach"}, {"class": "LocationGoal", "level_name": "Cloudy Meadows"}], "days": 9, "reward_item": {"num": 36, "amount": 2}, "reward_coins": 90}
+        },
+        {
+          "phrase": "This seems too involved.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Fantastic! Your help will make the tourism campaign a success. Here are some museum passes as thanks!",
+      "replies": [
+        {
+          "phrase": "Thank you! I'll use these passes to explore more.",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
   ]
 }
  

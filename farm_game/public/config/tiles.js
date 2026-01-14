@@ -119,13 +119,14 @@ const TILE_DEFINITIONS = [
     /*100*/ { name: 'Building Supplies', png: 42, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}, {num: 45, amount: 5}], under_tile_num: 1, class: 'Shop' },
     /*101*/ { name: 'Building Supplies', png: 42, inv: [{num: 43, amount: 8}, {num: 44, amount: 12}, {num: 45, amount: 5}], under_tile_num: 1, class: 'Shop' },
     /*102*/ { name: 'Ticket Master', png: 149, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 120, class: 'NPC', places: ['Beach', 'The Big City', 'Cloudy Meadows'], travel_price: 10 },
-    /*103*/ { name: 'Sarah', png: 26, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*104*/ { name: 'Marcus', png: 27, inv: [{num: 7, amount: 2}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*105*/ { name: 'Elena', png: 32, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'right', 'down', 'left'], moving_timer: 100, class: 'NPC' },
-    /*106*/ { name: 'Thomas', png: 50, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*107*/ { name: 'Victoria', png: 53, inv: [0], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'NPC' },
-    /*108*/ { name: 'Dante', png: 55, inv: [{num: 13, amount: 1}], under_tile_num: 1, class: 'Shop' },
-    /*109*/ { name: 'Kai', png: 54, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC' }
+    /*103*/ { name: 'Sarah', png: 26, inv: [{num: 36, amount: 5}, {num: 45, amount: 3}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
+    /*104*/ { name: 'Marcus', png: 26, inv: [{num: 7, amount: 10}, {num: 35, amount: 15}, {num: 13, amount: 8}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
+    /*105*/ { name: 'Elena', png: 26, inv: [{num: 35, amount: 8}, {num: 36, amount: 3}], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'right', 'down', 'left'], moving_timer: 100, class: 'Shop', quest_giver: true },
+    /*106*/ { name: 'Thomas', png: 26, inv: [{num: 35, amount: 20}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
+    /*107*/ { name: 'Victoria', png: 26, inv: [{num: 31, amount: 2}], hand: 0, facing: 2, under_tile_num: 57, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
+    /*108*/ { name: 'Dante', png: 26, inv: [{num: 13, amount: 5}, {num: 2, amount: 10}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
+    /*109*/ { name: 'Kai', png: 26, inv: [{num: 35, amount: 5}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
+    /*110*/ { name: 'Job Board', png: 0, class: 'Tile', jobs_available: ['Construction Worker', 'Delivery Driver', 'Cleaner', 'Security Guard', 'Office Assistant'], daily_wages: [25, 30, 20, 35, 40] }
 ];
 
 /*
