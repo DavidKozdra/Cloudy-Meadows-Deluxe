@@ -3150,6 +3150,381 @@
       "hand_num": 0,
       "amount": 4
     }
+  ],
+  "Alex Chen": [
+    {
+      "phrase": "Welcome to the Big City! I'm Alex Chen, a local business owner. Business is booming around here!",
+      "replies": [
+        {
+          "phrase": "What kind of business?",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Need help with anything?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Nice to meet you!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I run a logistics company here in the city. We ship goods all over! Actually, I could use some help right now.",
+      "replies": [
+        {
+          "phrase": "What do you need?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "I'm busy right now",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm always looking for good opportunities in the city. Maybe we can do business together!",
+      "replies": [
+        {
+          "phrase": "What kind of opportunities?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "Maybe later",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I need you to deliver some goods to three different locations in the city and beyond. Visit The Big City, Cloudy Meadows, and Beach. Can you do that?",
+      "replies": [
+        {
+          "phrase": "I'll make those deliveries!",
+          "dialouge_num": -1,
+          "quest": {"name": "City Deliveries", "goals": [{"class": "LocationGoal", "level_name": "The Big City"}, {"class": "LocationGoal", "level_name": "Cloudy Meadows"}, {"class": "LocationGoal", "level_name": "Beach"}], "days": 5, "reward_item": {"num": 35, "amount": 10}, "reward_coins": 100}
+        },
+        {
+          "phrase": "That's too much work",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Priya Patel": [
+    {
+      "phrase": "Hello! I'm Priya Patel, an artist here in the city. I create beautiful installations around town.",
+      "replies": [
+        {
+          "phrase": "Your work is impressive!",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "What kind of art?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Goodbye",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Thank you! I love creating pieces that inspire people. Your encouragement means a lot!",
+      "replies": [
+        {
+          "phrase": "Can I help you with something?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "I'm just browsing",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I create abstract sculptures and paintings that reflect the urban landscape. Very modern and bold!",
+      "replies": [
+        {
+          "phrase": "Can I help you?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "Cool, see you around",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Actually, I'm organizing an art exhibition! I need to collect 30 creative items to display. Can you help gather supplies?",
+      "replies": [
+        {
+          "phrase": "I'll help gather items for your exhibition!",
+          "dialouge_num": -1,
+          "quest": {"name": "Art Exhibition Collection", "goals": [{"class": "HaveGoal", "item_name": "Flower", "amount": 30}], "days": 7, "reward_item": {"num": 36, "amount": 5}, "reward_coins": 120}
+        },
+        {
+          "phrase": "That sounds complicated",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Marcus Brown": [
+    {
+      "phrase": "Hey there! I'm Marcus Brown, a city councilman. Always working to make the city better!",
+      "replies": [
+        {
+          "phrase": "What do you do exactly?",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "Can you help me?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Nice meeting you",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm responsible for city planning, infrastructure, and making sure everyone's happy. It's a lot of work!",
+      "replies": [
+        {
+          "phrase": "What can I do to help?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "Sounds tough",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm always open to help! The city could use some community support to keep things running smoothly.",
+      "replies": [
+        {
+          "phrase": "What do you need?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "Let me think about it",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "We need funds to improve our city parks and public spaces. Can you help us raise 500 coins? Every bit helps make our city more beautiful!",
+      "replies": [
+        {
+          "phrase": "I'll help fund the city improvements!",
+          "dialouge_num": -1,
+          "quest": {"name": "City Infrastructure Fund", "goals": [{"class": "FundingGoal", "amount": 500}], "days": 8, "reward_item": {"num": 35, "amount": 15}, "reward_coins": 150}
+        },
+        {
+          "phrase": "That's a lot of coins",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Sophia Moore": [
+    {
+      "phrase": "Hi! I'm Sophia Moore, a chef and food critic. I love everything about food!",
+      "replies": [
+        {
+          "phrase": "Tell me about food in the city",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "What's your favorite food?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "Nice to meet you",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "The Big City has amazing restaurants and food vendors. We have everything from street food to fine dining!",
+      "replies": [
+        {
+          "phrase": "Can you help me with something?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "I'm getting hungry now!",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I absolutely love fresh vegetables and quality ingredients. Cooking with fresh produce is what makes food amazing!",
+      "replies": [
+        {
+          "phrase": "Do you need help?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "Sounds delicious",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm planning a food festival for the city! I need quality vegetables for our cooking demonstrations. Can you bring me 40 vegetables?",
+      "replies": [
+        {
+          "phrase": "I'll help with the food festival!",
+          "dialouge_num": -1,
+          "quest": {"name": "City Food Festival", "goals": [{"class": "TalkingGoal", "npc_name": "Sophia Moore", "item_name": "Vegetables", "amount": 40}], "days": 6, "reward_item": {"num": 2, "amount": 8}, "reward_coins": 110}
+        },
+        {
+          "phrase": "That's a lot of vegetables",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
+  ],
+  "Jordan Kim": [
+    {
+      "phrase": "Hey! I'm Jordan Kim, an environmentalist working to make the city more green and sustainable.",
+      "replies": [
+        {
+          "phrase": "Tell me more about your work",
+          "dialouge_num": 1,
+          "quest": -1
+        },
+        {
+          "phrase": "How can I help?",
+          "dialouge_num": 2,
+          "quest": -1
+        },
+        {
+          "phrase": "That sounds great",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "I'm promoting urban gardening and sustainability throughout the city. We're planting trees and creating green spaces everywhere!",
+      "replies": [
+        {
+          "phrase": "Need any help with that?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "That's awesome",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Actually, I would really appreciate some help! We need supplies for our green initiatives.",
+      "replies": [
+        {
+          "phrase": "What kind of supplies?",
+          "dialouge_num": 3,
+          "quest": -1
+        },
+        {
+          "phrase": "Let me think about it",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "We need compost and gardening tools to plant trees around the city. Can you bring us 60 compost and 20 tools? It would help make the city greener!",
+      "replies": [
+        {
+          "phrase": "I'll help make the city greener!",
+          "dialouge_num": -1,
+          "quest": {"name": "Urban Greening Initiative", "goals": [{"class": "HaveGoal", "item_name": "Compost", "amount": 60}, {"class": "HaveGoal", "item_name": "Hoe", "amount": 20}], "days": 9, "reward_item": {"num": 13, "amount": 5}, "reward_coins": 130}
+        },
+        {
+          "phrase": "That's quite a bit",
+          "dialouge_num": -1,
+          "quest": -1
+        }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    }
   ]
 }
  
