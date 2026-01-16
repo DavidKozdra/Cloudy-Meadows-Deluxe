@@ -82,6 +82,8 @@ function preload() {
     water_tile_img = loadImage('images/tiles/water.gif');
     water_tile_var_img = loadImage('images/tiles/Flower_water.png');
     water_tile_var2_img = loadImage('images/tiles/water2.png');
+    sand_tile_img = loadImage('images/tiles/sand.png');
+    water12_tile_img = loadImage('images/tiles/water12.png');
     kitchen_tile_img = loadImage('images/tiles/restaurant_tile.png');
     table_tile_img = loadImage('images/tiles/chair_and_table.png');
     dirt_path_tile_img = loadImage('images/tiles/dirt_path.png');
@@ -730,7 +732,9 @@ function preload() {
     /*155*/coral_tile_imgs,
     /*156*/fisher_joe_tile_imgs,
     /*157*/sandy_tile_imgs,
-    /*158*/skipper_tile_imgs
+    /*158*/skipper_tile_imgs,
+    /*159*/[sand_tile_img],
+    /*160*/[water12_tile_img]
     ];
     
     all_imgs[159] = [sand_tile_img];
