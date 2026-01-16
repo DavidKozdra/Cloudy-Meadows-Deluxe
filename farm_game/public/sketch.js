@@ -2211,7 +2211,7 @@ function render_ui() {
         }
 
         // Centered animated hunger panel rendered in UI space (above night overlay)
-        if (!paused && !player.dead && player.hunger <= 8) {
+        if (!paused && !player.dead && player.hunger <= 2) {
             push();
             // Full-screen dim backdrop
             noStroke();
