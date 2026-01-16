@@ -97,6 +97,7 @@ function preload() {
     pc_tile_img = loadImage('images/tiles/Computer.png');
     sand_tile_img = loadImage('images/tiles/sand.png');
     water12_tile_img = loadImage('images/tiles/water12.png');
+    towel_tile_img = loadImage('images/tiles/towel.png');
 
     //NPC
     quest_marker_img = loadImage('images/ui/QuestMarker.png');
@@ -739,6 +740,7 @@ function preload() {
     
     all_imgs[159] = [sand_tile_img];
     all_imgs[160] = [water12_tile_img];
+    all_imgs[161] = [towel_tile_img];
 
    /*
     class           obj
