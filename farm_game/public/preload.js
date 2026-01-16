@@ -252,6 +252,69 @@ function preload() {
     ticket_master_tile_img = loadImage('images/npc/Ticket_Master.png');
     ticket_master_tile_imgs = [[ticket_master_tile_img], [ticket_master_tile_img], [ticket_master_tile_img], [ticket_master_tile_img]];
 
+    //Alex Chen
+    chen_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    chen_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    chen_tile_down_img = loadImage('images/npc/chen.png');
+    chen_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    chen_tile_imgs = [[chen_tile_up_img], [chen_tile_right_img], [chen_tile_down_img], [chen_tile_left_img]];
+
+    //Priya Patel
+    priya_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    priya_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    priya_tile_down_img = loadImage('images/npc/priya.png');
+    priya_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    priya_tile_imgs = [[priya_tile_up_img], [priya_tile_right_img], [priya_tile_down_img], [priya_tile_left_img]];
+
+    //Marcus Brown
+    marcus_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    marcus_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    marcus_tile_down_img = loadImage('images/npc/marcus.png');
+    marcus_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    marcus_tile_imgs = [[marcus_tile_up_img], [marcus_tile_right_img], [marcus_tile_down_img], [marcus_tile_left_img]];
+
+    //Sophia Moore
+    sophia_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    sophia_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    sophia_tile_down_img = loadImage('images/npc/Sophia.png');
+    sophia_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    sophia_tile_imgs = [[sophia_tile_up_img], [sophia_tile_right_img], [sophia_tile_down_img], [sophia_tile_left_img]];
+
+    //Jordan Kim
+    jordan_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    jordan_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    jordan_tile_down_img = loadImage('images/npc/priya.png');
+    jordan_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    jordan_tile_imgs = [[jordan_tile_up_img], [jordan_tile_right_img], [jordan_tile_down_img], [jordan_tile_left_img]];
+
+    //Coral
+    coral_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    coral_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    coral_tile_down_img = loadImage('images/npc/coral.png');
+    coral_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    coral_tile_imgs = [[coral_tile_up_img], [coral_tile_right_img], [coral_tile_down_img], [coral_tile_left_img]];
+
+    //Fisher Joe
+    fisher_joe_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    fisher_joe_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    fisher_joe_tile_down_img = loadImage('images/npc/fisher_joe.png');
+    fisher_joe_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    fisher_joe_tile_imgs = [[fisher_joe_tile_up_img], [fisher_joe_tile_right_img], [fisher_joe_tile_down_img], [fisher_joe_tile_left_img]];
+
+    //Sandy
+    sandy_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    sandy_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    sandy_tile_down_img = loadImage('images/npc/sandy.png');
+    sandy_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    sandy_tile_imgs = [[sandy_tile_up_img], [sandy_tile_right_img], [sandy_tile_down_img], [sandy_tile_left_img]];
+
+    //Skipper
+    skipper_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
+    skipper_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    skipper_tile_down_img = loadImage('images/npc/skipper.png');
+    skipper_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    skipper_tile_imgs = [[skipper_tile_up_img], [skipper_tile_right_img], [skipper_tile_down_img], [skipper_tile_left_img]];
+
     //Mr.C
     mrC_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
     mrC_tile_right_img = loadImage('images/npc/mrC_Right.png');
@@ -656,7 +719,16 @@ function preload() {
     /*146*/bed_item_img,
     /*147*/wall_item_img,
     /*148*/compost_bucket_tile_img,
-    /*149*/ticket_master_tile_imgs
+    /*149*/ticket_master_tile_imgs,
+    /*150*/chen_tile_imgs,
+    /*151*/priya_tile_imgs,
+    /*152*/marcus_tile_imgs,
+    /*153*/sophia_tile_imgs,
+    /*154*/jordan_tile_imgs,
+    /*155*/coral_tile_imgs,
+    /*156*/fisher_joe_tile_imgs,
+    /*157*/sandy_tile_imgs,
+    /*158*/skipper_tile_imgs
     ];
 
    /*
@@ -2467,7 +2539,7 @@ function newWorld(){
         [61,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61],
         [61,61,100,61,1,1,61,100,61,1,1,61,100,61,1,1,61,100,61,1,1,61,61],
         [61,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61],
-        [61,1,1,1,1,1,1,1,1,1,1,1,119,1,1,1,1,1,1,1,1,1,61],
+        [61,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,61],
         [61,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61],
         [61,61,100,61,1,1,61,100,61,1,1,61,100,61,1,1,61,100,61,1,1,61,61],
         [61,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61,61,1,1,61,61],
@@ -3063,7 +3135,7 @@ function newWorld(){
     [level29, level32, level35, level20, level23, level26],
     [level30, 0, level38, level21, level24, level27],
     [level39, level36, level40, level41, 0, 0],
-    [0, 0, 0, 0, 0, level34],
+    [0, 0, 0, 0, 0, level34]
     ];
 
     currentLevel_y = 1;

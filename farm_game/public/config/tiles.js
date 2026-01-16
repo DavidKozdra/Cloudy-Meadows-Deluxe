@@ -127,15 +127,14 @@ const TILE_DEFINITIONS = [
     /*108*/ { name: 'Dante', png: 26, inv: [{num: 13, amount: 5}, {num: 2, amount: 10}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
     /*109*/ { name: 'Kai', png: 26, inv: [{num: 35, amount: 5}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'Shop', quest_giver: true },
     /*110*/ { name: 'Job Board', png: 0, class: 'Tile', jobs_available: ['Construction Worker', 'Delivery Driver', 'Cleaner', 'Security Guard', 'Office Assistant'], daily_wages: [25, 30, 20, 35, 40] },
-    /*111*/ { name: 'Coral', png: 30, inv: [{num: 7, amount: 10}], hand: 0, facing: 2, under_tile_num: 1, instructions: ['left', 'left', 'right', 'right'], moving_timer: 120, class: 'NPC', random_move: false },
-    /*112*/ { name: 'Fisher Joe', png: 31, inv: [{num: 17, amount: 5}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 150, class: 'NPC', random_move: false },
-    /*113*/ { name: 'Sandy', png: 32, inv: [{num: 11, amount: 5}], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'down', 'left', 'right'], moving_timer: 100, class: 'NPC', random_move: false },
-    /*114*/ { name: 'Skipper', png: 33, inv: [{num: 15, amount: 8}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 110, class: 'NPC', random_move: false },
-    /*115*/ { name: 'Alex Chen', png: 26, inv: [{num: 35, amount: 10}, {num: 31, amount: 2}], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'down'], moving_timer: 100, class: 'NPC', quest_giver: true },
-    /*116*/ { name: 'Priya Patel', png: 27, inv: [{num: 36, amount: 5}, {num: 37, amount: 3}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC', quest_giver: true },
-    /*117*/ { name: 'Marcus Brown', png: 28, inv: [{num: 35, amount: 15}, {num: 38, amount: 2}], hand: 0, facing: 2, under_tile_num: 1, instructions: ['left', 'right'], moving_timer: 120, class: 'NPC', quest_giver: true },
-    /*118*/ { name: 'Sophia Moore', png: 29, inv: [{num: 2, amount: 8}, {num: 35, amount: 6}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC', quest_giver: true },
-    /*119*/ { name: 'Jordan Kim', png: 30, inv: [{num: 13, amount: 4}, {num: 26, amount: 2}], hand: 0, facing: 2, under_tile_num: 1, instructions: ['up', 'up', 'down', 'down'], moving_timer: 90, class: 'NPC', quest_giver: true }
+    /*111*/ { name: 'Coral', png: 155, inv: [{num: 7, amount: 10}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 120, class: 'NPC', random_move: false },
+    /*112*/ { name: 'Fisher Joe', png: 156, inv: [{num: 17, amount: 5}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 150, class: 'NPC', random_move: false },
+    /*113*/ { name: 'Sandy', png: 157, inv: [{num: 11, amount: 5}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC', random_move: false },
+    /*115*/ { name: 'Alex Chen', png: 150, inv: [{num: 35, amount: 10}, {num: 31, amount: 2}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC', quest_giver: true, random_move: false },
+    /*116*/ { name: 'Priya Patel', png: 151, inv: [{num: 36, amount: 5}, {num: 37, amount: 3}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC', quest_giver: true, random_move: false },
+    /*117*/ { name: 'Marcus Brown', png: 152, inv: [{num: 35, amount: 15}, {num: 38, amount: 2}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 120, class: 'NPC', quest_giver: true, random_move: false },
+    /*118*/ { name: 'Sophia Moore', png: 153, inv: [{num: 2, amount: 8}, {num: 35, amount: 6}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC', quest_giver: true, random_move: false },
+    /*119*/ { name: 'Jordan Kim', png: 154, inv: [{num: 13, amount: 4}, {num: 26, amount: 2}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 90, class: 'NPC', quest_giver: true, random_move: false }
 ];
 
 /*
