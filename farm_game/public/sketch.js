@@ -2308,7 +2308,7 @@ function render_ui() {
                 : ('Press ' + (typeof Controls_Eat_button_key !== 'undefined' ? Controls_Eat_button_key.toUpperCase() : 'Q') + ' to eat');
             noStroke();
             fill(255, 240, 160, pulseAlpha);
-            textSize(msgSize * 0.5);
+            textSize(msgSize * 0.7);
             text(hintText, 0, cardH * 0.46);
 
             pop();
