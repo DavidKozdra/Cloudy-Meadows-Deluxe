@@ -65,16 +65,40 @@ var mouse_item = 0;
 var localData = localDataStorage( 'passphrase.life' )
 var musicplayer = {};
 
+// Check if a hotbar slot has an enabled item (not disabled in custom rules)
+function isSlotEnabled(slotIdx) {
+    if (!player || !player.inv || player.inv[slotIdx] == 0 || player.inv[slotIdx] == undefined) {
+        return true; // Empty slots are "enabled" (can be selected)
+    }
+    const itemNum = typeof item_name_to_num === 'function' ? item_name_to_num(player.inv[slotIdx].name) : -1;
+    return typeof getEffectiveItem === 'function' ? getEffectiveItem(itemNum) : true;
+}
+
+// Find next enabled slot in a direction (1 = forward, -1 = backward)
+function findNextEnabledSlot(currentSlot, direction) {
+    const slots = 8;
+    let newSlot = (currentSlot + direction + slots) % slots;
+    let checked = 0;
+    // Loop through slots to find an enabled one (or return to start after checking all)
+    while (checked < slots) {
+        if (isSlotEnabled(newSlot)) {
+            return newSlot;
+        }
+        newSlot = (newSlot + direction + slots) % slots;
+        checked++;
+    }
+    return currentSlot; // No enabled slots found, stay on current
+}
+
 // Mouse wheel hotbar scroll
 function handleHotbarScroll(event) {
     if (typeof player !== 'undefined' && player.inv && !title_screen && !paused && !player.show_quests) {
-        const slots = 8;
         if (event.deltaY > 0) {
-            // Scroll down: next slot
-            player.hand = (player.hand + 1) % slots;
+            // Scroll down: next enabled slot
+            player.hand = findNextEnabledSlot(player.hand, 1);
         } else if (event.deltaY < 0) {
-            // Scroll up: previous slot
-            player.hand = (player.hand - 1 + slots) % slots;
+            // Scroll up: previous enabled slot
+            player.hand = findNextEnabledSlot(player.hand, -1);
         }
     }
 }
@@ -198,7 +222,7 @@ function setupMobileControls() {
         hotbarPrev.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (typeof player !== 'undefined' && player.inv && !title_screen) {
-                player.hand = (player.hand - 1 + 8) % 8;
+                player.hand = findNextEnabledSlot(player.hand, -1);
             }
             hotbarPrev.classList.add('pressed');
         }, { passive: false });
@@ -209,7 +233,7 @@ function setupMobileControls() {
         hotbarPrev.addEventListener('click', (e) => {
             e.preventDefault();
             if (typeof player !== 'undefined' && player.inv && !title_screen) {
-                player.hand = (player.hand - 1 + 8) % 8;
+                player.hand = findNextEnabledSlot(player.hand, -1);
             }
         });
     }
@@ -218,7 +242,7 @@ function setupMobileControls() {
         hotbarNext.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (typeof player !== 'undefined' && player.inv && !title_screen) {
-                player.hand = (player.hand + 1) % 8;
+                player.hand = findNextEnabledSlot(player.hand, 1);
             }
             hotbarNext.classList.add('pressed');
         }, { passive: false });
@@ -229,7 +253,7 @@ function setupMobileControls() {
         hotbarNext.addEventListener('click', (e) => {
             e.preventDefault();
             if (typeof player !== 'undefined' && player.inv && !title_screen) {
-                player.hand = (player.hand + 1) % 8;
+                player.hand = findNextEnabledSlot(player.hand, 1);
             }
         });
     }
@@ -1695,6 +1719,11 @@ function draw() {
 
     // Update mobile controls visibility
     updateMobileControlsVisibility();
+    
+    // Ensure player's hand isn't on a disabled item
+    if (typeof player !== 'undefined' && player.inv && !isSlotEnabled(player.hand)) {
+        player.hand = findNextEnabledSlot(player.hand, 1);
+    }
 
     takeInput();
     if (title_screen) {
