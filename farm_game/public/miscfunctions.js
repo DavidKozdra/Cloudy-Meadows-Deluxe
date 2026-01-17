@@ -501,9 +501,12 @@ function selectCustomDifficulty(features){
         mainQuestCoins: (typeof modalRules.mainQuestCoins === 'number' ? modalRules.mainQuestCoins : (questCoinsInput ? parseInt(questCoinsInput.value) : 10000)),
         mainQuestDays: (typeof modalRules.mainQuestDays === 'number' ? modalRules.mainQuestDays : (questDaysInput ? parseInt(questDaysInput.value) : 100)),
         startingCoins: (typeof modalRules.startingCoins === 'number' ? modalRules.startingCoins : 0),
-        // PRESERVE weatherWeights and npcEnabled from modal config!
+        // PRESERVE all custom config from modal!
         weatherWeights: modalRules.weatherWeights || null,
-        npcEnabled: modalRules.npcEnabled || null
+        npcEnabled: modalRules.npcEnabled || null,
+        areasEnabled: modalRules.areasEnabled || null,
+        itemsEnabled: modalRules.itemsEnabled || null,
+        itemPriceMultiplier: modalRules.itemPriceMultiplier ?? 100
     } : {
         moneyLoss: features[0].enabled,
         foodRot: features[1].enabled,
@@ -512,7 +515,10 @@ function selectCustomDifficulty(features){
         mainQuestDays: questDaysInput ? parseInt(questDaysInput.value) : 100,
         startingCoins: 0,
         weatherWeights: null,
-        npcEnabled: null
+        npcEnabled: null,
+        areasEnabled: null,
+        itemsEnabled: null,
+        itemPriceMultiplier: 100
     };
     window.customRules = rules;
     console.log('selectCustomDifficulty: Final rules with weatherWeights:', rules.weatherWeights);
@@ -569,6 +575,8 @@ function selectCustomDifficulty(features){
 
     // Apply NPC filter rules immediately when starting with custom difficulty
     applyNPCFilterRules();
+    applyAreaRules();
+    applyItemPriceMultiplier();
 
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
 }
@@ -1092,6 +1100,145 @@ function ensureConfigModal() {
     totalRow.appendChild(totalBadge);
     modal.appendChild(totalRow);
 
+    // Areas/Levels toggle grid
+    const areasTitle = document.createElement('div');
+    areasTitle.className = 'config-subtitle';
+    areasTitle.textContent = 'Areas (Enable/Disable)';
+    modal.appendChild(areasTitle);
+    const areasGrid = document.createElement('div');
+    areasGrid.id = 'cfg-areas-grid';
+    areasGrid.className = 'config-grid';
+    // Define areas with their sub-levels
+    const AREA_DEFINITIONS = [
+        { name: 'Cloudy Meadows', prefix: 'Cloudy Meadows' },
+        { name: 'Poly Park', prefix: 'Poly Park' },
+        { name: 'Swiggy Swamps', prefix: 'Swiggy Swamps' },
+        { name: 'The Big City', prefix: 'The Big City' },
+        { name: 'Beach', prefix: 'Beach' }
+    ];
+    AREA_DEFINITIONS.forEach(area => {
+        const btn = document.createElement('button');
+        btn.className = 'config-grid-item active'; // Areas on by default
+        btn.dataset.areaName = area.name;
+        btn.dataset.areaPrefix = area.prefix;
+        btn.textContent = area.name;
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+        });
+        areasGrid.appendChild(btn);
+    });
+    modal.appendChild(areasGrid);
+    // Area quick actions
+    const areasActions = document.createElement('div');
+    areasActions.className = 'config-actions';
+    const areasAllOnBtn = document.createElement('button');
+    areasAllOnBtn.className = 'config-btn';
+    areasAllOnBtn.textContent = 'All On';
+    areasAllOnBtn.addEventListener('click', () => {
+        Array.from(areasGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
+    });
+    const areasAllOffBtn = document.createElement('button');
+    areasAllOffBtn.className = 'config-btn';
+    areasAllOffBtn.textContent = 'All Off';
+    areasAllOffBtn.addEventListener('click', () => {
+        Array.from(areasGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
+    });
+    areasActions.appendChild(areasAllOnBtn);
+    areasActions.appendChild(areasAllOffBtn);
+    modal.appendChild(areasActions);
+
+    // ========== MORE OPTIONS (Expandable) ==========
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'config-btn config-more-btn';
+    moreBtn.textContent = '▶ More Options';
+    moreBtn.style.marginTop = '10px';
+    moreBtn.style.width = '100%';
+    modal.appendChild(moreBtn);
+
+    const moreSection = document.createElement('div');
+    moreSection.id = 'cfg-more-section';
+    moreSection.className = 'config-more-section';
+    moreSection.style.display = 'none';
+    modal.appendChild(moreSection);
+
+    moreBtn.addEventListener('click', () => {
+        const isHidden = moreSection.style.display === 'none';
+        moreSection.style.display = isHidden ? 'block' : 'none';
+        moreBtn.textContent = isHidden ? '▼ More Options' : '▶ More Options';
+    });
+
+    // Item Min Cost slider
+    const itemCostTitle = document.createElement('div');
+    itemCostTitle.className = 'config-subtitle';
+    itemCostTitle.textContent = 'Item Price Multiplier';
+    moreSection.appendChild(itemCostTitle);
+
+    const itemCostRow = document.createElement('div');
+    itemCostRow.className = 'config-row';
+    const itemCostLabel = document.createElement('label');
+    itemCostLabel.className = 'config-label';
+    itemCostLabel.textContent = 'Price Multiplier';
+    const itemCostSlider = document.createElement('input');
+    itemCostSlider.type = 'range';
+    itemCostSlider.id = 'cfg-item-price-mult';
+    itemCostSlider.className = 'config-slider';
+    itemCostSlider.min = '0';
+    itemCostSlider.max = '500';
+    itemCostSlider.step = '10';
+    itemCostSlider.value = '100';
+    const itemCostBadge = document.createElement('span');
+    itemCostBadge.className = 'config-slider-value';
+    itemCostBadge.textContent = '100%';
+    itemCostSlider.addEventListener('input', () => {
+        itemCostBadge.textContent = itemCostSlider.value + '%';
+    });
+    itemCostRow.appendChild(itemCostLabel);
+    itemCostRow.appendChild(itemCostSlider);
+    itemCostRow.appendChild(itemCostBadge);
+    moreSection.appendChild(itemCostRow);
+
+    // Items toggle grid
+    const itemsTitle = document.createElement('div');
+    itemsTitle.className = 'config-subtitle';
+    itemsTitle.textContent = 'Items (Enable/Disable)';
+    moreSection.appendChild(itemsTitle);
+    const itemsGrid = document.createElement('div');
+    itemsGrid.id = 'cfg-items-grid';
+    itemsGrid.className = 'config-grid';
+    // Build item list from ITEM_DEFINITIONS
+    const itemDefs = typeof ITEM_DEFINITIONS !== 'undefined' ? ITEM_DEFINITIONS : [];
+    itemDefs.forEach((item, idx) => {
+        if (!item || idx === 0) return; // Skip empty slot
+        if (!item.name) return;
+        const btn = document.createElement('button');
+        btn.className = 'config-grid-item active'; // Items on by default
+        btn.dataset.itemIdx = idx;
+        btn.dataset.itemName = item.name;
+        btn.textContent = item.name;
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+        });
+        itemsGrid.appendChild(btn);
+    });
+    moreSection.appendChild(itemsGrid);
+    // Items quick actions
+    const itemsActions = document.createElement('div');
+    itemsActions.className = 'config-actions';
+    const itemsAllOnBtn = document.createElement('button');
+    itemsAllOnBtn.className = 'config-btn';
+    itemsAllOnBtn.textContent = 'All On';
+    itemsAllOnBtn.addEventListener('click', () => {
+        Array.from(itemsGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
+    });
+    const itemsAllOffBtn = document.createElement('button');
+    itemsAllOffBtn.className = 'config-btn';
+    itemsAllOffBtn.textContent = 'All Off';
+    itemsAllOffBtn.addEventListener('click', () => {
+        Array.from(itemsGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
+    });
+    itemsActions.appendChild(itemsAllOnBtn);
+    itemsActions.appendChild(itemsAllOffBtn);
+    moreSection.appendChild(itemsActions);
 
     const actions = document.createElement('div');
     actions.className = 'config-actions';
@@ -1164,6 +1311,36 @@ function showConfigModal() {
     // Normalize total to 100 by adjusting Clear accordingly
     normalizeWeatherTotal(null);
 
+    // Areas grid state
+    const areasGrid = document.getElementById('cfg-areas-grid');
+    const areasEnabled = rules.areasEnabled || null;
+    if (areasGrid) {
+        Array.from(areasGrid.querySelectorAll('.config-grid-item')).forEach(el => {
+            const name = el.dataset.areaName;
+            const isOn = areasEnabled == null ? true : !!areasEnabled[name];
+            el.classList.toggle('active', isOn);
+        });
+    }
+
+    // Items grid state (in More section)
+    const itemsGrid = document.getElementById('cfg-items-grid');
+    const itemsEnabled = rules.itemsEnabled || null;
+    if (itemsGrid) {
+        Array.from(itemsGrid.querySelectorAll('.config-grid-item')).forEach(el => {
+            const idx = el.dataset.itemIdx;
+            const isOn = itemsEnabled == null ? true : !!itemsEnabled[idx];
+            el.classList.toggle('active', isOn);
+        });
+    }
+
+    // Item price multiplier
+    const priceMultSlider = document.getElementById('cfg-item-price-mult');
+    const priceMultBadge = priceMultSlider?.parentElement?.querySelector('.config-slider-value');
+    if (priceMultSlider) {
+        priceMultSlider.value = rules.itemPriceMultiplier ?? 100;
+        if (priceMultBadge) priceMultBadge.textContent = (rules.itemPriceMultiplier ?? 100) + '%';
+    }
+
     overlay.style.display = 'flex';
     updateCanvasPointerEvents();
 }
@@ -1214,7 +1391,33 @@ function saveConfigModal() {
             const sumOthers = ww['partly-cloudy'] + ww['overcast'] + ww['fog'] + ww['sunshower'] + ww['rain'] + ww['thunderstorm'] + ww['frog-rain'];
             ww['clear'] = Math.max(0, 100 - sumOthers);
             return ww;
-        })()
+        })(),
+        // Build areasEnabled map from grid
+        areasEnabled: (() => {
+            const grid = document.getElementById('cfg-areas-grid');
+            const out = {};
+            if (grid) {
+                Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => {
+                    const name = el.dataset.areaName;
+                    out[name] = el.classList.contains('active');
+                });
+            }
+            return out;
+        })(),
+        // Build itemsEnabled map from grid
+        itemsEnabled: (() => {
+            const grid = document.getElementById('cfg-items-grid');
+            const out = {};
+            if (grid) {
+                Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => {
+                    const idx = el.dataset.itemIdx;
+                    out[idx] = el.classList.contains('active');
+                });
+            }
+            return out;
+        })(),
+        // Item price multiplier (percentage)
+        itemPriceMultiplier: clampInt(document.getElementById('cfg-item-price-mult')?.value, 0, 500, 100)
     };
 
     window.customRules = newRules;
@@ -1232,6 +1435,8 @@ function saveConfigModal() {
     // Apply to active game for main quest values
     applyCustomRulesToActiveGame();
     applyNPCFilterRules();
+    applyAreaRules();
+    applyItemPriceMultiplier();
     // Immediately re-generate today's weather using the new weights
     if (typeof generateDailyWeather === 'function') {
         try {
@@ -1333,6 +1538,68 @@ function applyNPCFilterRules() {
             }
         }
     }
+}
+
+// Apply area access rules - block travel to disabled areas
+function applyAreaRules() {
+    if (!window.customRules || !window.customRules.areasEnabled) return;
+    const areasEnabled = window.customRules.areasEnabled;
+    // Store blocked areas globally for level transition checks
+    window.blockedAreas = {};
+    for (const [areaName, enabled] of Object.entries(areasEnabled)) {
+        if (!enabled) {
+            window.blockedAreas[areaName] = true;
+        }
+    }
+    console.log('Blocked areas:', Object.keys(window.blockedAreas));
+}
+
+// Check if a level is in a blocked area
+function isLevelBlocked(levelName) {
+    if (!window.blockedAreas || !levelName) return false;
+    for (const areaName of Object.keys(window.blockedAreas)) {
+        if (levelName.startsWith(areaName)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Apply item price multiplier to all items
+function applyItemPriceMultiplier() {
+    if (!window.customRules) return;
+    const mult = (window.customRules.itemPriceMultiplier ?? 100) / 100;
+    if (mult === 1) return; // No change needed
+    
+    // Store original prices if not already stored
+    if (!window._originalItemPrices) {
+        window._originalItemPrices = {};
+        if (typeof all_items !== 'undefined') {
+            for (let i = 0; i < all_items.length; i++) {
+                if (all_items[i] && all_items[i].price !== undefined) {
+                    window._originalItemPrices[i] = all_items[i].price;
+                }
+            }
+        }
+    }
+    
+    // Apply multiplier
+    if (typeof all_items !== 'undefined') {
+        for (let i = 0; i < all_items.length; i++) {
+            if (all_items[i] && window._originalItemPrices[i] !== undefined) {
+                all_items[i].price = Math.max(1, Math.round(window._originalItemPrices[i] * mult));
+            }
+        }
+    }
+    console.log('Item prices multiplied by', mult);
+}
+
+// Get effective item - returns null if item is disabled
+function getEffectiveItem(itemIdx) {
+    if (!window.customRules || !window.customRules.itemsEnabled) return true;
+    const enabled = window.customRules.itemsEnabled;
+    // Default to enabled if not in map
+    return enabled.hasOwnProperty(itemIdx) ? !!enabled[itemIdx] : true;
 }
 
 // ======== Progress gating helpers ========
@@ -2142,7 +2409,8 @@ function saveAll(){
         dificulty: dificulty,
         currentWeather: currentWeather,
         time: time,
-        timephase: timephase
+        timephase: timephase,
+        customRules: window.customRules || null
     });
     let lvlLength = 0;
     for(let i = 0; i < levels.length; i++){
@@ -2224,6 +2492,8 @@ function loadAll(){
 
         // Apply NPC rules on load so existing worlds respect configuration
         applyNPCFilterRules();
+        applyAreaRules();
+        applyItemPriceMultiplier();
         
         // Load weather state
         currentWeather = localData.get('Day_curLvl_Dif').currentWeather || 'clear';

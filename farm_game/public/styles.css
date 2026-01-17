@@ -1349,6 +1349,20 @@ button {
     border-color: rgba(120,120,120,0.6);
 }
 
+.config-more-btn {
+    background: rgba(100,100,150,0.4);
+    border: 2px solid rgba(100,100,150,0.6);
+}
+.config-more-btn:hover {
+    background: rgba(100,100,150,0.6);
+}
+
+.config-more-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
 @media (max-width: 768px) {
     .config-modal { max-width: 94vw; padding: 16px; }
     .config-input { font-size: 18px; }
