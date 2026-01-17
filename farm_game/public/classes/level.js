@@ -66,7 +66,7 @@ class Level {
                 if (map[i][j] == 0) {
                     this.map[i][j] = 0;
                 } else {
-                    if (map[i][j] <= all_tiles.length) {
+                    if (map[i][j] > 0 && map[i][j] <= all_tiles.length) {
                         map[i][j] = new_tile_from_num(map[i][j], j * tileSize, i * tileSize);
                     } else {
                         this.map[i][j] = 0;

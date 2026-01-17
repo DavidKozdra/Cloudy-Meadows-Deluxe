@@ -58,8 +58,8 @@ const ITEM_DEFINITIONS = [
     /*42*/ { name: 'Pumpkin Seed', png: 145, plant_num: 99, class: 'Seed'},
     /*43*/ { name: 'Bed', png: 146, price: 70, tile_num: 7, tile_need_num: 0, class: 'Placeable'},
     /*44*/ { name: 'Wall', png: 147, price: 12, tile_num: 6, tile_need_num: 0, class: 'Placeable'},
-    /*45*/ { name: 'Axe', png: 56, price: 40, class: 'Tool' },
-    /*46*/ { name: 'Composter', png: 148, price: 80, tile_num: 14, tile_need_num: 0, class: 'Placeable'},
+    /*45*/ { name: 'Axe', png: 163, price: 40, class: 'Tool' },
+    /*46*/ { name: 'Composter', png: 149, price: 80, tile_num: 14, tile_need_num: 0, class: 'Placeable'},
     /*47*/ { name: 'Hemp Oil', png: 86, price: 30, class: 'Item'},
     /*48*/ { name: 'Fruit Juice', png: 86, price: 12, class: 'Item'}
 ];
