@@ -480,6 +480,10 @@ function selectDifficulty(difficulty){
     paused = false;
     
     console.log('Starting game with difficulty:', difficulty);
+    // Ensure weather is rolled for the current day when starting a game
+    if (typeof generateDailyWeather === 'function') {
+        try { generateDailyWeather(); } catch(e) { console.warn('Failed to roll weather at game start:', e); }
+    }
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
 }
 
@@ -496,16 +500,22 @@ function selectCustomDifficulty(features){
         permaDeath: typeof modalRules.permaDeath === 'boolean' ? modalRules.permaDeath : features[2].enabled,
         mainQuestCoins: (typeof modalRules.mainQuestCoins === 'number' ? modalRules.mainQuestCoins : (questCoinsInput ? parseInt(questCoinsInput.value) : 10000)),
         mainQuestDays: (typeof modalRules.mainQuestDays === 'number' ? modalRules.mainQuestDays : (questDaysInput ? parseInt(questDaysInput.value) : 100)),
-        startingCoins: (typeof modalRules.startingCoins === 'number' ? modalRules.startingCoins : 0)
+        startingCoins: (typeof modalRules.startingCoins === 'number' ? modalRules.startingCoins : 0),
+        // PRESERVE weatherWeights and npcEnabled from modal config!
+        weatherWeights: modalRules.weatherWeights || null,
+        npcEnabled: modalRules.npcEnabled || null
     } : {
         moneyLoss: features[0].enabled,
         foodRot: features[1].enabled,
         permaDeath: features[2].enabled,
         mainQuestCoins: questCoinsInput ? parseInt(questCoinsInput.value) : 10000,
         mainQuestDays: questDaysInput ? parseInt(questDaysInput.value) : 100,
-        startingCoins: 0
+        startingCoins: 0,
+        weatherWeights: null,
+        npcEnabled: null
     };
     window.customRules = rules;
+    console.log('selectCustomDifficulty: Final rules with weatherWeights:', rules.weatherWeights);
     
     try {
         localData.set('Day_curLvl_Dif', {day: 0, currentLevel_y, currentLevel_x, dificulty, customRules: window.customRules});
@@ -521,6 +531,10 @@ function selectCustomDifficulty(features){
     paused = false;
     
     console.log('Starting game with custom difficulty:', window.customRules);
+    // Ensure weather is rolled for the current day when starting a custom game
+    if (typeof generateDailyWeather === 'function') {
+        try { generateDailyWeather(); } catch(e) { console.warn('Failed to roll weather at custom start:', e); }
+    }
     
     // Update player quests if player already exists
     if (typeof player !== 'undefined' && player.quests) {
@@ -1057,7 +1071,6 @@ function ensureConfigModal() {
     weatherTitle.className = 'config-subtitle';
     weatherTitle.textContent = 'Weather Rarity (Weights)';
     modal.appendChild(weatherTitle);
-    addSliderRow('Clear', 'cfg-weather-clear', 0, 100, 1);
     addSliderRow('Partly Cloudy', 'cfg-weather-partly', 0, 100, 1);
     addSliderRow('Overcast', 'cfg-weather-overcast', 0, 100, 1);
     addSliderRow('Fog', 'cfg-weather-fog', 0, 100, 1);
@@ -1074,7 +1087,7 @@ function ensureConfigModal() {
     const totalBadge = document.createElement('div');
     totalBadge.id = 'cfg-weather-total';
     totalBadge.className = 'config-slider-remaining';
-    totalBadge.textContent = 'Total: 100%';
+    totalBadge.textContent = 'Clear: 100%';
     totalRow.appendChild(totalSpacer);
     totalRow.appendChild(totalBadge);
     modal.appendChild(totalRow);
@@ -1140,7 +1153,6 @@ function showConfigModal() {
         'frog-rain': 0.5
     };
     const setSlider = (id, v) => { const el = document.getElementById(id); const badge = el?.parentElement?.querySelector('.config-slider-value'); if (el) el.value = v; if (badge) badge.textContent = String(v); };
-    setSlider('cfg-weather-clear', ww['clear']);
     setSlider('cfg-weather-partly', ww['partly-cloudy']);
     setSlider('cfg-weather-overcast', ww['overcast']);
     setSlider('cfg-weather-fog', ww['fog']);
@@ -1188,16 +1200,21 @@ function saveConfigModal() {
             }
             return out;
         })(),
-        weatherWeights: {
-            'clear': clampInt(document.getElementById('cfg-weather-clear').value, 0, 100, 49.5),
-            'partly-cloudy': clampInt(document.getElementById('cfg-weather-partly').value, 0, 100, 15),
-            'overcast': clampInt(document.getElementById('cfg-weather-overcast').value, 0, 100, 10),
-            'fog': clampInt(document.getElementById('cfg-weather-fog').value, 0, 100, 7),
-            'sunshower': clampInt(document.getElementById('cfg-weather-sunshower').value, 0, 100, 8),
-            'rain': clampInt(document.getElementById('cfg-weather-rain').value, 0, 100, 8),
-            'thunderstorm': clampInt(document.getElementById('cfg-weather-thunderstorm').value, 0, 100, 2),
-            'frog-rain': clampInt(document.getElementById('cfg-weather-frog').value, 0, 100, 0.5)
-        }
+        weatherWeights: (() => {
+            const get = (id) => clampInt(document.getElementById(id).value, 0, 100, 0);
+            const ww = {
+                'partly-cloudy': get('cfg-weather-partly'),
+                'overcast': get('cfg-weather-overcast'),
+                'fog': get('cfg-weather-fog'),
+                'sunshower': get('cfg-weather-sunshower'),
+                'rain': get('cfg-weather-rain'),
+                'thunderstorm': get('cfg-weather-thunderstorm'),
+                'frog-rain': get('cfg-weather-frog')
+            };
+            const sumOthers = ww['partly-cloudy'] + ww['overcast'] + ww['fog'] + ww['sunshower'] + ww['rain'] + ww['thunderstorm'] + ww['frog-rain'];
+            ww['clear'] = Math.max(0, 100 - sumOthers);
+            return ww;
+        })()
     };
 
     window.customRules = newRules;
@@ -1215,6 +1232,16 @@ function saveConfigModal() {
     // Apply to active game for main quest values
     applyCustomRulesToActiveGame();
     applyNPCFilterRules();
+    // Immediately re-generate today's weather using the new weights
+    if (typeof generateDailyWeather === 'function') {
+        try {
+            console.log('SAVE: About to re-roll weather. window.customRules.weatherWeights =', window.customRules?.weatherWeights);
+            generateDailyWeather();
+            console.log('Weather re-rolled with updated weights. Current:', typeof currentWeather !== 'undefined' ? currentWeather : '(unknown)');
+        } catch (e) {
+            console.warn('Failed to re-roll weather after saving config:', e);
+        }
+    }
     hideConfigModal();
 }
 
@@ -1242,7 +1269,6 @@ function applyCustomRulesToActiveGame() {
 // Keep weather sliders totaling 100% by balancing with Clear
 function normalizeWeatherTotal(changedId) {
     const ids = [
-        'cfg-weather-clear',
         'cfg-weather-partly',
         'cfg-weather-overcast',
         'cfg-weather-fog',
@@ -1261,33 +1287,18 @@ function normalizeWeatherTotal(changedId) {
             if (badge) badge.textContent = String(val);
         }
     };
-    const sumExcept = (excludeId) => ids.reduce((s, id) => id === excludeId ? s : s + get(id), 0);
-    // Recompute clear based on others
-    const clearId = 'cfg-weather-clear';
-    const sumOthers = sumExcept(clearId);
-    if (changedId === clearId) {
-        // Clamp clear so total does not exceed 100
-        const maxClear = Math.max(0, 100 - sumExcept(clearId));
-        const desired = get(clearId);
-        set(clearId, Math.min(desired, maxClear));
-    } else {
-        // Cap changed slider to remaining budget
-        if (changedId) {
-            const desired = get(changedId);
-            const maxAllowed = Math.max(0, 100 - sumExcept(changedId) - get(clearId));
-            // When changing non-clear, we don't consider existing clear; we balance clear after
-            const maxByOthers = Math.max(0, 100 - sumExcept(changedId));
-            set(changedId, Math.min(desired, maxByOthers));
-        }
-        const newSumOthers = sumExcept(clearId);
-        const newClear = Math.max(0, 100 - newSumOthers);
-        set(clearId, newClear);
+    const sumAll = ids.reduce((s, id) => s + get(id), 0);
+    if (changedId) {
+        const desired = get(changedId);
+        const sumOthers = sumAll - desired;
+        const maxAllowed = Math.max(0, 100 - sumOthers);
+        set(changedId, Math.min(desired, maxAllowed));
     }
-    // Update total badge
     const totalBadge = document.getElementById('cfg-weather-total');
     if (totalBadge) {
-        const total = ids.reduce((s, id) => s + get(id), 0);
-        totalBadge.textContent = `Total: ${Math.round(total)}%`;
+        const sum = ids.reduce((s, id) => s + get(id), 0);
+        const clearPct = Math.max(0, 100 - sum);
+        totalBadge.textContent = `Clear: ${Math.round(clearPct)}%`;
     }
 }
 
@@ -1313,13 +1324,43 @@ function applyNPCFilterRules() {
                             keep = enabledMap.hasOwnProperty(tile.name) ? !!enabledMap[tile.name] : true;
                         }
                         if (!keep) {
-                            lvl.map[r][c] = 0;
+                            // Restore the ground tile beneath the NPC when removing
+                            const replacement = (tile && tile.under_tile) ? tile.under_tile : 0;
+                            lvl.map[r][c] = replacement;
                         }
                     }
                 }
             }
         }
     }
+}
+
+// ======== Progress gating helpers ========
+function getHasBeatenGame() {
+    try {
+        const prev = localData.get('Day_curLvl_Dif');
+        return !!(prev && prev.hasBeatenGame);
+    } catch(e) {
+        return false;
+    }
+}
+
+// Mark beaten state when main quest completes (global listener, independent of UI panels)
+if (!window._beatFlagListenerRegistered) {
+    window._beatFlagListenerRegistered = true;
+    window.addEventListener('questCompleted', (e) => {
+        const q = e.detail && e.detail.quest;
+        if (q && (q.og_name === 'Save Cloudy Meadows' || q.name === 'Save Cloudy Meadows')) {
+            try {
+                const prev = localData.get('Day_curLvl_Dif') || { day: days || 0, currentLevel_y, currentLevel_x, dificulty };
+                prev.hasBeatenGame = true;
+                localData.set('Day_curLvl_Dif', prev);
+                console.log('Beaten flag set in local storage');
+            } catch(err) {
+                console.warn('Failed to set beaten flag', err);
+            }
+        }
+    });
 }
 
 function showPaused(){
@@ -2169,6 +2210,8 @@ function loadAll(){
         currentLevel_y = localData.get('Day_curLvl_Dif').currentLevel_y;
         dificulty = localData.get('Day_curLvl_Dif').dificulty;
         window.customRules = localData.get('Day_curLvl_Dif').customRules || null;
+        console.log('LOAD: customRules from storage:', window.customRules);
+        console.log('LOAD: weatherWeights:', window.customRules?.weatherWeights);
         // If this is a new game (no saved player yet), apply starting coins now
         try {
             const hasSavedPlayer = localData.get('player') != null;

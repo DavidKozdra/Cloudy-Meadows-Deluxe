@@ -1208,17 +1208,34 @@ function generateDailyWeather() {
         'fog': 7,
         'clear': 49.5
     };
-    // Override with custom rules if provided
+    // Override with custom rules if provided - REPLACE defaults entirely
     if (typeof window !== 'undefined' && window.customRules && window.customRules.weatherWeights) {
-        weights = Object.assign(weights, window.customRules.weatherWeights);
+        // Use custom weights directly (they already sum to 100 with computed clear)
+        const custom = window.customRules.weatherWeights;
+        const keys = ['partly-cloudy','overcast','fog','sunshower','rain','thunderstorm','frog-rain'];
+        const sumOthers = keys.reduce((s,k)=> s + (isNaN(custom[k])?0:Number(custom[k])), 0);
+        // Build clean weights object from custom values only
+        weights = {
+            'partly-cloudy': Number(custom['partly-cloudy']) || 0,
+            'overcast': Number(custom['overcast']) || 0,
+            'fog': Number(custom['fog']) || 0,
+            'sunshower': Number(custom['sunshower']) || 0,
+            'rain': Number(custom['rain']) || 0,
+            'thunderstorm': Number(custom['thunderstorm']) || 0,
+            'frog-rain': Number(custom['frog-rain']) || 0,
+            'clear': custom['clear'] != null ? Number(custom['clear']) : Math.max(0, 100 - sumOthers)
+        };
+        console.log('Using custom weather weights:', weights);
     }
     // Weighted random selection
     const entries = Object.entries(weights);
     const total = entries.reduce((sum, [, w]) => sum + (isNaN(w) ? 0 : Number(w)), 0);
+    console.log('Weather selection - Total weight:', total, 'Entries:', entries.map(([k,v])=>`${k}:${v}`).join(', '));
     if (total <= 0) {
         currentWeather = 'clear';
     } else {
         let roll = Math.random() * total;
+        const originalRoll = roll;
         let selected = 'clear';
         for (let i = 0; i < entries.length; i++) {
             const [name, w] = entries[i];
@@ -1226,6 +1243,7 @@ function generateDailyWeather() {
             if (roll <= 0) { selected = name; break; }
         }
         currentWeather = selected;
+        console.log('Weather roll:', originalRoll.toFixed(2), '/', total, '-> Selected:', currentWeather);
     }
     // Track rain-related days
     if (currentWeather === 'rain' || currentWeather === 'sunshower' || currentWeather === 'thunderstorm') {
