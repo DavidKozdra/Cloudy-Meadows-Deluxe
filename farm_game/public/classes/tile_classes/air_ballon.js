@@ -30,11 +30,18 @@ class AirBallon extends Entity {
         textAlign(CENTER, TOP);
         text('Where to?', (canvasWidth / 2), canvasHeight - 140);
         
-        // Filter out current location from the list
+        // Filter out current location and disabled areas from the list
         const currentLocationName = levels[currentLevel_y][currentLevel_x].name;
         this.availablePlaces = this.places.filter(place => {
             // Check if the place name is in the current level name
-            return !currentLocationName.includes(place);
+            if (currentLocationName.includes(place)) {
+                return false;
+            }
+            // Check if area is blocked in custom rules
+            if (typeof window !== 'undefined' && window.blockedAreas && window.blockedAreas[place]) {
+                return false;
+            }
+            return true;
         });
         
         const maxLen = this.availablePlaces.reduce((m,p)=>Math.max(m, (p ? p.length : 0)), 10);
