@@ -1196,16 +1196,19 @@ button {
     height: 100%;
     background: rgba(0,0,0,0.6);
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     z-index: 1000;
     pointer-events: auto;
     padding: 20px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .config-modal {
     width: 90vw;
     max-width: 520px;
+    max-height: none;
     background-color: rgb(187, 132, 75);
     border: 5px solid rgb(149, 108, 65);
     border-radius: 6px;
@@ -1214,6 +1217,7 @@ button {
     flex-direction: column;
     gap: 12px;
     padding: 18px;
+    margin: auto;
 }
 
 .config-title {
@@ -1364,10 +1368,33 @@ button {
 }
 
 @media (max-width: 768px) {
-    .config-modal { max-width: 94vw; padding: 16px; }
-    .config-input { font-size: 18px; }
-    .config-btn { width: 100%; }
-    .config-actions { flex-direction: column; }
+    .config-overlay { padding: 10px; }
+    .config-modal { 
+        max-width: 98vw; 
+        padding: 14px; 
+        gap: 10px;
+    }
+    .config-title { font-size: 18px; }
+    .config-subtitle { font-size: 14px; }
+    .config-label { font-size: 12px; }
+    .config-input { font-size: 16px; padding: 6px 8px; }
+    .config-btn { width: 100%; padding: 10px; }
+    .config-actions { flex-direction: column; gap: 8px; }
+    .config-grid { 
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); 
+        gap: 6px;
+    }
+    .config-grid-item { 
+        font-size: 12px; 
+        padding: 6px 8px; 
+    }
+    .config-row { flex-wrap: wrap; }
+    .config-slider { width: 100%; }
+}
+
+@media (max-height: 600px) {
+    .config-overlay { padding: 5px; }
+    .config-modal { gap: 8px; padding: 12px; }
 }
 
 /* Credits Menu Styles */
