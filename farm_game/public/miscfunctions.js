@@ -573,10 +573,12 @@ function selectCustomDifficulty(features){
         }
     }
 
-    // Apply NPC filter rules immediately when starting with custom difficulty
+    // Apply NPC/critter filter rules immediately when starting with custom difficulty
     applyNPCFilterRules();
+    applyCritterFilterRules();
     applyAreaRules();
     applyItemPriceMultiplier();
+    removeDisabledItemsFromInventory();
 
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
 }
@@ -1137,6 +1139,68 @@ function ensureConfigModal() {
     npcActions.appendChild(allOffBtn);
     modal.appendChild(npcActions);
 
+    // Critters toggle grid (frogs, fireflies, bees, bunnies, etc.)
+    const crittersTitle = document.createElement('div');
+    crittersTitle.className = 'config-subtitle';
+    crittersTitle.textContent = 'Critters (Enable/Disable)';
+    modal.appendChild(crittersTitle);
+    const crittersGrid = document.createElement('div');
+    crittersGrid.id = 'cfg-critters-grid';
+    crittersGrid.className = 'config-grid config-sprite-grid';
+    
+    // Critter definitions with sprites
+    const CRITTER_DEFINITIONS = [
+        { name: 'Frog', sprite: 'images/npc/frog_front.png' },
+        { name: 'LightBug', sprite: 'images/tiles/FireFlys.gif' },
+        { name: 'Bees', sprite: 'images/tiles/Bees.gif' },
+        { name: 'ladybug', sprite: 'images/tiles/LadyBugs.gif' }
+    ];
+    
+    CRITTER_DEFINITIONS.forEach(critter => {
+        const btn = document.createElement('button');
+        btn.className = 'config-grid-item config-sprite-item active';
+        btn.dataset.critterName = critter.name;
+        
+        const spriteImg = document.createElement('img');
+        spriteImg.className = 'config-sprite-img';
+        spriteImg.width = 32;
+        spriteImg.height = 32;
+        spriteImg.style.imageRendering = 'pixelated';
+        spriteImg.src = critter.sprite;
+        spriteImg.alt = critter.name;
+        btn.appendChild(spriteImg);
+        
+        const label = document.createElement('span');
+        label.className = 'config-sprite-label';
+        label.textContent = critter.name;
+        btn.appendChild(label);
+        
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+        });
+        crittersGrid.appendChild(btn);
+    });
+    modal.appendChild(crittersGrid);
+    
+    // Critters quick actions
+    const crittersActions = document.createElement('div');
+    crittersActions.className = 'config-actions';
+    const crittersAllOnBtn = document.createElement('button');
+    crittersAllOnBtn.className = 'config-btn';
+    crittersAllOnBtn.textContent = 'All On';
+    crittersAllOnBtn.addEventListener('click', () => {
+        Array.from(crittersGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
+    });
+    const crittersAllOffBtn = document.createElement('button');
+    crittersAllOffBtn.className = 'config-btn';
+    crittersAllOffBtn.textContent = 'All Off';
+    crittersAllOffBtn.addEventListener('click', () => {
+        Array.from(crittersGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
+    });
+    crittersActions.appendChild(crittersAllOnBtn);
+    crittersActions.appendChild(crittersAllOffBtn);
+    modal.appendChild(crittersActions);
+
     // Weather rarity sliders (weights; higher = more likely)
     const weatherTitle = document.createElement('div');
     weatherTitle.className = 'config-subtitle';
@@ -1466,6 +1530,17 @@ function showConfigModal() {
         });
     }
 
+    // Critters grid state
+    const crittersGrid = document.getElementById('cfg-critters-grid');
+    const crittersEnabled = rules.crittersEnabled || null;
+    if (crittersGrid) {
+        Array.from(crittersGrid.querySelectorAll('.config-grid-item')).forEach(el => {
+            const name = el.dataset.critterName;
+            const isOn = crittersEnabled == null ? true : !!crittersEnabled[name];
+            el.classList.toggle('active', isOn);
+        });
+    }
+
     // Item price multiplier
     const priceMultSlider = document.getElementById('cfg-item-price-mult');
     const priceMultBadge = priceMultSlider?.parentElement?.querySelector('.config-slider-value');
@@ -1554,6 +1629,18 @@ function saveConfigModal() {
             console.log('Built itemsEnabled map:', out);
             return out;
         })(),
+        // Build crittersEnabled map from grid
+        crittersEnabled: (() => {
+            const grid = document.getElementById('cfg-critters-grid');
+            const out = {};
+            if (grid) {
+                Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => {
+                    const name = el.dataset.critterName;
+                    out[name] = el.classList.contains('active');
+                });
+            }
+            return out;
+        })(),
         // Item price multiplier (percentage)
         itemPriceMultiplier: clampInt(document.getElementById('cfg-item-price-mult')?.value, 0, 500, 100)
     };
@@ -1573,8 +1660,10 @@ function saveConfigModal() {
     // Apply to active game for main quest values
     applyCustomRulesToActiveGame();
     applyNPCFilterRules();
+    applyCritterFilterRules();
     applyAreaRules();
     applyItemPriceMultiplier();
+    removeDisabledItemsFromInventory();
     // Immediately re-generate today's weather using the new weights
     if (typeof generateDailyWeather === 'function') {
         try {
@@ -1692,6 +1781,54 @@ function applyNPCFilterRules() {
     console.log('applyNPCFilterRules: Removed', removedCount, 'NPCs');
 }
 
+// Apply critter filter rules - remove disabled critters from all levels
+function applyCritterFilterRules() {
+    if (!window.customRules || !levels) {
+        console.log('applyCritterFilterRules: No customRules or levels');
+        return;
+    }
+    const enabledMap = window.customRules.crittersEnabled;
+    if (!enabledMap || Object.keys(enabledMap).length === 0) {
+        console.log('applyCritterFilterRules: No critters to filter');
+        return;
+    }
+    
+    // Classes that are considered critters
+    const critterClasses = ['FreeMoveEntity', 'LightMoveEntity', 'Entity'];
+    // Specific critter names we care about
+    const critterNames = ['Frog', 'LightBug', 'Bees', 'ladybug'];
+    
+    let removedCount = 0;
+    for (let y = 0; y < levels.length; y++) {
+        for (let x = 0; x < levels[y].length; x++) {
+            const lvl = levels[y][x];
+            if (!lvl || !lvl.map) continue;
+            for (let r = 0; r < lvl.map.length; r++) {
+                for (let c = 0; c < lvl.map[r].length; c++) {
+                    const tile = lvl.map[r][c];
+                    if (!tile) continue;
+                    
+                    // Check if this is a critter
+                    const isCritterClass = critterClasses.includes(tile.class);
+                    const isCritterName = critterNames.includes(tile.name);
+                    
+                    if (isCritterClass && isCritterName) {
+                        // Check if this critter is disabled
+                        const keep = enabledMap.hasOwnProperty(tile.name) ? !!enabledMap[tile.name] : true;
+                        if (!keep) {
+                            console.log('Removing critter:', tile.name, 'at level', y, x);
+                            const replacement = (tile && tile.under_tile) ? tile.under_tile : 0;
+                            lvl.map[r][c] = replacement;
+                            removedCount++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    console.log('applyCritterFilterRules: Removed', removedCount, 'critters');
+}
+
 // Apply area access rules - block travel to disabled areas
 function applyAreaRules() {
     if (!window.customRules || !window.customRules.areasEnabled) return;
@@ -1715,6 +1852,49 @@ function isLevelBlocked(levelName) {
         }
     }
     return false;
+}
+
+// Remove disabled items from player's inventory
+function removeDisabledItemsFromInventory() {
+    if (!window.customRules || !window.customRules.itemsEnabled) return;
+    if (typeof player === 'undefined' || !player.inv) return;
+    
+    const enabled = window.customRules.itemsEnabled;
+    let removedCount = 0;
+    
+    // Check main inventory (hotbar)
+    for (let i = 0; i < player.inv.length; i++) {
+        if (player.inv[i] != 0 && player.inv[i] != undefined) {
+            const itemNum = typeof item_name_to_num === 'function' ? item_name_to_num(player.inv[i].name) : -1;
+            const strKey = String(itemNum);
+            const isEnabled = !enabled.hasOwnProperty(strKey) || !!enabled[strKey];
+            if (!isEnabled) {
+                console.log('Removing disabled item from inventory slot', i, ':', player.inv[i].name);
+                player.inv[i] = 0;
+                removedCount++;
+            }
+        }
+    }
+    
+    // Check backpack if player has one equipped
+    for (let i = 0; i < player.inv.length; i++) {
+        if (player.inv[i] != 0 && player.inv[i].class === 'Backpack' && player.inv[i].inv) {
+            for (let j = 0; j < player.inv[i].inv.length; j++) {
+                if (player.inv[i].inv[j] != 0 && player.inv[i].inv[j] != undefined) {
+                    const itemNum = typeof item_name_to_num === 'function' ? item_name_to_num(player.inv[i].inv[j].name) : -1;
+                    const strKey = String(itemNum);
+                    const isEnabled = !enabled.hasOwnProperty(strKey) || !!enabled[strKey];
+                    if (!isEnabled) {
+                        console.log('Removing disabled item from backpack slot', j, ':', player.inv[i].inv[j].name);
+                        player.inv[i].inv[j] = 0;
+                        removedCount++;
+                    }
+                }
+            }
+        }
+    }
+    
+    console.log('removeDisabledItemsFromInventory: Removed', removedCount, 'items');
 }
 
 // Apply item price multiplier to all items
@@ -2712,10 +2892,12 @@ function loadAll(){
         }
     }
     
-    // Apply NPC/Area/Price rules AFTER all levels have loaded from storage
+    // Apply NPC/Area/Price/Critter rules AFTER all levels have loaded from storage
     applyNPCFilterRules();
+    applyCritterFilterRules();
     applyAreaRules();
     applyItemPriceMultiplier();
+    removeDisabledItemsFromInventory();
 }
 
 function loadLevel(level, lvlx = 0, lvly = 0){
