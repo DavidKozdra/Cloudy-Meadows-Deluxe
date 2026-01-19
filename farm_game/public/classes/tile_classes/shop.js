@@ -56,7 +56,12 @@ class Shop extends Entity {
         for(let i = 0; i < this.inv.length; i++){
             if(this.inv[i] != 0 && this.inv[i].name == itemName){
                 let basePrice = this.originalPrices[i] || this.inv[i].price;
-                return round(basePrice * 1.25);
+                let price = round(basePrice * 1.25);
+                // Enforce maxPrice if defined
+                if (typeof this.inv[i].maxPrice === 'number') {
+                    price = Math.min(price, this.inv[i].maxPrice);
+                }
+                return price;
             }
         }
         return 0;

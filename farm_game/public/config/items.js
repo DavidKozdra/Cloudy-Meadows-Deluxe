@@ -14,7 +14,7 @@
 
 const ITEM_DEFINITIONS = [
     /*0*/  0, // Empty slot
-    /*1*/  { name: 'Hoe', png: 56, class: 'Tool' },
+    /*1*/  { name: 'Hoe', png: 56, price: 20, maxPrice: 20, class: 'Tool' },
     /*2*/  { name: 'Corn', png: 57, price: 6, hunger: 2, hunger_timer: 2000, seed_num: 3, seed_min: 1, seed_max: 2, class: 'Eat' },
     /*3*/  { name: 'Corn Seed', png: 58, plant_num: 21, class: 'Seed' },
     /*4*/  { name: 'Junk', png: 59, price: 0, class: 'Item' },
