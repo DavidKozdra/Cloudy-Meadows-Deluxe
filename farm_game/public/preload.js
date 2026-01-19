@@ -867,10 +867,18 @@ function toggleFullscreen() {
             fullscreenPromise = elem.msRequestFullscreen();
         }
         
-        // Handle promise rejection silently (e.g., orientation.lock() not supported)
-        if (fullscreenPromise && fullscreenPromise.catch) {
+        // Try to lock orientation if supported (safe, non-blocking)
+        if (fullscreenPromise && typeof screen !== 'undefined' && screen.orientation && screen.orientation.lock) {
+            fullscreenPromise.then(() => {
+                // Try to lock to landscape, but ignore errors
+                screen.orientation.lock('landscape').catch(() => {});
+            }).catch((err) => {
+                // Fullscreen request failed (possibly orientation lock not supported)
+                console.log('Fullscreen request failed (possibly orientation lock not supported):', err && err.message);
+            });
+        } else if (fullscreenPromise && fullscreenPromise.catch) {
             fullscreenPromise.catch((err) => {
-                console.log('Fullscreen request failed (possibly orientation lock not supported):', err.message);
+                console.log('Fullscreen request failed (possibly orientation lock not supported):', err && err.message);
             });
         }
     } else {

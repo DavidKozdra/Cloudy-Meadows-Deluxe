@@ -369,28 +369,29 @@ class Level {
         // Iterate through all tiles in this level and update them
         for (let i = 0; i < this.map.length; i++) {
             for (let j = 0; j < this.map[i].length; j++) {
-                if (this.map[i][j] != 0 && this.map[i][j] != undefined) {
+                const tile = this.map[i][j];
+                if (tile && tile != 0 && typeof tile !== 'undefined') {
                     // Handle different tile types
-                    if (this.map[i][j].class == 'Plant') {
-                        this.map[i][j].grow(x, y);
+                    if (tile.class === 'Plant') {
+                        tile.grow(x, y);
                     }
-                    if (this.map[i][j].class == 'NPC') {
-                        this.map[i][j].move(x, y);
+                    if (tile.class === 'NPC') {
+                        tile.move(x, y);
                     }
-                    if (this.map[i][j].class == 'Robot') {
-                        this.map[i][j].move(x, y);
+                    if (tile.class === 'Robot') {
+                        tile.move(x, y);
                     }
-                    if (this.map[i][j].class == 'FreeMoveEntity'){
-                        this.map[i][j].randomMove(x, y);
+                    if (tile.class === 'FreeMoveEntity'){
+                        tile.randomMove(x, y);
                     }
-                    if (this.map[i][j].class == 'LightMoveEntity'){
-                        this.map[i][j].randomMove(x, y);
+                    if (tile.class === 'LightMoveEntity'){
+                        tile.randomMove(x, y);
                     }
-                    if (this.map[i][j].name == 'flower') {
+                    if (tile.name === 'flower') {
                         // Check if Bees are enabled before spawning
                         const beesEnabled = !window.customRules || !window.customRules.crittersEnabled || 
                                            window.customRules.crittersEnabled['Bees'] !== false;
-                        if (beesEnabled && this.map[i][j].age == 1 && round(random(0,3)) == 2) {
+                        if (beesEnabled && tile.age == 1 && round(random(0,3)) == 2) {
                             this.map[i][j] = new_tile_from_num(49, (j * tileSize), (i * tileSize));
                             this.map[i][j].age = 0;
                             this.map[i][j].under_tile = new_tile_from_num(50, (j * tileSize), (i * tileSize));
