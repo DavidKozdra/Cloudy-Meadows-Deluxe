@@ -78,6 +78,22 @@ class NPC extends GridMoveEntity {
 
     dialouge_render() {
         if (this.places && this.places.length) {
+            // Ticket Master travel UI
+            // Check if player can afford travel
+            const travel_price = this.travel_price || 10;
+            if (typeof player !== 'undefined' && player.talking === this && player.coins < travel_price) {
+                push();
+                stroke(255,0,0);
+                strokeWeight(1);
+                fill(255, 200, 200);
+                rect(canvasWidth / 4, canvasHeight - 500, 320, 40, 12);
+                textFont(player_2);
+                textSize(10);
+                fill(255,0,0);
+                textAlign(CENTER, CENTER);
+                text('You cannot afford to travel! (Cost: ' + travel_price + ')', canvasWidth / 4 ,  canvasHeight - 480, 320);
+                pop();
+            }
             AirBallon.prototype.tp_render.call(this);
         }
         else {
