@@ -1129,7 +1129,7 @@ function buildFullTutorialPrompt(options = {}) {
                     {
                         image: 'images/items/Sprinkler.png',
                         title: 'Sprinklers',
-                        description: 'Automation saves time once you can afford it.'
+                        description: ' Some plants need water and placing these next to them will help water tilled soil in a grid.'
                     },
                     {
                         image: 'images/items/Corn_item.png',
