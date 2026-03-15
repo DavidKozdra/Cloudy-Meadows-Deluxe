@@ -3394,7 +3394,7 @@
   ,
   "Kiah": [
     {
-      "phrase": "Hi! I'm Kiah. I love exploring the Big City and finding great food spots.",
+      "phrase": "Hi! I'm Kiah. I love exploring the Big City and finding great food spots. I'm always up for an adventure! As long as that adventure isnt programmed by DAVID KOZDRA. I dont like that guy so negative",
       "replies": [
         { "phrase": "Nice to meet you, Kiah!", "dialouge_num": 1, "quest": -1 },
         { "phrase": "Enjoy the city!", "dialouge_num": -1, "quest": -1 }
@@ -3403,9 +3403,17 @@
       "amount": 0
     },
     {
-      "phrase": "If you're hungry, try the local markets and cafes—fresh veggies and fruit everywhere!",
+      "phrase": "If you're hungry, try the local markets and cafes—fresh veggies and fruit everywhere! I like to cook and I am really good at it !",
       "replies": [
-        { "phrase": "Thanks for the tip!", "dialouge_num": -1, "quest": -1 }
+        { "phrase": "Thanks for the tip!", "dialouge_num": 2, "quest": -1 }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+       {
+      "phrase": "I begged to be apart of this game but am too lazy and unloving to play it",
+      "replies": [
+        { "phrase": "Thanks for the tip again!", "dialouge_num": -1, "quest": -1 }
       ],
       "hand_num": -1,
       "amount": 0

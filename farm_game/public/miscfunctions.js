@@ -93,6 +93,394 @@ function hasGameSave(){
     }
 }
 
+// Backfill Kiah into older Downtown saves that were created before she was added to the map.
+function ensureKiahInLegacyDowntownSave() {
+    if (!levels || !levels.length) {
+        return false;
+    }
+
+    let downtown = null;
+    for (let y = 0; y < levels.length; y++) {
+        for (let x = 0; x < levels[y].length; x++) {
+            if (levels[y][x] && levels[y][x].name === 'The Big City : Downtown') {
+                downtown = levels[y][x];
+                break;
+            }
+        }
+        if (downtown) {
+            break;
+        }
+    }
+
+    if (!downtown || !downtown.map) {
+        return false;
+    }
+
+    for (let y = 0; y < downtown.map.length; y++) {
+        for (let x = 0; x < downtown.map[y].length; x++) {
+            if (downtown.map[y][x] && downtown.map[y][x].name === 'Kiah') {
+                return true;
+            }
+        }
+    }
+
+    const preferredSpots = [
+        { x: 13, y: 14 },
+        { x: 9, y: 14 },
+        { x: 17, y: 11 },
+        { x: 13, y: 8 }
+    ];
+
+    let spawnSpot = preferredSpots.find(({ x, y }) => {
+        const tile = downtown.map?.[y]?.[x];
+        return tile == null || tile === 0 || (tile.class === 'Tile' && tile.name === 'concrete');
+    });
+
+    if (!spawnSpot) {
+        for (let y = 0; y < downtown.map.length; y++) {
+            for (let x = 0; x < downtown.map[y].length; x++) {
+                const tile = downtown.map[y][x];
+                if (tile && tile.class === 'Tile' && tile.name === 'concrete') {
+                    spawnSpot = { x, y };
+                    break;
+                }
+            }
+            if (spawnSpot) {
+                break;
+            }
+        }
+    }
+
+    if (!spawnSpot) {
+        console.warn('Unable to place Kiah in Downtown: no open concrete tile found');
+        return false;
+    }
+
+    const kiahTileNum = tile_name_to_num('Kiah');
+    if (!kiahTileNum) {
+        console.warn('Unable to place Kiah in Downtown: tile definition not found');
+        return false;
+    }
+
+    downtown.map[spawnSpot.y][spawnSpot.x] = new_tile_from_num(kiahTileNum, spawnSpot.x * tileSize, spawnSpot.y * tileSize);
+    return true;
+}
+
+let saveTransferStatus = {
+    message: '',
+    isError: false
+};
+
+let saveTransferMode = null;
+
+function setSaveTransferStatus(message = '', isError = false) {
+    saveTransferStatus.message = message;
+    saveTransferStatus.isError = isError;
+
+    const statusNodes = document.querySelectorAll('.save-transfer-status');
+    statusNodes.forEach((node) => {
+        node.textContent = message;
+        node.classList.toggle('error', !!message && isError);
+        node.classList.toggle('success', !!message && !isError);
+    });
+}
+
+function hasManagedSaveData() {
+    try {
+        return hasGameSave() || localData.get('Options') != null || localData.get('Controls') != null;
+    } catch (err) {
+        console.warn('Save management detection failed, assuming no managed data', err);
+        return false;
+    }
+}
+
+function refreshSaveTransferButtons() {
+    const canCopy = hasManagedSaveData();
+    const copyButtons = document.querySelectorAll('[data-save-copy-button="true"]');
+    copyButtons.forEach((button) => {
+        button.disabled = !canCopy;
+        button.title = canCopy ? 'Copy the current save data to your clipboard.' : 'No save data is available to copy yet.';
+    });
+}
+
+function getSavedLevelsForExport() {
+    const savedLevels = {};
+    for (let y = 0; y < levels.length; y++) {
+        for (let x = 0; x < levels[y].length; x++) {
+            const level = levels[y][x];
+            if (level == 0 || level == undefined) {
+                continue;
+            }
+
+            const storedLevel = localData.get(level.name);
+            if (storedLevel != null) {
+                savedLevels[level.name] = storedLevel;
+            }
+        }
+    }
+    return savedLevels;
+}
+
+function buildSaveExportPayload() {
+    try {
+        if (typeof saveOptions === 'function' && typeof musicSlider !== 'undefined' && typeof fxSlider !== 'undefined' && musicSlider && fxSlider) {
+            saveOptions();
+        }
+    } catch (err) {
+        console.warn('Failed to persist options before copying save data:', err);
+    }
+
+    const payload = {
+        format: 'cloudy-meadows-save',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: {}
+    };
+
+    const rootKeys = ['player', 'Day_curLvl_Dif', 'extralvlStuff', 'Options', 'Controls'];
+    for (let i = 0; i < rootKeys.length; i++) {
+        const key = rootKeys[i];
+        const value = localData.get(key);
+        if (value != null) {
+            payload.data[key] = value;
+        }
+    }
+
+    const savedLevels = getSavedLevelsForExport();
+    if (Object.keys(savedLevels).length > 0) {
+        payload.data.levels = savedLevels;
+    }
+
+    if (Object.keys(payload.data).length === 0) {
+        throw new Error('No save data found to export.');
+    }
+
+    return payload;
+}
+
+function getSerializedSaveData() {
+    return JSON.stringify(buildSaveExportPayload(), null, 2);
+}
+
+function showSaveTransferEditor(mode, value = '') {
+    const editor = document.getElementById('save-transfer-editor');
+    const editorTitle = document.getElementById('save-transfer-editor-title');
+    const textarea = document.getElementById('save-transfer-textarea');
+    const copyBtn = document.getElementById('save-transfer-copy-btn');
+    const importBtn = document.getElementById('save-transfer-import-btn');
+    const fileBtn = document.getElementById('save-transfer-file-btn');
+    const cancelBtn = document.getElementById('save-transfer-cancel-btn');
+
+    if (!editor || !editorTitle || !textarea || !copyBtn || !importBtn || !fileBtn || !cancelBtn) {
+        return;
+    }
+
+    saveTransferMode = mode;
+    editor.style.display = 'flex';
+    textarea.value = value;
+    textarea.readOnly = mode === 'copy';
+    editorTitle.textContent = mode === 'copy' ? 'Copy Save Data' : 'Import Save Data';
+    copyBtn.style.display = mode === 'copy' ? 'inline-flex' : 'none';
+    importBtn.style.display = mode === 'import' ? 'inline-flex' : 'none';
+    fileBtn.style.display = mode === 'import' ? 'inline-flex' : 'none';
+    cancelBtn.textContent = mode === 'copy' ? 'Close' : 'Cancel';
+
+    requestAnimationFrame(() => {
+        textarea.focus();
+        if (mode === 'copy') {
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length);
+        }
+    });
+}
+
+function hideSaveTransferEditor(clearValue = true) {
+    const editor = document.getElementById('save-transfer-editor');
+    const textarea = document.getElementById('save-transfer-textarea');
+    if (editor) {
+        editor.style.display = 'none';
+    }
+    if (textarea && clearValue) {
+        textarea.value = '';
+    }
+    saveTransferMode = null;
+}
+
+async function tryCopySaveDataText(text) {
+    const textarea = document.getElementById('save-transfer-textarea');
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+
+    if (textarea) {
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        if (document.execCommand && document.execCommand('copy')) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+async function copySaveData() {
+    try {
+        const serializedData = getSerializedSaveData();
+        showSaveTransferEditor('copy', serializedData);
+        const copied = await tryCopySaveDataText(serializedData);
+        setSaveTransferStatus(copied ? 'Save data copied to clipboard.' : 'Copy was blocked. Use the text box to copy manually.');
+        refreshSaveTransferButtons();
+    } catch (err) {
+        const message = err?.message || 'Failed to copy save data.';
+        console.warn('Failed to copy save data:', err);
+        setSaveTransferStatus(message, true);
+        alert(message);
+    }
+}
+
+function normalizeImportedSavePayload(payload) {
+    const data = payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object'
+        ? payload.data
+        : payload;
+
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('Invalid save file.');
+    }
+
+    if (data.levels != null && (typeof data.levels !== 'object' || Array.isArray(data.levels))) {
+        throw new Error('Invalid save file: level data is malformed.');
+    }
+
+    const hasImportableData =
+        data.player != null ||
+        data.Day_curLvl_Dif != null ||
+        data.extralvlStuff != null ||
+        data.Options != null ||
+        data.Controls != null ||
+        (data.levels != null && Object.keys(data.levels).length > 0);
+
+    if (!hasImportableData) {
+        throw new Error('Save file does not contain any importable data.');
+    }
+
+    return data;
+}
+
+async function importSaveDataFromText(text) {
+    const parsed = JSON.parse(text.trim());
+    const data = normalizeImportedSavePayload(parsed);
+
+    localData.clear();
+
+    const rootKeys = ['player', 'Day_curLvl_Dif', 'extralvlStuff', 'Options', 'Controls'];
+    for (let i = 0; i < rootKeys.length; i++) {
+        const key = rootKeys[i];
+        if (data[key] != null) {
+            localData.set(key, data[key]);
+        }
+    }
+
+    if (data.levels != null) {
+        for (const levelName in data.levels) {
+            if (!Object.prototype.hasOwnProperty.call(data.levels, levelName)) {
+                continue;
+            }
+            const levelData = data.levels[levelName];
+            if (levelData != null) {
+                localData.set(levelName, levelData);
+            }
+        }
+    }
+
+    setSaveTransferStatus('Save imported. Reloading...');
+    refreshSaveTransferButtons();
+    alert('Save data imported. The game will reload now.');
+    window.location.reload();
+}
+
+function ensureSaveImportInput() {
+    let input = document.getElementById('save-import-input');
+    if (input) {
+        return input;
+    }
+
+    input = document.createElement('input');
+    input.id = 'save-import-input';
+    input.type = 'file';
+    input.accept = '.json,.txt,application/json,text/plain';
+    input.style.display = 'none';
+    input.addEventListener('change', async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        try {
+            const text = await file.text();
+            showSaveTransferEditor('import', text);
+            setSaveTransferStatus('File loaded. Click "Import Save Data" to continue.');
+        } catch (err) {
+            const message = err?.message || 'Failed to import save data.';
+            console.warn('Failed to import save data:', err);
+            setSaveTransferStatus(message, true);
+            refreshSaveTransferButtons();
+            alert(message);
+        } finally {
+            event.target.value = '';
+        }
+    });
+
+    document.body.appendChild(input);
+    return input;
+}
+
+function promptSaveImport() {
+    showSaveTransferEditor('import', '');
+    setSaveTransferStatus('Paste save data below or choose a file to import.');
+}
+
+function openSaveImportFilePicker() {
+    ensureSaveImportInput().click();
+}
+
+async function importSaveDataFromEditor() {
+    const textarea = document.getElementById('save-transfer-textarea');
+    const text = textarea ? textarea.value.trim() : '';
+
+    if (!text) {
+        setSaveTransferStatus('Paste save data or choose a file first.', true);
+        return;
+    }
+
+    if (!confirm('Importing save data will overwrite the current save and local settings. Continue?')) {
+        return;
+    }
+
+    try {
+        await importSaveDataFromText(text);
+    } catch (err) {
+        const message = err?.message || 'Failed to import save data.';
+        console.warn('Failed to import save data:', err);
+        setSaveTransferStatus(message, true);
+        refreshSaveTransferButtons();
+        alert(message);
+    }
+}
+
+function createSaveTransferStatusNode() {
+    const status = document.createElement('div');
+    status.className = 'save-transfer-status';
+    status.setAttribute('aria-live', 'polite');
+    status.textContent = saveTransferStatus.message;
+    if (saveTransferStatus.message) {
+        status.classList.add(saveTransferStatus.isError ? 'error' : 'success');
+    }
+    return status;
+}
+
 // Hide UI popups (goal and location) when not in gameplay
 function hideUIPopups() {
     const goalPopup = document.getElementById('current-goal-popup');
@@ -869,8 +1257,98 @@ function showTitleOptions(){
             controlsSection.appendChild(controlsContainer);
             optionsMenu.appendChild(controlsSection);
         }
-        
-  
+
+        const dataSection = document.createElement('div');
+        dataSection.className = 'options-section options-data-section';
+        const dataTitle = document.createElement('h3');
+        dataTitle.className = 'options-section-title';
+        dataTitle.textContent = 'Data Management';
+        dataSection.appendChild(dataTitle);
+        const dataDescription = document.createElement('p');
+        dataDescription.className = 'options-section-description';
+        dataDescription.textContent = 'Permanently remove saves and local settings.';
+        dataSection.appendChild(dataDescription);
+        const dataActions = document.createElement('div');
+        dataActions.className = 'options-button-group';
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'options-button';
+        copyBtn.textContent = 'Copy Save Data';
+        copyBtn.dataset.saveCopyButton = 'true';
+        copyBtn.addEventListener('click', copySaveData);
+        dataActions.appendChild(copyBtn);
+        const importBtn = document.createElement('button');
+        importBtn.className = 'options-button';
+        importBtn.textContent = 'Import Save Data';
+        importBtn.addEventListener('click', promptSaveImport);
+        dataActions.appendChild(importBtn);
+        const clearBtn = document.createElement('button');
+        clearBtn.id = 'clear-data-btn';
+        clearBtn.className = 'options-button options-button-danger';
+        clearBtn.textContent = 'Clear All Saved Data';
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all saved data and local settings? This cannot be undone.')) {
+                clear_anim = true;
+                try {
+                    localData.clear();
+                    console.log('Data cleared from IndexedDB');
+                    setTimeout(() => {
+                        console.log('Reloading window...');
+                        window.location.reload();
+                    }, 1500);
+                } catch (e) {
+                    console.warn('Failed to clear data:', e);
+                    window.location.reload();
+                }
+            }
+        });
+        dataActions.appendChild(clearBtn);
+        dataSection.appendChild(dataActions);
+        dataSection.appendChild(createSaveTransferStatusNode());
+        const dataEditor = document.createElement('div');
+        dataEditor.id = 'save-transfer-editor';
+        dataEditor.className = 'save-transfer-editor';
+        dataEditor.style.display = 'none';
+        const dataEditorTitle = document.createElement('div');
+        dataEditorTitle.id = 'save-transfer-editor-title';
+        dataEditorTitle.className = 'save-transfer-editor-title';
+        dataEditor.textContent = '';
+        dataEditor.appendChild(dataEditorTitle);
+        const dataTextarea = document.createElement('textarea');
+        dataTextarea.id = 'save-transfer-textarea';
+        dataTextarea.className = 'save-transfer-textarea';
+        dataTextarea.spellcheck = false;
+        dataTextarea.placeholder = 'Paste save data here or choose a file to import.';
+        dataEditor.appendChild(dataTextarea);
+        const dataEditorActions = document.createElement('div');
+        dataEditorActions.className = 'save-transfer-actions';
+        const copyAgainBtn = document.createElement('button');
+        copyAgainBtn.id = 'save-transfer-copy-btn';
+        copyAgainBtn.className = 'options-button';
+        copyAgainBtn.textContent = 'Copy Again';
+        copyAgainBtn.addEventListener('click', copySaveData);
+        dataEditorActions.appendChild(copyAgainBtn);
+        const importNowBtn = document.createElement('button');
+        importNowBtn.id = 'save-transfer-import-btn';
+        importNowBtn.className = 'options-button';
+        importNowBtn.textContent = 'Import Save Data';
+        importNowBtn.addEventListener('click', importSaveDataFromEditor);
+        dataEditorActions.appendChild(importNowBtn);
+        const chooseFileBtn = document.createElement('button');
+        chooseFileBtn.id = 'save-transfer-file-btn';
+        chooseFileBtn.className = 'options-button';
+        chooseFileBtn.textContent = 'Choose File';
+        chooseFileBtn.addEventListener('click', openSaveImportFilePicker);
+        dataEditorActions.appendChild(chooseFileBtn);
+        const cancelTransferBtn = document.createElement('button');
+        cancelTransferBtn.id = 'save-transfer-cancel-btn';
+        cancelTransferBtn.className = 'options-button';
+        cancelTransferBtn.textContent = 'Cancel';
+        cancelTransferBtn.addEventListener('click', () => hideSaveTransferEditor());
+        dataEditorActions.appendChild(cancelTransferBtn);
+        dataEditor.appendChild(dataEditorActions);
+        dataSection.appendChild(dataEditor);
+        optionsMenu.appendChild(dataSection);
+
         // Buttons section
         const buttonGroup = document.createElement('div');
         buttonGroup.className = 'options-button-group';
@@ -882,30 +1360,6 @@ function showTitleOptions(){
             resetControls();
         });
         buttonGroup.appendChild(resetBtn);
-        const clearBtn = document.createElement('button');
-        clearBtn.id = 'clear-data-btn';
-        clearBtn.className = 'options-button options-button-danger';
-        clearBtn.textContent = 'Clear Save';
-        clearBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to clear all data? This cannot be undone!')) {
-                clear_anim = true;
-                try {
-                    // Clear the IndexedDB
-                    localData.clear();
-                    console.log('Data cleared from IndexedDB');
-                    
-                    // After a brief delay to show animation, reload the window
-                    setTimeout(() => {
-                        console.log('Reloading window...');
-                        window.location.reload();
-                    }, 1500); // Let the animation finish
-                } catch (e) {
-                    console.warn('Failed to clear data:', e);
-                    window.location.reload(); // Reload anyway to reset state
-                }
-            }
-        });
-        buttonGroup.appendChild(clearBtn);
 
         optionsMenu.appendChild(buttonGroup);
         
@@ -938,6 +1392,7 @@ function showTitleOptions(){
         renderControlButtons(controlsContainer);
     }
     
+    refreshSaveTransferButtons();
     optionsMenu.style.display = 'flex';
     updateCanvasPointerEvents();
 }
@@ -945,6 +1400,7 @@ function showTitleOptions(){
 function hideTitleOptions(){
     const optionsMenu = document.getElementById('options-menu');
     if (optionsMenu) optionsMenu.style.display = 'none';
+    hideSaveTransferEditor();
     updateCanvasPointerEvents();
 }
 
@@ -966,8 +1422,62 @@ function ensureConfigModal() {
     title.textContent = 'Configure Game Rules';
     modal.appendChild(title);
 
-    const rows = [];
-    function addSliderRow(labelText, id, min = 0, max = 100, step = 1) {
+    const tabBar = document.createElement('div');
+    tabBar.className = 'config-tab-bar';
+    modal.appendChild(tabBar);
+
+    const panelWrap = document.createElement('div');
+    panelWrap.className = 'config-tab-panels';
+    modal.appendChild(panelWrap);
+
+    function createTabPanel(tabId, label, helpText) {
+        const tabBtn = document.createElement('button');
+        tabBtn.type = 'button';
+        tabBtn.className = 'config-tab';
+        tabBtn.dataset.tab = tabId;
+        tabBtn.textContent = label;
+        tabBtn.addEventListener('click', () => {
+            setActiveConfigTab(tabId);
+        });
+        tabBar.appendChild(tabBtn);
+
+        const panel = document.createElement('div');
+        panel.className = 'config-panel';
+        panel.dataset.tab = tabId;
+        panelWrap.appendChild(panel);
+
+        if (helpText) {
+            const help = document.createElement('div');
+            help.className = 'config-panel-help';
+            help.textContent = helpText;
+            panel.appendChild(help);
+        }
+        return panel;
+    }
+
+    function createSection(container, titleText, helpText) {
+        const section = document.createElement('section');
+        section.className = 'config-section';
+        container.appendChild(section);
+
+        if (titleText) {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'config-subtitle';
+            titleEl.textContent = titleText;
+            section.appendChild(titleEl);
+        }
+
+        if (helpText) {
+            const helpEl = document.createElement('div');
+            helpEl.className = 'config-help';
+            helpEl.textContent = helpText;
+            section.appendChild(helpEl);
+        }
+
+        return section;
+    }
+
+    function addSliderRow(container, labelText, id, min = 0, max = 100, step = 1) {
         const row = document.createElement('div');
         row.className = 'config-row';
         const label = document.createElement('label');
@@ -992,10 +1502,10 @@ function ensureConfigModal() {
         row.appendChild(label);
         row.appendChild(input);
         row.appendChild(valueBadge);
-        modal.appendChild(row);
-        rows.push(input);
+        container.appendChild(row);
     }
-    function addNumberRow(labelText, id, placeholder) {
+
+    function addNumberRow(container, labelText, id, placeholder) {
         const row = document.createElement('div');
         row.className = 'config-row';
         const label = document.createElement('label');
@@ -1009,11 +1519,10 @@ function ensureConfigModal() {
         input.placeholder = placeholder || '';
         row.appendChild(label);
         row.appendChild(input);
-        modal.appendChild(row);
-        rows.push(input);
+        container.appendChild(row);
     }
 
-    function addToggleRow(labelText, id) {
+    function addToggleRow(container, labelText, id) {
         const row = document.createElement('div');
         row.className = 'config-row';
         const label = document.createElement('label');
@@ -1026,22 +1535,49 @@ function ensureConfigModal() {
         input.className = 'config-checkbox';
         row.appendChild(label);
         row.appendChild(input);
-        modal.appendChild(row);
-        rows.push(input);
+        container.appendChild(row);
     }
 
-    addNumberRow('Main Quest Coins', 'cfg-main-quest-coins', 'e.g. 10000');
-    addNumberRow('Main Quest Days', 'cfg-main-quest-days', 'e.g. 100');
-    addNumberRow('Starting Coins', 'cfg-starting-coins', 'e.g. 0');
-    addToggleRow('Money Loss', 'cfg-money-loss');
-    addToggleRow('Food Rot', 'cfg-food-rot');
-    addToggleRow('Perma Death', 'cfg-perma-death');
+    function addBulkToggleActions(container, grid) {
+        const actions = document.createElement('div');
+        actions.className = 'config-actions config-inline-actions';
+
+        const allOnBtn = document.createElement('button');
+        allOnBtn.type = 'button';
+        allOnBtn.className = 'config-btn';
+        allOnBtn.textContent = 'All On';
+        allOnBtn.addEventListener('click', () => {
+            Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
+        });
+
+        const allOffBtn = document.createElement('button');
+        allOffBtn.type = 'button';
+        allOffBtn.className = 'config-btn';
+        allOffBtn.textContent = 'All Off';
+        allOffBtn.addEventListener('click', () => {
+            Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
+        });
+
+        actions.appendChild(allOnBtn);
+        actions.appendChild(allOffBtn);
+        container.appendChild(actions);
+    }
+
+    const corePanel = createTabPanel('core', 'Core', 'Quest goals and survival rules live here.');
+    const worldPanel = createTabPanel('world', 'World', 'Weather and area access are grouped together.');
+    const peoplePanel = createTabPanel('people', 'People', 'NPC and critter availability can be managed separately.');
+    const itemsPanel = createTabPanel('items', 'Items', 'Item unlocks and price overrides are organized here.');
+
+    const coreSection = createSection(corePanel, 'Quest and Survival');
+    addNumberRow(coreSection, 'Main Quest Coins', 'cfg-main-quest-coins', 'e.g. 10000');
+    addNumberRow(coreSection, 'Main Quest Days', 'cfg-main-quest-days', 'e.g. 100');
+    addNumberRow(coreSection, 'Starting Coins', 'cfg-starting-coins', 'e.g. 0');
+    addToggleRow(coreSection, 'Money Loss', 'cfg-money-loss');
+    addToggleRow(coreSection, 'Food Rot', 'cfg-food-rot');
+    addToggleRow(coreSection, 'Perma Death', 'cfg-perma-death');
 
     // NPC toggle grid
-    const npcTitle = document.createElement('div');
-    npcTitle.className = 'config-subtitle';
-    npcTitle.textContent = 'NPCs (Enable/Disable)';
-    modal.appendChild(npcTitle);
+    const npcSection = createSection(peoplePanel, 'NPCs', 'Enable or disable individual characters for this run.');
     const npcGrid = document.createElement('div');
     npcGrid.id = 'cfg-npc-grid';
     npcGrid.className = 'config-grid config-sprite-grid';
@@ -1123,31 +1659,11 @@ function ensureConfigModal() {
         });
         npcGrid.appendChild(btn);
     });
-    modal.appendChild(npcGrid);
-    // Quick actions
-    const npcActions = document.createElement('div');
-    npcActions.className = 'config-actions';
-    const allOnBtn = document.createElement('button');
-    allOnBtn.className = 'config-btn';
-    allOnBtn.textContent = 'All On';
-    allOnBtn.addEventListener('click', () => {
-        Array.from(npcGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
-    });
-    const allOffBtn = document.createElement('button');
-    allOffBtn.className = 'config-btn';
-    allOffBtn.textContent = 'All Off';
-    allOffBtn.addEventListener('click', () => {
-        Array.from(npcGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
-    });
-    npcActions.appendChild(allOnBtn);
-    npcActions.appendChild(allOffBtn);
-    modal.appendChild(npcActions);
+    npcSection.appendChild(npcGrid);
+    addBulkToggleActions(npcSection, npcGrid);
 
     // Critters toggle grid (frogs, fireflies, bees, bunnies, etc.)
-    const crittersTitle = document.createElement('div');
-    crittersTitle.className = 'config-subtitle';
-    crittersTitle.textContent = 'Critters (Enable/Disable)';
-    modal.appendChild(crittersTitle);
+    const crittersSection = createSection(peoplePanel, 'Critters', 'Ambient creatures can be toggled without affecting NPCs.');
     const crittersGrid = document.createElement('div');
     crittersGrid.id = 'cfg-critters-grid';
     crittersGrid.className = 'config-grid config-sprite-grid';
@@ -1184,39 +1700,18 @@ function ensureConfigModal() {
         });
         crittersGrid.appendChild(btn);
     });
-    modal.appendChild(crittersGrid);
-    
-    // Critters quick actions
-    const crittersActions = document.createElement('div');
-    crittersActions.className = 'config-actions';
-    const crittersAllOnBtn = document.createElement('button');
-    crittersAllOnBtn.className = 'config-btn';
-    crittersAllOnBtn.textContent = 'All On';
-    crittersAllOnBtn.addEventListener('click', () => {
-        Array.from(crittersGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
-    });
-    const crittersAllOffBtn = document.createElement('button');
-    crittersAllOffBtn.className = 'config-btn';
-    crittersAllOffBtn.textContent = 'All Off';
-    crittersAllOffBtn.addEventListener('click', () => {
-        Array.from(crittersGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
-    });
-    crittersActions.appendChild(crittersAllOnBtn);
-    crittersActions.appendChild(crittersAllOffBtn);
-    modal.appendChild(crittersActions);
+    crittersSection.appendChild(crittersGrid);
+    addBulkToggleActions(crittersSection, crittersGrid);
 
     // Weather rarity sliders (weights; higher = more likely)
-    const weatherTitle = document.createElement('div');
-    weatherTitle.className = 'config-subtitle';
-    weatherTitle.textContent = 'Weather Rarity (Weights)';
-    modal.appendChild(weatherTitle);
-    addSliderRow('Partly Cloudy', 'cfg-weather-partly', 0, 100, 1);
-    addSliderRow('Overcast', 'cfg-weather-overcast', 0, 100, 1);
-    addSliderRow('Fog', 'cfg-weather-fog', 0, 100, 1);
-    addSliderRow('Sunshower', 'cfg-weather-sunshower', 0, 100, 1);
-    addSliderRow('Rain', 'cfg-weather-rain', 0, 100, 1);
-    addSliderRow('Thunderstorm', 'cfg-weather-thunderstorm', 0, 100, 1);
-    addSliderRow('Frog Rain', 'cfg-weather-frog', 0, 100, 1);
+    const weatherSection = createSection(worldPanel, 'Weather Rarity', 'Non-clear weather sliders are balanced automatically against Clear.');
+    addSliderRow(weatherSection, 'Partly Cloudy', 'cfg-weather-partly', 0, 100, 1);
+    addSliderRow(weatherSection, 'Overcast', 'cfg-weather-overcast', 0, 100, 1);
+    addSliderRow(weatherSection, 'Fog', 'cfg-weather-fog', 0, 100, 1);
+    addSliderRow(weatherSection, 'Sunshower', 'cfg-weather-sunshower', 0, 100, 1);
+    addSliderRow(weatherSection, 'Rain', 'cfg-weather-rain', 0, 100, 1);
+    addSliderRow(weatherSection, 'Thunderstorm', 'cfg-weather-thunderstorm', 0, 100, 1);
+    addSliderRow(weatherSection, 'Frog Rain', 'cfg-weather-frog', 0, 100, 1);
 
     // Total indicator (always kept at 100%)
     const totalRow = document.createElement('div');
@@ -1229,13 +1724,10 @@ function ensureConfigModal() {
     totalBadge.textContent = 'Clear: 100%';
     totalRow.appendChild(totalSpacer);
     totalRow.appendChild(totalBadge);
-    modal.appendChild(totalRow);
+    weatherSection.appendChild(totalRow);
 
     // Areas/Levels toggle grid
-    const areasTitle = document.createElement('div');
-    areasTitle.className = 'config-subtitle';
-    areasTitle.textContent = 'Areas (Enable/Disable)';
-    modal.appendChild(areasTitle);
+    const areasSection = createSection(worldPanel, 'Areas', 'Disable large regions if you want a narrower world.');
     const areasGrid = document.createElement('div');
     areasGrid.id = 'cfg-areas-grid';
     areasGrid.className = 'config-grid';
@@ -1258,51 +1750,11 @@ function ensureConfigModal() {
         });
         areasGrid.appendChild(btn);
     });
-    modal.appendChild(areasGrid);
-    // Area quick actions
-    const areasActions = document.createElement('div');
-    areasActions.className = 'config-actions';
-    const areasAllOnBtn = document.createElement('button');
-    areasAllOnBtn.className = 'config-btn';
-    areasAllOnBtn.textContent = 'All On';
-    areasAllOnBtn.addEventListener('click', () => {
-        Array.from(areasGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
-    });
-    const areasAllOffBtn = document.createElement('button');
-    areasAllOffBtn.className = 'config-btn';
-    areasAllOffBtn.textContent = 'All Off';
-    areasAllOffBtn.addEventListener('click', () => {
-        Array.from(areasGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
-    });
-    areasActions.appendChild(areasAllOnBtn);
-    areasActions.appendChild(areasAllOffBtn);
-    modal.appendChild(areasActions);
-
-    // ========== MORE OPTIONS (Expandable) ==========
-    const moreBtn = document.createElement('button');
-    moreBtn.className = 'config-btn config-more-btn';
-    moreBtn.textContent = '▶ More Options';
-    moreBtn.style.marginTop = '10px';
-    moreBtn.style.width = '100%';
-    modal.appendChild(moreBtn);
-
-    const moreSection = document.createElement('div');
-    moreSection.id = 'cfg-more-section';
-    moreSection.className = 'config-more-section';
-    moreSection.style.display = 'none';
-    modal.appendChild(moreSection);
-
-    moreBtn.addEventListener('click', () => {
-        const isHidden = moreSection.style.display === 'none';
-        moreSection.style.display = isHidden ? 'block' : 'none';
-        moreBtn.textContent = isHidden ? '▼ More Options' : '▶ More Options';
-    });
+    areasSection.appendChild(areasGrid);
+    addBulkToggleActions(areasSection, areasGrid);
 
     // Items toggle grid with individual prices
-    const itemsTitle = document.createElement('div');
-    itemsTitle.className = 'config-subtitle';
-    itemsTitle.textContent = 'Items (Enable/Disable)';
-    moreSection.appendChild(itemsTitle);
+    const itemsSection = createSection(itemsPanel, 'Items', 'Toggle individual items and override any base shop price.');
     const itemsGrid = document.createElement('div');
     itemsGrid.id = 'cfg-items-grid';
     itemsGrid.className = 'config-grid config-sprite-grid';
@@ -1426,41 +1878,28 @@ function ensureConfigModal() {
         
         itemsGrid.appendChild(itemRow);
     });
-    moreSection.appendChild(itemsGrid);
-    // Items quick actions
-    const itemsActions = document.createElement('div');
-    itemsActions.className = 'config-actions';
-    const itemsAllOnBtn = document.createElement('button');
-    itemsAllOnBtn.className = 'config-btn';
-    itemsAllOnBtn.textContent = 'All On';
-    itemsAllOnBtn.addEventListener('click', () => {
-        Array.from(itemsGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
-    });
-    const itemsAllOffBtn = document.createElement('button');
-    itemsAllOffBtn.className = 'config-btn';
-    itemsAllOffBtn.textContent = 'All Off';
-    itemsAllOffBtn.addEventListener('click', () => {
-        Array.from(itemsGrid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
-    });
-    itemsActions.appendChild(itemsAllOnBtn);
-    itemsActions.appendChild(itemsAllOffBtn);
-    moreSection.appendChild(itemsActions);
+    itemsSection.appendChild(itemsGrid);
+    addBulkToggleActions(itemsSection, itemsGrid);
 
     const actions = document.createElement('div');
     actions.className = 'config-actions';
     const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
     saveBtn.className = 'config-btn';
     saveBtn.textContent = 'Save';
     saveBtn.addEventListener('click', () => {
         saveConfigModal();
     });
     const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
     cancelBtn.className = 'config-btn';
     cancelBtn.textContent = 'Cancel';
     cancelBtn.addEventListener('click', hideConfigModal);
     actions.appendChild(cancelBtn);
     actions.appendChild(saveBtn);
     modal.appendChild(actions);
+
+    setActiveConfigTab('core');
 
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) hideConfigModal();
@@ -1469,8 +1908,26 @@ function ensureConfigModal() {
     return overlay;
 }
 
+function setActiveConfigTab(tabId) {
+    const overlay = document.getElementById('config-overlay');
+    if (!overlay) return;
+
+    overlay.dataset.activeTab = tabId;
+
+    Array.from(overlay.querySelectorAll('.config-tab')).forEach(tab => {
+        const isActive = tab.dataset.tab === tabId;
+        tab.classList.toggle('active', isActive);
+        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    Array.from(overlay.querySelectorAll('.config-panel')).forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.tab === tabId);
+    });
+}
+
 function showConfigModal() {
     const overlay = ensureConfigModal();
+    setActiveConfigTab('core');
     // Populate fields from current rules or defaults
     const rules = window.customRules || {};
     document.getElementById('cfg-main-quest-coins').value = (rules.mainQuestCoins ?? 10000);
@@ -2153,7 +2610,6 @@ function ensurePauseMenuContainer() {
         renderControlButtons(controlsSection);
     }
 
-    
     //back button
     const backBtn = document.createElement('button');
     backBtn.id = 'pause-back-btn';
@@ -2782,16 +3238,18 @@ function saveAll(){
     // 1. Prepare all levels and entities (clear circular references and non-serializable objects)
     for(let i = 0; i < levels.length; i++){
         for(let j = 0; j < levels[i].length; j++){
-            if(levels[i][j] != 0 && levels[i][j] != undefined){
+            const level = levels[i][j];
+            if(level && level !== 0){
                 // Prepare the level itself
-                if(levels[i][j].getReadyForSave){
-                    levels[i][j].getReadyForSave();
+                if(typeof level.getReadyForSave === 'function'){
+                    level.getReadyForSave();
                 }
                 // Prepare all entities in the level
-                for(let y = 0; y < levels[i][j].map.length; y++){
-                    for(let x = 0; x < levels[i][j].map[y].length; x++){
-                        if (levels[i][j].map[y][x] != 0){
-                            levels[i][j].map[y][x].getReadyForSave();
+                for(let y = 0; y < level.map.length; y++){
+                    for(let x = 0; x < level.map[y].length; x++){
+                        const tile = level.map[y][x];
+                        if (tile && tile !== 0 && typeof tile.getReadyForSave === 'function'){
+                            tile.getReadyForSave();
                         }
                     }
                 }
@@ -2800,7 +3258,9 @@ function saveAll(){
     }
     
     // 2. Prepare player (who might be touching one of those entities)
-    player.getReadyForSave();
+    if (player && typeof player.getReadyForSave === 'function') {
+        player.getReadyForSave();
+    }
 
     // 3. Now save everything
     if(player.talking == 0){
@@ -2943,6 +3403,8 @@ function loadAll(){
         }
     }
     
+    ensureKiahInLegacyDowntownSave();
+
     // Apply NPC/Area/Price/Critter rules AFTER all levels have loaded from storage
     applyNPCFilterRules();
     applyCritterFilterRules();
@@ -2961,16 +3423,22 @@ function loadLevel(level, lvlx = 0, lvly = 0){
         let fore = JSON.parse(JSON.stringify(newLvl.fore));
         for(let i = 0; i < fore.length; i++){
             for(let j = 0; j < fore[i].length; j++){
-                if(fore[i][j] != 0){
-                    fore[i][j] = fore[i][j].type;
+                const savedFore = fore[i][j];
+                if(savedFore && savedFore !== 0 && typeof savedFore.type !== 'undefined'){
+                    fore[i][j] = savedFore.type;
+                } else if(savedFore == null) {
+                    fore[i][j] = 0;
                 }
             }
         }
         let map = JSON.parse(JSON.stringify(newLvl.map));
         for(let i = 0; i < map.length; i++){
             for(let j = 0; j < map[i].length; j++){
-                if(map[i][j] != 0){
-                    map[i][j] = tile_name_to_num(map[i][j].name);
+                const savedTile = map[i][j];
+                if(savedTile && savedTile !== 0 && savedTile.name){
+                    map[i][j] = tile_name_to_num(savedTile.name) || 0;
+                } else if(savedTile == null) {
+                    map[i][j] = 0;
                 }
             }
         }
@@ -2978,7 +3446,11 @@ function loadLevel(level, lvlx = 0, lvly = 0){
         level = levels[lvly][lvlx];
         for(let i = 0; i < levels[lvly][lvlx].fore.length; i++){
             for(let j = 0; j < levels[lvly][lvlx].fore[i].length; j++){
-                levels[lvly][lvlx].fore[i][j].variant = newLvl.fore[i][j].variant;
+                const currentFore = levels[lvly][lvlx].fore[i][j];
+                const savedFore = newLvl.fore?.[i]?.[j];
+                if(currentFore && savedFore && savedFore !== 0 && typeof savedFore.variant !== 'undefined'){
+                    currentFore.variant = savedFore.variant;
+                }
             }
         }
     }else{
@@ -2989,22 +3461,25 @@ function loadLevel(level, lvlx = 0, lvly = 0){
         level.ladybugs = newLvl.ladybugs;
         for(let i = 0; i < newLvl.map.length; i++){
             for(let j = 0; j < newLvl.map[i].length; j++){
-                if(newLvl.map[i][j] != 0 && level.map[i][j] != 0){
-                    const tileNum = tile_name_to_num(newLvl.map[i][j].name);
+                const savedTile = newLvl.map[i][j];
+                const currentTile = level.map?.[i]?.[j];
+                if(savedTile && savedTile !== 0 && currentTile && currentTile !== 0 && savedTile.name){
+                    const tileNum = tile_name_to_num(savedTile.name);
                     if(tileNum !== undefined) {
-                        level.map[i][j] = new_tile_from_num(tileNum, newLvl.map[i][j].pos.x, newLvl.map[i][j].pos.y);
-                        level.map[i][j].load(newLvl.map[i][j]);
+                        const savedPos = savedTile.pos || currentTile.pos;
+                        level.map[i][j] = new_tile_from_num(tileNum, savedPos.x, savedPos.y);
+                        level.map[i][j].load(savedTile);
                     } else {
                         // Tile name not found, skip loading and keep original
-                        console.warn('Saved tile "' + newLvl.map[i][j].name + '" not found, keeping original tile');
+                        console.warn('Saved tile "' + savedTile.name + '" not found, keeping original tile');
                     }
-                    if (newLvl.map[i][j].name == 'lamppost') {
+                    if (savedTile.name == 'lamppost') {
                         append(level.lights, new Light(level.map[i][j].pos.x, level.map[i][j].pos.y, (tileSize * 6), 255, 255, 255));
                     }
-                    if (newLvl.map[i][j].name == 'satilite') {
+                    if (savedTile.name == 'satilite') {
                         append(level.lights, new Light(level.map[i][j].pos.x, level.map[i][j].pos.y, (tileSize * 1)+5, 255, 255, 0));
                     }
-                    if (newLvl.map[i][j].name == 'LightBug'){
+                    if (savedTile.name == 'LightBug'){
                         let light = new Light(level.map[i][j].pos.x, level.map[i][j].pos.y, (tileSize * 1)-5, 150, 255, 0);
                         append(level.lights, light);
                         level.map[i][j].light = light;

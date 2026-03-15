@@ -697,6 +697,18 @@ button {
     border-color: rgb(200, 150, 100);
 }
 
+.pause-button:disabled,
+.options-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.pause-button:disabled:hover,
+.options-button:disabled:hover {
+    background-color: rgb(100, 70, 40);
+    border-color: rgb(149, 108, 65);
+}
+
 /* Pause slider labels */
 .pause-slider-label {
     font-family: pixelFont, monospace;
@@ -768,6 +780,36 @@ button {
 
 .pause-button:active {
     transform: translateY(2px);
+}
+
+.save-transfer-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+.save-transfer-actions .pause-button,
+.save-transfer-actions .options-button {
+    margin-top: 0;
+}
+
+.save-transfer-status {
+    min-height: 16px;
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgb(255, 255, 200);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.save-transfer-status.success {
+    color: rgb(210, 255, 210);
+}
+
+.save-transfer-status.error {
+    color: rgb(255, 200, 200);
 }
 
 /* Main Menu Styles */
@@ -1132,6 +1174,15 @@ button {
     justify-content: center;
 }
 
+.options-section-description {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgb(255, 245, 210);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+    line-height: 1.5;
+}
+
 .options-button {
     font-family: pixelFont, monospace;
     font-size: 16px;
@@ -1162,6 +1213,42 @@ button {
 .options-button-danger:hover {
     background-color: rgb(180, 60, 60);
     border-color: rgb(230, 100, 100);
+}
+
+.save-transfer-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 2px solid rgba(149, 108, 65, 0.75);
+}
+
+.save-transfer-editor-title {
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    color: rgb(255, 255, 200);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.save-transfer-textarea {
+    width: 100%;
+    min-height: 170px;
+    resize: vertical;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 3px solid rgb(149, 108, 65);
+    border-radius: 4px;
+    background-color: rgba(60, 35, 15, 0.9);
+    color: rgb(255, 255, 255);
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.save-transfer-textarea::placeholder {
+    color: rgba(255, 255, 255, 0.65);
 }
 
 .options-back-button {
@@ -1228,6 +1315,74 @@ button {
     margin: 0 0 6px 0;
 }
 
+.config-tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.config-tab {
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    background: rgba(65,43,22,0.55);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 999px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
+}
+
+.config-tab:hover {
+    background: rgba(85,56,28,0.8);
+    border-color: rgba(255,255,255,0.3);
+}
+
+.config-tab:active {
+    transform: translateY(1px);
+}
+
+.config-tab.active {
+    color: #fff;
+    background: rgba(31,122,31,0.9);
+    border-color: rgba(255,255,150,0.55);
+}
+
+.config-tab-panels {
+    display: flex;
+    flex-direction: column;
+}
+
+.config-panel {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.config-panel.active {
+    display: flex;
+}
+
+.config-panel-help {
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+    padding: 10px 12px;
+    background: rgba(55,32,16,0.35);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+}
+
+.config-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(75,45,22,0.3);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
 .config-row {
     display: flex;
     align-items: center;
@@ -1268,6 +1423,10 @@ button {
     gap: 10px;
     justify-content: flex-end;
     margin-top: 6px;
+}
+
+.config-inline-actions {
+    margin-top: 0;
 }
 
 .config-btn {
@@ -1435,20 +1594,6 @@ button {
     border-color: #4a90d9;
 }
 
-.config-more-btn {
-    background: rgba(100,100,150,0.4);
-    border: 2px solid rgba(100,100,150,0.6);
-}
-.config-more-btn:hover {
-    background: rgba(100,100,150,0.6);
-}
-
-.config-more-section {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255,255,255,0.2);
-}
-
 @media (max-width: 768px) {
     .config-overlay { padding: 10px; }
     .config-modal { 
@@ -1457,6 +1602,12 @@ button {
         gap: 10px;
     }
     .config-title { font-size: 18px; }
+    .config-tab-bar { gap: 6px; }
+    .config-tab {
+        flex: 1 1 calc(50% - 6px);
+        font-size: 12px;
+        padding: 8px 10px;
+    }
     .config-subtitle { font-size: 14px; }
     .config-label { font-size: 12px; }
     .config-input { font-size: 16px; padding: 6px 8px; }
