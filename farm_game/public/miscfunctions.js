@@ -917,9 +917,12 @@ function createTutorialDirectoryHero(tabConfig) {
     return hero;
 }
 
-function createTutorialDirectoryLayout(prompt) {
+function createTutorialDirectoryLayout(prompt, options = {}) {
     const directory = document.createElement('div');
     directory.className = 'tutorial-directory';
+    if (options.variant) {
+        directory.classList.add('tutorial-directory-' + options.variant);
+    }
 
     const nav = document.createElement('div');
     nav.className = 'tutorial-directory-tabs';
@@ -973,7 +976,7 @@ function createTutorialDirectoryLayout(prompt) {
         label.textContent = tabConfig.label;
         button.appendChild(label);
 
-        if (tabConfig.navHint) {
+        if (tabConfig.navHint && !options.hideNavHints) {
             const hint = document.createElement('span');
             hint.className = 'tutorial-directory-tab-hint';
             hint.textContent = tabConfig.navHint;
@@ -2291,24 +2294,70 @@ function showOptions(){
     showTitleOptions();
 }
 
+function setActiveTitleOptionsTab(tabId) {
+    const optionsMenu = document.getElementById('options-menu');
+    if (!optionsMenu) return;
+
+    optionsMenu.dataset.activeTab = tabId;
+
+    Array.from(optionsMenu.querySelectorAll('.options-tab')).forEach(tab => {
+        const isActive = tab.dataset.tab === tabId;
+        tab.classList.toggle('active', isActive);
+        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    Array.from(optionsMenu.querySelectorAll('.options-tab-panel')).forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.tab === tabId);
+    });
+}
+
 function showTitleOptions(){
     let optionsMenu = document.getElementById('options-menu');
     if (!optionsMenu) {
-        // Create structure once
         optionsMenu = document.createElement('div');
         optionsMenu.id = 'options-menu';
         optionsMenu.className = 'title-options-menu';
         document.body.appendChild(optionsMenu);
-        
+
         const title = document.createElement('h2');
         title.className = 'options-title';
         title.textContent = 'Options';
         optionsMenu.appendChild(title);
-        
-        // Audio section
+
+        const tabBar = document.createElement('div');
+        tabBar.className = 'options-tab-bar';
+        optionsMenu.appendChild(tabBar);
+
+        const panelWrap = document.createElement('div');
+        panelWrap.className = 'options-panel-wrap';
+        optionsMenu.appendChild(panelWrap);
+
+        const createOptionsPanel = (tabId, label) => {
+            const tab = document.createElement('button');
+            tab.type = 'button';
+            tab.className = 'options-tab';
+            tab.dataset.tab = tabId;
+            tab.textContent = label;
+            tab.addEventListener('click', () => {
+                setActiveTitleOptionsTab(tabId);
+            });
+            tabBar.appendChild(tab);
+
+            const panel = document.createElement('div');
+            panel.className = 'options-tab-panel';
+            panel.dataset.tab = tabId;
+            panelWrap.appendChild(panel);
+            return panel;
+        };
+
+        const audioPanel = createOptionsPanel('audio', 'Audio');
+        const controlsPanel = !isMobile ? createOptionsPanel('controls', 'Controls') : null;
+        const dataPanel = createOptionsPanel('data', 'Data');
+        const helpPanel = createOptionsPanel('help', 'Help');
+
         const audioSection = document.createElement('div');
         audioSection.className = 'options-section';
-        
+
         const musicRow = document.createElement('div');
         musicRow.className = 'slider-row';
         const musicIcon = document.createElement('img');
@@ -2332,7 +2381,7 @@ function showTitleOptions(){
         musicRow.appendChild(musicLabel);
         musicRow.appendChild(musicSlider);
         audioSection.appendChild(musicRow);
-        
+
         const fxRow = document.createElement('div');
         fxRow.className = 'slider-row';
         const fxIcon = document.createElement('img');
@@ -2356,22 +2405,35 @@ function showTitleOptions(){
         fxRow.appendChild(fxLabel);
         fxRow.appendChild(fxSlider);
         audioSection.appendChild(fxRow);
-        optionsMenu.appendChild(audioSection);
-        
-        // Controls section (hidden on mobile)
-        if (!isMobile) {
+        audioPanel.appendChild(audioSection);
+
+        if (controlsPanel) {
             const controlsSection = document.createElement('div');
             controlsSection.className = 'options-section options-controls-section';
             controlsSection.id = 'options-controls-section';
+
             const controlsTitle = document.createElement('h3');
             controlsTitle.className = 'options-section-title';
             controlsTitle.textContent = 'Controls';
             controlsSection.appendChild(controlsTitle);
+
             const controlsContainer = document.createElement('div');
             controlsContainer.id = 'title-controls-container';
             controlsContainer.className = 'title-controls-container';
             controlsSection.appendChild(controlsContainer);
-            optionsMenu.appendChild(controlsSection);
+            controlsPanel.appendChild(controlsSection);
+
+            const controlsActions = document.createElement('div');
+            controlsActions.className = 'options-button-group';
+            const resetBtn = document.createElement('button');
+            resetBtn.id = 'reset-controls-btn';
+            resetBtn.className = 'options-button';
+            resetBtn.textContent = 'Reset Controls';
+            resetBtn.addEventListener('click', () => {
+                resetControls();
+            });
+            controlsActions.appendChild(resetBtn);
+            controlsPanel.appendChild(controlsActions);
         }
 
         const dataSection = document.createElement('div');
@@ -2463,29 +2525,30 @@ function showTitleOptions(){
         dataEditorActions.appendChild(cancelTransferBtn);
         dataEditor.appendChild(dataEditorActions);
         dataSection.appendChild(dataEditor);
-        optionsMenu.appendChild(dataSection);
+        dataPanel.appendChild(dataSection);
 
-        // Buttons section
-        const buttonGroup = document.createElement('div');
-        buttonGroup.className = 'options-button-group';
+        const helpSection = document.createElement('div');
+        helpSection.className = 'options-section';
+        const helpTitle = document.createElement('h3');
+        helpTitle.className = 'options-section-title';
+        helpTitle.textContent = 'How to Play';
+        helpSection.appendChild(helpTitle);
+        const helpDescription = document.createElement('p');
+        helpDescription.className = 'options-section-description';
+        helpDescription.textContent = 'Open the tabbed gameplay guide with art, controls, and progression tips.';
+        helpSection.appendChild(helpDescription);
+        const helpActions = document.createElement('div');
+        helpActions.className = 'options-button-group';
         const tutorialBtn = document.createElement('button');
         tutorialBtn.className = 'options-button';
         tutorialBtn.textContent = 'How to Play';
         tutorialBtn.addEventListener('click', () => {
             showFullGameTutorial({ source: 'title-options' });
         });
-        buttonGroup.appendChild(tutorialBtn);
-        const resetBtn = document.createElement('button');
-        resetBtn.id = 'reset-controls-btn';
-        resetBtn.className = 'options-button';
-        resetBtn.textContent = 'Reset Controls';
-        resetBtn.addEventListener('click', () => {
-            resetControls();
-        });
-        buttonGroup.appendChild(resetBtn);
+        helpActions.appendChild(tutorialBtn);
+        helpSection.appendChild(helpActions);
+        helpPanel.appendChild(helpSection);
 
-        optionsMenu.appendChild(buttonGroup);
-        
         const backBtn = document.createElement('button');
         backBtn.id = 'back-btn';
         backBtn.className = 'options-back-button';
@@ -2495,26 +2558,28 @@ function showTitleOptions(){
             hideTitleOptions();
         });
         optionsMenu.appendChild(backBtn);
+
+        setActiveTitleOptionsTab('audio');
     }
-    
-    // Update sliders and controls content
+
     const musicSliderDOM = document.getElementById('music-slider-title');
     const fxSliderDOM = document.getElementById('fx-slider-title');
     const controlsContainer = document.getElementById('title-controls-container');
-    
+
     if (musicSliderDOM) {
         musicSliderDOM.value = musicSlider.value();
     }
     if (fxSliderDOM) {
         fxSliderDOM.value = fxSlider.value();
     }
-    
-    // Only render controls if the container is empty (first time or after reset)
-    if (controlsContainer && controlsContainer.children.length === 0) {
-        console.log('Rendering controls for first time in options');
+
+    if (controlsContainer) {
         renderControlButtons(controlsContainer);
     }
-    
+
+    const preferredTab = optionsMenu.dataset.activeTab || 'audio';
+    const availableTab = optionsMenu.querySelector('.options-tab[data-tab="' + preferredTab + '"]') ? preferredTab : 'audio';
+    setActiveTitleOptionsTab(availableTab);
     refreshSaveTransferButtons();
     optionsMenu.style.display = 'flex';
     updateCanvasPointerEvents();
@@ -3947,6 +4012,7 @@ function showPaused(){
     ensurePauseMenuContainer();
     const pauseMenu = document.getElementById('pause-menu');
     if (pauseMenu) {
+        const wasVisible = pauseMenu.style.display === 'flex';
         pauseMenu.style.display = 'flex';
         updateCanvasPointerEvents();
         
@@ -3974,6 +4040,19 @@ function showPaused(){
                 fxSlider.value(fxSliderDOM.value);
             };
         }
+
+        if (!wasVisible) {
+            const pauseControlsContainer = document.getElementById('pause-controls-container');
+            if (pauseControlsContainer) {
+                renderControlButtons(pauseControlsContainer);
+            }
+
+            renderPauseHelpTabContent();
+
+            const preferredTab = pauseMenu.dataset.activeTab || 'audio';
+            const availableTab = pauseMenu.querySelector('.pause-tab[data-tab="' + preferredTab + '"]') ? preferredTab : 'audio';
+            setActivePauseMenuTab(availableTab);
+        }
     }
 }
 
@@ -3983,6 +4062,53 @@ function hidePaused() {
         pauseMenu.style.display = 'none';
     }
     updateCanvasPointerEvents();
+}
+
+function setActivePauseMenuTab(tabId) {
+    const pauseMenu = document.getElementById('pause-menu');
+    if (!pauseMenu) return;
+
+    pauseMenu.dataset.activeTab = tabId;
+
+    Array.from(pauseMenu.querySelectorAll('.pause-tab')).forEach(tab => {
+        const isActive = tab.dataset.tab === tabId;
+        tab.classList.toggle('active', isActive);
+        tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    Array.from(pauseMenu.querySelectorAll('.pause-tab-panel')).forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.tab === tabId);
+    });
+
+    if (tabId === 'help') {
+        renderPauseHelpTabContent();
+    }
+}
+
+function renderPauseHelpTabContent() {
+    const helpHost = document.getElementById('pause-inline-tutorial');
+    if (!helpHost) return;
+
+    const helpPrompt = buildFullTutorialPrompt({ source: 'pause-menu-inline' });
+    const helpTitle = document.getElementById('pause-help-title');
+    const helpIntro = document.getElementById('pause-help-intro');
+
+    if (helpTitle) {
+        helpTitle.textContent = helpPrompt.title || 'How To Play';
+    }
+
+    if (helpIntro) {
+        if (helpPrompt.intro) {
+            helpIntro.textContent = helpPrompt.intro;
+            helpIntro.style.display = '';
+        } else {
+            helpIntro.textContent = '';
+            helpIntro.style.display = 'none';
+        }
+    }
+
+    helpHost.innerHTML = '';
+    helpHost.appendChild(createTutorialDirectoryLayout(helpPrompt, { variant: 'compact', hideNavHints: true }));
 }
 
 function ensurePauseMenuContainer() {
@@ -3997,12 +4123,45 @@ function ensurePauseMenuContainer() {
     title.className = 'pause-title';
     title.textContent = 'Paused';
     pauseMenu.appendChild(title);
-    
-    // Sliders section
+
+    const tabBar = document.createElement('div');
+    tabBar.className = 'options-tab-bar pause-tab-bar';
+    pauseMenu.appendChild(tabBar);
+
+    const panelWrap = document.createElement('div');
+    panelWrap.className = 'options-panel-wrap pause-panel-wrap';
+    pauseMenu.appendChild(panelWrap);
+
+    const createPausePanel = (tabId, label) => {
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = 'options-tab pause-tab';
+        tab.dataset.tab = tabId;
+        tab.textContent = label;
+        tab.addEventListener('click', () => {
+            setActivePauseMenuTab(tabId);
+        });
+        tabBar.appendChild(tab);
+
+        const panel = document.createElement('div');
+        panel.className = 'options-tab-panel pause-tab-panel';
+        panel.dataset.tab = tabId;
+        panelWrap.appendChild(panel);
+        return panel;
+    };
+
+    const audioPanel = createPausePanel('audio', 'Audio');
+    const controlsPanel = !isMobile ? createPausePanel('controls', 'Controls') : null;
+    const helpPanel = createPausePanel('help', 'Help');
+
     const sliderSection = document.createElement('div');
     sliderSection.className = 'pause-menu-section';
-    
-    // Music slider
+
+    const audioTitle = document.createElement('div');
+    audioTitle.className = 'pause-controls-title';
+    audioTitle.textContent = 'Audio';
+    sliderSection.appendChild(audioTitle);
+
     const musicRow = document.createElement('div');
     musicRow.className = 'pause-slider-row';
     const musicIcon = document.createElement('img');
@@ -4022,8 +4181,7 @@ function ensurePauseMenuContainer() {
     musicRow.appendChild(musicLabel);
     musicRow.appendChild(musicSliderDOM);
     sliderSection.appendChild(musicRow);
-    
-    // FX slider
+
     const fxRow = document.createElement('div');
     fxRow.className = 'pause-slider-row';
     const fxIcon = document.createElement('img');
@@ -4043,33 +4201,61 @@ function ensurePauseMenuContainer() {
     fxRow.appendChild(fxLabel);
     fxRow.appendChild(fxSliderDOM);
     sliderSection.appendChild(fxRow);
-    
-    pauseMenu.appendChild(sliderSection);
-    
-    // Controls section - only show on desktop (not mobile)
-    if (!isMobile) {
+
+    audioPanel.appendChild(sliderSection);
+
+    if (controlsPanel) {
         const controlsSection = document.createElement('div');
         controlsSection.className = 'pause-controls-section';
-        controlsSection.id = 'pause-controls-container';
+
         const controlsTitle = document.createElement('div');
         controlsTitle.className = 'pause-controls-title';
         controlsTitle.textContent = 'Controls';
         controlsSection.appendChild(controlsTitle);
-        
-        pauseMenu.appendChild(controlsSection);
-        
-        // Render control buttons once (only on desktop)
-        renderControlButtons(controlsSection);
+
+        const controlsContainer = document.createElement('div');
+        controlsContainer.id = 'pause-controls-container';
+        controlsContainer.className = 'pause-controls-list';
+        controlsSection.appendChild(controlsContainer);
+
+        const controlsActions = document.createElement('div');
+        controlsActions.className = 'pause-button-group';
+        const resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.className = 'pause-button';
+        resetBtn.textContent = 'Reset Controls';
+        resetBtn.addEventListener('click', () => {
+            resetControls();
+        });
+        controlsActions.appendChild(resetBtn);
+        controlsSection.appendChild(controlsActions);
+
+        controlsPanel.appendChild(controlsSection);
+        renderControlButtons(controlsContainer);
     }
 
-    const tutorialBtn = document.createElement('button');
-    tutorialBtn.id = 'pause-tutorial-btn';
-    tutorialBtn.className = 'pause-button';
-    tutorialBtn.textContent = 'How to Play';
-    tutorialBtn.addEventListener('click', () => {
-        showFullGameTutorial({ source: 'pause-menu' });
-    });
-    pauseMenu.appendChild(tutorialBtn);
+    const helpSection = document.createElement('div');
+    helpSection.className = 'pause-menu-section pause-help-section';
+
+    const helpTitle = document.createElement('div');
+    helpTitle.id = 'pause-help-title';
+    helpTitle.className = 'pause-controls-title';
+    helpTitle.textContent = 'How To Play';
+    helpSection.appendChild(helpTitle);
+
+    const helpDescription = document.createElement('p');
+    helpDescription.id = 'pause-help-intro';
+    helpDescription.className = 'pause-menu-label pause-help-intro';
+    helpSection.appendChild(helpDescription);
+
+    const helpContent = document.createElement('div');
+    helpContent.id = 'pause-inline-tutorial';
+    helpContent.className = 'pause-inline-tutorial';
+    helpSection.appendChild(helpContent);
+    helpPanel.appendChild(helpSection);
+
+    const actions = document.createElement('div');
+    actions.className = 'pause-actions';
 
     //back button
     const backBtn = document.createElement('button');
@@ -4080,7 +4266,7 @@ function ensurePauseMenuContainer() {
         paused = false;
         hidePaused();
     });
-    pauseMenu.appendChild(backBtn);
+    actions.appendChild(backBtn);
 
     // Quit button
     const quitBtn = document.createElement('button');
@@ -4098,7 +4284,11 @@ function ensurePauseMenuContainer() {
         clearButton.hide();
         saveAll();
     });
-    pauseMenu.appendChild(quitBtn);
+    actions.appendChild(quitBtn);
+    pauseMenu.appendChild(actions);
+
+    renderPauseHelpTabContent();
+    setActivePauseMenuTab('audio');
 }
 
 function showCredits(){

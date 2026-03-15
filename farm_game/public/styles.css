@@ -602,7 +602,16 @@ button {
     z-index: 2000;
     pointer-events: auto;
     min-width: 400px;
+    width: min(640px, 94vw);
+    max-width: 94vw;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+#pause-menu[data-active-tab="help"] {
+    width: min(920px, 95vw);
+    max-width: 95vw;
 }
 
 .pause-title {
@@ -629,6 +638,7 @@ button {
     color: rgb(255, 255, 255);
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
     text-align: center;
+    margin: 0;
 }
 
 .pause-slider-row {
@@ -716,6 +726,182 @@ button {
     color: rgb(255, 255, 255);
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
     min-width: 50px;
+}
+
+.pause-panel-wrap {
+    width: 100%;
+    max-width: 560px;
+}
+
+.pause-tab-panel .pause-menu-section,
+.pause-tab-panel .pause-controls-section {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.pause-controls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.pause-button-group,
+.pause-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    width: 100%;
+}
+
+.pause-button-group .pause-button,
+.pause-actions .pause-button {
+    margin-top: 0;
+}
+
+.pause-help-section {
+    align-items: stretch;
+}
+
+.pause-help-intro {
+    text-align: left;
+}
+
+.pause-inline-tutorial {
+    width: 100%;
+    max-height: min(62vh, 760px);
+    overflow-y: auto;
+    padding: 12px;
+    padding-right: 4px;
+    box-sizing: border-box;
+    background: rgba(34, 18, 8, 0.34);
+    border: 2px solid rgba(255, 238, 186, 0.12);
+    border-radius: 12px;
+}
+
+.pause-inline-tutorial .tutorial-directory {
+    min-height: 0;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact {
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tab {
+    flex: 1 1 132px;
+    min-width: 0;
+    padding: 10px 12px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tab-label {
+    font-size: 13px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tab-hint {
+    display: none;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-content {
+    gap: 10px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-hero {
+    grid-template-columns: minmax(0, 1fr) 120px;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 12px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-title {
+    font-size: 20px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-description {
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-chip {
+    font-size: 10px;
+    padding: 5px 8px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-hero-media {
+    min-height: 120px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-hero-image {
+    width: 88px;
+    height: 88px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-asset-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-asset-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 10px;
+    min-height: 0;
+    padding: 10px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-asset-media {
+    width: 52px;
+    height: 52px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-asset-image {
+    width: 40px;
+    height: 40px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-asset-title {
+    font-size: 12px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-asset-description {
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-sections {
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-section {
+    padding: 12px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-section-title {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-list {
+    gap: 6px;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.pause-tab-bar {
+    width: 100%;
+    max-width: 560px;
+}
+
+#pause-menu[data-active-tab="help"] .pause-tab-bar,
+#pause-menu[data-active-tab="help"] .pause-panel-wrap {
+    max-width: 100%;
 }
 
 /* Mobile info section for pause menu - hidden by default on desktop */
@@ -2943,6 +3129,87 @@ button {
     transform: translateY(2px);
 }
 
+.options-tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    width: min(560px, 100%);
+}
+
+.options-tab {
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(100, 70, 40, 0.72);
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.options-tab:hover {
+    background: rgba(130, 90, 50, 0.88);
+    border-color: rgba(255, 230, 170, 0.3);
+}
+
+.options-tab:active {
+    transform: translateY(1px);
+}
+
+.options-tab.active {
+    background: rgba(31, 122, 31, 0.94);
+    border-color: rgba(255, 255, 150, 0.5);
+}
+
+.options-panel-wrap {
+    width: min(560px, 100%);
+}
+
+.options-tab-panel {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.options-tab-panel.active {
+    display: flex;
+}
+
+.title-options-menu .options-section {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.options-tab-panel .options-button-group {
+    justify-content: flex-start;
+}
+
+@media (max-width: 768px) {
+    .options-tab-bar {
+        width: 100%;
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .options-tab {
+        flex: 0 0 auto;
+    }
+
+    .options-panel-wrap {
+        width: 100%;
+    }
+
+    .title-options-menu .options-section {
+        padding: 16px;
+    }
+}
+
 /* Credits Menu Styles */
 .credits-menu {
     position: fixed;
@@ -3755,6 +4022,15 @@ button {
     .pause-title {
         font-size: 22px;
     }
+
+    .pause-panel-wrap {
+        width: 100%;
+    }
+
+    #pause-menu[data-active-tab="help"] {
+        width: 95vw;
+        max-width: 95vw;
+    }
     
     /* Hide keyboard controls on mobile, show touch info */
     .pause-controls-section {
@@ -3986,6 +4262,28 @@ button {
     
     .pause-title {
         font-size: 18px;
+    }
+
+    .pause-actions {
+        gap: 10px;
+    }
+
+    .pause-inline-tutorial {
+        max-height: min(58vh, 640px);
+        padding: 10px;
+        padding-right: 2px;
+    }
+
+    .pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tab {
+        flex: 1 1 120px;
+    }
+
+    .pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .pause-inline-tutorial .tutorial-directory-compact .tutorial-asset-grid {
+        grid-template-columns: 1fr;
     }
     
     .pause-menu-label {
