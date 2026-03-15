@@ -1274,6 +1274,503 @@ button {
     transform: translateY(2px);
 }
 
+/* Tutorial Overlay */
+.tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    padding: 20px;
+    pointer-events: auto;
+}
+
+.tutorial-overlay-urgent {
+    background: rgba(20, 7, 4, 0.84);
+}
+
+.tutorial-overlay-directory {
+    background: rgba(8, 11, 16, 0.82);
+}
+
+.tutorial-modal {
+    width: min(760px, 100%);
+    max-height: min(88vh, 900px);
+    overflow-y: auto;
+    background: linear-gradient(180deg, rgb(202, 149, 88) 0%, rgb(174, 118, 63) 100%);
+    border: 5px solid rgb(149, 108, 65);
+    border-radius: 8px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.tutorial-modal-directory {
+    width: min(1080px, 100%);
+    max-height: min(92vh, 980px);
+    background:
+        radial-gradient(circle at top right, rgba(104, 160, 157, 0.28), transparent 30%),
+        linear-gradient(180deg, rgb(147, 104, 56) 0%, rgb(113, 72, 36) 100%);
+}
+
+.tutorial-modal-urgent {
+    background: linear-gradient(180deg, rgb(123, 40, 26) 0%, rgb(87, 27, 17) 100%);
+    border-color: rgb(255, 183, 86);
+    box-shadow: 0 0 0 3px rgba(255, 195, 92, 0.2), 0 12px 30px rgba(0, 0, 0, 0.55);
+    animation: tutorial-urgent-pulse 1.9s ease-in-out infinite;
+}
+
+@keyframes tutorial-urgent-pulse {
+    0%, 100% {
+        transform: translateY(0);
+        box-shadow: 0 0 0 3px rgba(255, 195, 92, 0.14), 0 12px 30px rgba(0, 0, 0, 0.55);
+    }
+    50% {
+        transform: translateY(-2px);
+        box-shadow: 0 0 0 4px rgba(255, 214, 118, 0.26), 0 18px 36px rgba(0, 0, 0, 0.6);
+    }
+}
+
+.tutorial-title {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 28px;
+    color: rgb(255, 255, 255);
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+.tutorial-intro {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgb(255, 245, 210);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.tutorial-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tutorial-body-directory {
+    gap: 16px;
+}
+
+.tutorial-directory {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 16px;
+    min-height: 560px;
+}
+
+.tutorial-directory-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tutorial-directory-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(31, 20, 10, 0.34);
+    color: rgb(255, 247, 224);
+    cursor: pointer;
+    transition: transform 0.08s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.tutorial-directory-tab:hover {
+    transform: translateY(-1px);
+    background: rgba(55, 34, 16, 0.52);
+    border-color: rgba(255, 230, 160, 0.22);
+}
+
+.tutorial-directory-tab.active {
+    background: linear-gradient(180deg, rgba(55, 110, 80, 0.94) 0%, rgba(36, 80, 57, 0.98) 100%);
+    border-color: rgba(226, 244, 184, 0.42);
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+}
+
+.tutorial-directory-tab-label {
+    font-family: pixelFont, monospace;
+    font-size: 15px;
+    text-align: left;
+}
+
+.tutorial-directory-tab-hint {
+    font-family: pixelFont, monospace;
+    font-size: 10px;
+    color: rgba(255, 247, 224, 0.72);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.tutorial-directory-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.tutorial-directory-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 188px;
+    gap: 18px;
+    align-items: center;
+    padding: 18px;
+    background:
+        linear-gradient(135deg, rgba(44, 28, 15, 0.72) 0%, rgba(77, 49, 23, 0.84) 100%);
+    border: 2px solid rgba(255, 231, 152, 0.24);
+    border-radius: 14px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.tutorial-directory-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.tutorial-directory-eyebrow {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgb(255, 226, 135);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.tutorial-directory-title {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 28px;
+    color: rgb(255, 255, 255);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.42);
+}
+
+.tutorial-directory-description {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: rgb(255, 245, 217);
+}
+
+.tutorial-directory-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tutorial-directory-chip {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgb(49, 30, 13);
+    background: rgb(255, 220, 112);
+    border-radius: 999px;
+    padding: 6px 10px;
+}
+
+.tutorial-directory-hero-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 188px;
+    border-radius: 12px;
+    background: rgba(18, 10, 6, 0.56);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.tutorial-directory-hero-image {
+    width: 128px;
+    height: 128px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.tutorial-asset-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.tutorial-asset-card {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px;
+    background: rgba(27, 18, 11, 0.44);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    min-height: 132px;
+}
+
+.tutorial-asset-media {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tutorial-asset-image {
+    width: 48px;
+    height: 48px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.tutorial-asset-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.tutorial-asset-title {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 13px;
+    color: rgb(255, 249, 231);
+    overflow-wrap: anywhere;
+}
+
+.tutorial-asset-description {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    color: rgba(255, 245, 217, 0.9);
+    overflow-wrap: anywhere;
+}
+
+.tutorial-directory-sections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.tutorial-spotlight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(82, 47, 18, 0.82) 0%, rgba(129, 78, 29, 0.86) 100%);
+    border: 2px solid rgba(255, 226, 116, 0.45);
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.tutorial-spotlight-portrait-wrap {
+    flex: 0 0 auto;
+    width: 110px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(28, 16, 10, 0.75);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+}
+
+.tutorial-spotlight-portrait {
+    width: 80px;
+    height: 80px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.tutorial-spotlight-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.tutorial-spotlight-eyebrow {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgb(255, 230, 140);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.tutorial-spotlight-name {
+    margin: 0;
+    font-family: pixelFont, monospace;
+    font-size: 26px;
+    color: rgb(255, 255, 255);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.tutorial-spotlight-location {
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    color: rgb(255, 243, 212);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.tutorial-spotlight-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tutorial-spotlight-chip {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgb(255, 249, 227);
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    padding: 6px 10px;
+}
+
+.tutorial-spotlight-chip-action {
+    color: rgb(38, 28, 16);
+    background: rgb(255, 222, 107);
+    border-color: rgb(255, 242, 177);
+}
+
+.tutorial-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.tutorial-step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px;
+    background: rgba(42, 16, 10, 0.72);
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+}
+
+.tutorial-step-highlight {
+    border-color: rgba(255, 214, 118, 0.78);
+    background: rgba(71, 28, 14, 0.88);
+}
+
+.tutorial-step-number {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: pixelFont, monospace;
+    font-size: 16px;
+    color: rgb(53, 28, 12);
+    background: rgb(255, 214, 118);
+    border-radius: 999px;
+}
+
+.tutorial-step-content {
+    min-width: 0;
+}
+
+.tutorial-step-title {
+    margin: 0 0 8px;
+    font-family: pixelFont, monospace;
+    font-size: 18px;
+    color: rgb(255, 248, 226);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.tutorial-list-compact {
+    gap: 6px;
+    margin: 0;
+    font-size: 12px;
+}
+
+.tutorial-section {
+    background: rgba(76, 47, 21, 0.28);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 14px;
+}
+
+.tutorial-section-highlight {
+    background: rgba(118, 77, 24, 0.52);
+    border-color: rgba(255, 234, 120, 0.5);
+}
+
+.tutorial-section-title {
+    margin: 0 0 10px 0;
+    font-family: pixelFont, monospace;
+    font-size: 17px;
+    color: rgb(255, 255, 255);
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.tutorial-list {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgb(255, 248, 225);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.tutorial-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tutorial-button {
+    font-family: pixelFont, monospace;
+    font-size: 15px;
+    color: rgb(255, 255, 255);
+    background: rgb(100, 70, 40);
+    border: 3px solid rgb(149, 108, 65);
+    border-radius: 4px;
+    padding: 11px 18px;
+    cursor: pointer;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
+}
+
+.tutorial-button:hover {
+    background: rgb(130, 90, 50);
+    border-color: rgb(200, 150, 100);
+}
+
+.tutorial-button:active {
+    transform: translateY(2px);
+}
+
+.tutorial-button-secondary {
+    background: rgba(60, 90, 50, 0.92);
+    border-color: rgb(119, 159, 77);
+}
+
+.tutorial-button-secondary:hover {
+    background: rgba(74, 109, 61, 0.96);
+    border-color: rgb(164, 205, 117);
+}
+
 /* Config Modal Styles */
 .config-overlay {
     position: fixed;
@@ -1293,8 +1790,8 @@ button {
 }
 
 .config-modal {
-    width: 90vw;
-    max-width: 520px;
+    width: min(92vw, 760px);
+    max-width: 760px;
     max-height: none;
     background-color: rgb(187, 132, 75);
     border: 5px solid rgb(149, 108, 65);
@@ -1305,6 +1802,12 @@ button {
     gap: 12px;
     padding: 18px;
     margin: auto;
+    transition: width 0.18s ease, max-width 0.18s ease;
+}
+
+#config-overlay[data-active-tab="items"] .config-modal {
+    width: min(96vw, 1120px);
+    max-width: 1120px;
 }
 
 .config-title {
@@ -1544,47 +2047,273 @@ button {
     filter: grayscale(100%) brightness(0.6);
 }
 
-/* Items grid - use table-like layout for alignment */
-#cfg-items-grid {
+/* Item config UI */
+.config-items-toolbar {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(58, 34, 16, 0.42);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
 }
+
+.config-items-toolbar-top {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.config-item-search-wrap {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    flex: 1 1 360px;
+}
+
+.config-item-search {
+    min-width: 220px;
+    flex: 1 1 auto;
+    min-height: 52px;
+    padding: 0 16px;
+    font-family: pixelFont, monospace;
+    font-size: 15px;
+    border-radius: 8px;
+    border: 2px solid rgba(95, 62, 30, 0.9);
+    background: rgba(30, 16, 8, 0.72);
+    color: #fff7d6;
+}
+
+.config-item-search::placeholder {
+    color: rgba(255,247,214,0.62);
+}
+
+.config-item-search:focus {
+    outline: none;
+    border-color: rgba(255, 221, 114, 0.9);
+    box-shadow: 0 0 0 2px rgba(255, 221, 114, 0.18);
+}
+
+.config-item-search-clear {
+    flex: 0 0 auto;
+    min-width: 88px;
+    min-height: 52px;
+    padding: 0 14px;
+}
+
+.config-item-search-clear:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.config-items-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.config-items-summary-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.16);
+}
+
+.config-items-summary-label {
+    font-family: pixelFont, monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.72);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.config-items-summary-value {
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: #fff;
+}
+
+.config-chip-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.config-filter-chip {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.config-filter-chip.active {
+    background: rgba(31,122,31,0.9);
+    border-color: rgba(255,255,150,0.5);
+}
+
+#cfg-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+
 .config-item-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 100%;
+    padding: 14px;
+    background: linear-gradient(180deg, rgba(62, 35, 16, 0.74) 0%, rgba(43, 24, 12, 0.78) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+}
+
+.config-item-row.custom-price {
+    border-color: rgba(255,255,120,0.48);
+    box-shadow: inset 0 0 0 1px rgba(255,255,120,0.12), 0 10px 18px rgba(0,0,0,0.18);
+}
+
+.config-item-row.disabled {
+    opacity: 0.82;
+}
+
+.config-item-main {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.config-item-toggle {
+    width: 100%;
+    min-width: 0;
+    min-height: 148px;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.12);
+}
+
+.config-item-toggle .config-sprite-img {
+    width: 52px;
+    height: 52px;
+}
+
+.config-item-toggle .config-sprite-label {
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.25;
+}
+
+.config-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+
+.config-item-badge {
+    font-family: pixelFont, monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
     padding: 4px 8px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 6px;
 }
-.config-item-row .config-sprite-item {
-    flex-direction: row;
-    gap: 8px;
-    min-width: 150px;
-    justify-content: flex-start;
+
+.config-item-row[data-enabled="true"] .config-item-state-badge {
+    background: rgba(50, 132, 62, 0.88);
+    border-color: rgba(188, 255, 167, 0.35);
 }
-.config-item-row .config-sprite-label {
-    font-size: 12px;
-    text-align: left;
+
+.config-item-row[data-enabled="false"] .config-item-state-badge {
+    background: rgba(116, 116, 116, 0.55);
+    border-color: rgba(220, 220, 220, 0.16);
+    color: rgba(255,255,255,0.76);
 }
+
+.config-item-controls {
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+    margin-top: auto;
+}
+
 .config-price-wrapper {
     display: flex;
-    align-items: center;
-    gap: 2px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    padding: 10px;
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
 }
+
+.config-price-caption {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+}
+
+.config-item-price-status {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: #ffe58a;
+}
+
+.config-price-input-wrap {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
 .config-price-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    min-height: 40px;
     font-size: 14px;
     color: #8f8;
     font-weight: bold;
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
 }
+
 .config-item-price {
-    width: 70px;
-    padding: 4px 6px;
-    font-size: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 10px;
+    font-family: pixelFont, monospace;
+    font-size: 14px;
     border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 4px;
+    border-radius: 8px;
     background: rgba(0,0,0,0.3);
     color: #fff;
     text-align: right;
@@ -1594,7 +2323,138 @@ button {
     border-color: #4a90d9;
 }
 
+.config-price-reset {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    min-height: 40px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.config-price-reset:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.config-item-note {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px dashed rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.06);
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.78);
+    text-align: center;
+}
+
+.config-empty-state {
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    text-align: center;
+    padding: 14px 12px;
+    background: rgba(0,0,0,0.18);
+    border: 1px dashed rgba(255,255,255,0.2);
+    border-radius: 6px;
+}
+
 @media (max-width: 768px) {
+    .tutorial-overlay {
+        padding: 12px;
+    }
+
+    .tutorial-modal {
+        padding: 16px;
+        gap: 10px;
+    }
+
+    .tutorial-spotlight {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .tutorial-modal-directory {
+        width: 100%;
+    }
+
+    .tutorial-directory {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+
+    .tutorial-directory-tabs {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .tutorial-directory-tab {
+        flex: 0 0 160px;
+    }
+
+    .tutorial-directory-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .tutorial-directory-hero-media {
+        min-height: 132px;
+    }
+
+    .tutorial-asset-grid,
+    .tutorial-directory-sections,
+    .tutorial-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .tutorial-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .tutorial-step {
+        padding: 12px;
+    }
+
+    .tutorial-spotlight-portrait-wrap {
+        width: 100%;
+        height: auto;
+        padding: 12px 0;
+    }
+
+    .tutorial-spotlight-name {
+        font-size: 22px;
+    }
+
+    .tutorial-spotlight-chips {
+        justify-content: center;
+    }
+
+    .tutorial-title {
+        font-size: 22px;
+    }
+
+    .tutorial-intro,
+    .tutorial-list {
+        font-size: 11px;
+    }
+
+    .tutorial-section-title {
+        font-size: 14px;
+    }
+
+    .tutorial-actions {
+        flex-direction: column;
+    }
+
+    .tutorial-button {
+        width: 100%;
+    }
+
     .config-overlay { padding: 10px; }
     .config-modal { 
         max-width: 98vw; 
@@ -1623,6 +2483,39 @@ button {
     }
     .config-row { flex-wrap: wrap; }
     .config-slider { width: 100%; }
+    .config-items-toolbar-top {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .config-items-summary {
+        text-align: left;
+        white-space: normal;
+    }
+    .config-item-row {
+        padding: 12px;
+    }
+    .config-item-main {
+        gap: 8px;
+    }
+    .config-item-toggle {
+        min-width: 0;
+        min-height: 128px;
+    }
+    .config-item-search-wrap {
+        flex-basis: 100%;
+    }
+    .config-items-summary {
+        justify-content: flex-start;
+    }
+    .config-price-input-wrap {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+    .config-price-reset {
+        grid-column: 1 / -1;
+    }
+    .config-item-price {
+        min-height: 42px;
+    }
 }
 
 @media (max-height: 600px) {

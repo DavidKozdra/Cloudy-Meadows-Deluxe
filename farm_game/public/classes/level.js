@@ -303,6 +303,25 @@ class Level {
                 if(tile.class === 'NPC' && player.talking === 0) {
                     push();
                     imageMode(CENTER);
+
+                    if (typeof shouldHighlightMrCInWorld === 'function' && shouldHighlightMrCInWorld(tile)) {
+                        const centerX = tile.pos.x + (tileSize / 2);
+                        const centerY = tile.pos.y + (tileSize / 2);
+                        const pulse = 0.55 + (0.45 * abs(sin(millis() * 0.008)));
+
+                        noStroke();
+                        fill(255, 216, 104, 45 + (35 * pulse));
+                        ellipse(centerX, centerY, tileSize * (1.45 + (0.08 * pulse)), tileSize * (1.2 + (0.06 * pulse)));
+
+                        stroke(255, 239, 174, 210);
+                        strokeWeight(3);
+                        noFill();
+                        ellipse(centerX, centerY, tileSize * (1.1 + (0.1 * pulse)), tileSize * (1.45 + (0.08 * pulse)));
+
+                        if (typeof quest_marker_img !== 'undefined') {
+                            image(quest_marker_img, centerX, tile.pos.y - 18 - (4 * pulse), 24, 24);
+                        }
+                    }
                     
                     if(tile.hasQuestForPlayer && tile.hasQuestForPlayer()) {
                         // Quest marker sprite

@@ -20,8 +20,9 @@ function updateCanvasPointerEvents() {
     const questsVisible = document.querySelector('.quests-container')?.style.display !== 'none';
     const loseScreenVisible = document.getElementById('lose-screen')?.style.display !== 'none';
     const configModalVisible = document.getElementById('config-overlay')?.style.display !== 'none';
+    const tutorialVisible = document.getElementById('tutorial-overlay')?.style.display !== 'none';
     
-    const anyMenuVisible = mainMenuVisible || difficultyMenuVisible || optionsMenuVisible || creditsMenuVisible || pauseMenuVisible || questsVisible || loseScreenVisible || configModalVisible;
+    const anyMenuVisible = mainMenuVisible || difficultyMenuVisible || optionsMenuVisible || creditsMenuVisible || pauseMenuVisible || questsVisible || loseScreenVisible || configModalVisible || tutorialVisible;
     canvas.style.pointerEvents = anyMenuVisible ? 'none' : 'auto';
 }
 
@@ -80,6 +81,10 @@ function start(){
         //turn off the title screen
         title_screen = false;
         hideMainMenu();
+
+        if (!dificulty_screen) {
+            scheduleContextualTutorials(250);
+        }
     });
 }
 
@@ -481,6 +486,1113 @@ function createSaveTransferStatusNode() {
     return status;
 }
 
+const DEFAULT_TUTORIAL_STATE = {
+    fullTutorialSeen: false,
+    lastMrCHintDayShown: -1
+};
+
+let tutorialPromptQueue = [];
+let activeTutorialPrompt = null;
+let tutorialShouldResumeGameplay = false;
+let tutorialShouldReturnToPauseMenu = false;
+let tutorialScheduleTimer = null;
+
+function normalizeTutorialState(state) {
+    return {
+        fullTutorialSeen: !!state?.fullTutorialSeen,
+        lastMrCHintDayShown: Number.isFinite(state?.lastMrCHintDayShown) ? state.lastMrCHintDayShown : -1
+    };
+}
+
+function getTutorialState() {
+    if (!window.tutorialState) {
+        window.tutorialState = normalizeTutorialState(DEFAULT_TUTORIAL_STATE);
+    }
+    return window.tutorialState;
+}
+
+function getTutorialStateForSave() {
+    return normalizeTutorialState(getTutorialState());
+}
+
+function loadTutorialState(savedState) {
+    window.tutorialState = normalizeTutorialState(savedState || DEFAULT_TUTORIAL_STATE);
+}
+
+function persistTutorialState() {
+    try {
+        const prev = localData.get('Day_curLvl_Dif') || { days: days || 0, currentLevel_y, currentLevel_x, dificulty };
+        prev.tutorialState = getTutorialStateForSave();
+        localData.set('Day_curLvl_Dif', prev);
+    } catch (err) {
+        console.warn('Failed to persist tutorial state', err);
+    }
+}
+
+function resetTutorialStateForNewGame() {
+    window.tutorialState = normalizeTutorialState(DEFAULT_TUTORIAL_STATE);
+    tutorialPromptQueue = [];
+    activeTutorialPrompt = null;
+    persistTutorialState();
+}
+
+function isQuestPanelVisible() {
+    return document.querySelector('.quests-container')?.style.display === 'flex';
+}
+
+function isTutorialOverlayVisible() {
+    return document.getElementById('tutorial-overlay')?.style.display === 'flex';
+}
+
+function getMainQuest() {
+    if (!player || !Array.isArray(player.quests)) {
+        return null;
+    }
+    return player.quests.find(q => q && (q.og_name === 'Save Cloudy Meadows' || q.name === 'Save Cloudy Meadows')) || null;
+}
+
+function getMainQuestIndex() {
+    if (!player || !Array.isArray(player.quests)) {
+        return -1;
+    }
+    return player.quests.findIndex(q => q && (q.og_name === 'Save Cloudy Meadows' || q.name === 'Save Cloudy Meadows'));
+}
+
+function getMainQuestMrCGoal() {
+    const mainQuest = getMainQuest();
+    if (!mainQuest || !Array.isArray(mainQuest.goals)) {
+        return null;
+    }
+    return mainQuest.goals.find(goal => goal && goal.class === 'TalkingGoal' && goal.npc_name === 'Mr.C') || null;
+}
+
+function isMainQuestMrCPending() {
+    const mainQuest = getMainQuest();
+    const mrCGoal = getMainQuestMrCGoal();
+    if (!mainQuest || !mrCGoal) {
+        return false;
+    }
+    return !mainQuest.failed && !mainQuest.done && !mrCGoal.done;
+}
+
+function formatTutorialKey(keyName, fallback) {
+    const raw = keyName || fallback || '';
+    if (!raw) return '';
+    return String(raw).length === 1 ? String(raw).toUpperCase() : String(raw);
+}
+
+function getInteractTutorialActionLabel() {
+    if (typeof isMobile !== 'undefined' && isMobile) {
+        return 'Tap Interact';
+    }
+
+    return 'Press ' + formatTutorialKey(Controls_Interact_button_key, 'E');
+}
+
+function getGameplayControlHints() {
+    if (typeof isMobile !== 'undefined' && isMobile) {
+        return {
+            move: 'Use the on-screen movement pad to move around.',
+            interact: 'Tap the Interact button when you see the chat icon over an NPC or object.',
+            eat: 'Tap the Eat button when you need to use food from your hand.',
+            quest: 'Tap the Quests button in the top-left corner to review your objectives.'
+        };
+    }
+
+    return {
+        move: 'Move with ' + [
+            formatTutorialKey(Controls_Up_button_key, 'W'),
+            formatTutorialKey(Controls_Left_button_key, 'A'),
+            formatTutorialKey(Controls_Down_button_key, 'S'),
+            formatTutorialKey(Controls_Right_button_key, 'D')
+        ].join(' / ') + '.',
+        interact: 'Press ' + formatTutorialKey(Controls_Interact_button_key, 'E') + ' to talk, shop, open containers, or interact with objects.',
+        eat: 'Press ' + formatTutorialKey(Controls_Eat_button_key, 'Q') + ' to use the item in your hand.',
+        quest: 'Press ' + formatTutorialKey(Controls_Quest_button_key, 'P') + ' to open the quest log and see the current objective.'
+    };
+}
+
+function findNPCWorldLocation(npcName) {
+    if (typeof levels === 'undefined' || !levels || !Array.isArray(levels)) {
+        return null;
+    }
+
+    for (let levelY = 0; levelY < levels.length; levelY++) {
+        for (let levelX = 0; levelX < levels[levelY].length; levelX++) {
+            const level = levels[levelY][levelX];
+            if (!level || !Array.isArray(level.map)) {
+                continue;
+            }
+
+            for (let y = 0; y < level.map.length; y++) {
+                for (let x = 0; x < level.map[y].length; x++) {
+                    const tile = level.map[y][x];
+                    if (tile && tile.name === npcName) {
+                        return {
+                            npc: tile,
+                            level,
+                            levelX,
+                            levelY,
+                            x,
+                            y
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function getMrCTutorialLocationInfo() {
+    const found = findNPCWorldLocation('Mr.C');
+
+    if (!found || !found.level) {
+        return {
+            levelName: 'Cloudy Meadows: Home',
+            shortLabel: 'Right outside your house',
+            instructions: [
+                'Go back to Cloudy Meadows: Home.',
+                'Mr.C starts right outside your house at the beginning of the game.'
+            ]
+        };
+    }
+
+    if (found.level.name === 'Cloudy Meadows: Home') {
+        return {
+            levelName: found.level.name,
+            shortLabel: 'Right outside your house',
+            instructions: [
+                'Go to Cloudy Meadows: Home.',
+                'Mr.C starts right outside your house at the beginning of the game.'
+            ]
+        };
+    }
+
+    return {
+        levelName: found.level.name,
+        shortLabel: 'Follow the highlighted Mr.C sprite',
+        instructions: [
+            'Go to ' + found.level.name + '.',
+            'Look for the glowing highlight around Mr.C.'
+        ]
+    };
+}
+
+function getMrCInteractionHint() {
+    return 'Walk up to Mr.C until the chat icon appears, then ' + getInteractTutorialActionLabel().toLowerCase() + ' to talk to him.';
+}
+
+function shouldHighlightMrCInWorld(tile) {
+    return !!tile &&
+        tile.name === 'Mr.C' &&
+        typeof player !== 'undefined' &&
+        !!player &&
+        player.talking !== tile &&
+        typeof isMainQuestMrCPending === 'function' &&
+        isMainQuestMrCPending();
+}
+
+function createTutorialSection(sectionConfig) {
+    const section = document.createElement('section');
+    section.className = 'tutorial-section' + (sectionConfig.highlight ? ' tutorial-section-highlight' : '');
+
+    if (sectionConfig.title) {
+        const title = document.createElement('h3');
+        title.className = 'tutorial-section-title';
+        title.textContent = sectionConfig.title;
+        section.appendChild(title);
+    }
+
+    if (sectionConfig.lines && sectionConfig.lines.length) {
+        const list = document.createElement('ul');
+        list.className = 'tutorial-list';
+        sectionConfig.lines.forEach(lineText => {
+            const item = document.createElement('li');
+            item.textContent = lineText;
+            list.appendChild(item);
+        });
+        section.appendChild(list);
+    }
+
+    return section;
+}
+
+function createTutorialSpotlightCard(spotlightConfig) {
+    const card = document.createElement('div');
+    card.className = 'tutorial-spotlight';
+
+    const portraitWrap = document.createElement('div');
+    portraitWrap.className = 'tutorial-spotlight-portrait-wrap';
+    const portrait = document.createElement('img');
+    portrait.className = 'tutorial-spotlight-portrait';
+    portrait.src = spotlightConfig.image;
+    portrait.alt = spotlightConfig.alt || spotlightConfig.name || 'NPC';
+    portrait.width = 96;
+    portrait.height = 96;
+    portraitWrap.appendChild(portrait);
+    card.appendChild(portraitWrap);
+
+    const content = document.createElement('div');
+    content.className = 'tutorial-spotlight-content';
+
+    if (spotlightConfig.eyebrow) {
+        const eyebrow = document.createElement('div');
+        eyebrow.className = 'tutorial-spotlight-eyebrow';
+        eyebrow.textContent = spotlightConfig.eyebrow;
+        content.appendChild(eyebrow);
+    }
+
+    const name = document.createElement('h3');
+    name.className = 'tutorial-spotlight-name';
+    name.textContent = spotlightConfig.name;
+    content.appendChild(name);
+
+    if (spotlightConfig.location) {
+        const location = document.createElement('div');
+        location.className = 'tutorial-spotlight-location';
+        location.textContent = spotlightConfig.location;
+        content.appendChild(location);
+    }
+
+    const chips = document.createElement('div');
+    chips.className = 'tutorial-spotlight-chips';
+
+    if (spotlightConfig.action) {
+        const actionChip = document.createElement('div');
+        actionChip.className = 'tutorial-spotlight-chip tutorial-spotlight-chip-action';
+        actionChip.textContent = spotlightConfig.action;
+        chips.appendChild(actionChip);
+    }
+
+    if (spotlightConfig.detail) {
+        const detailChip = document.createElement('div');
+        detailChip.className = 'tutorial-spotlight-chip';
+        detailChip.textContent = spotlightConfig.detail;
+        chips.appendChild(detailChip);
+    }
+
+    content.appendChild(chips);
+    card.appendChild(content);
+
+    return card;
+}
+
+function createTutorialStepCards(stepConfigs) {
+    const steps = document.createElement('div');
+    steps.className = 'tutorial-steps';
+
+    stepConfigs.forEach((stepConfig, index) => {
+        const step = document.createElement('div');
+        step.className = 'tutorial-step' + (stepConfig.highlight ? ' tutorial-step-highlight' : '');
+
+        const number = document.createElement('div');
+        number.className = 'tutorial-step-number';
+        number.textContent = String(index + 1);
+        step.appendChild(number);
+
+        const content = document.createElement('div');
+        content.className = 'tutorial-step-content';
+
+        const title = document.createElement('h3');
+        title.className = 'tutorial-step-title';
+        title.textContent = stepConfig.title;
+        content.appendChild(title);
+
+        if (stepConfig.lines && stepConfig.lines.length) {
+            const list = document.createElement('ul');
+            list.className = 'tutorial-list tutorial-list-compact';
+            stepConfig.lines.forEach(lineText => {
+                const item = document.createElement('li');
+                item.textContent = lineText;
+                list.appendChild(item);
+            });
+            content.appendChild(list);
+        }
+
+        step.appendChild(content);
+        steps.appendChild(step);
+    });
+
+    return steps;
+}
+
+function createTutorialAssetGrid(assetConfigs) {
+    const grid = document.createElement('div');
+    grid.className = 'tutorial-asset-grid';
+
+    assetConfigs.forEach(assetConfig => {
+        const card = document.createElement('article');
+        card.className = 'tutorial-asset-card';
+
+        const media = document.createElement('div');
+        media.className = 'tutorial-asset-media';
+
+        const image = document.createElement('img');
+        image.className = 'tutorial-asset-image';
+        image.src = assetConfig.image;
+        image.alt = assetConfig.alt || assetConfig.title || 'Tutorial asset';
+        image.width = assetConfig.width || 52;
+        image.height = assetConfig.height || 52;
+        media.appendChild(image);
+        card.appendChild(media);
+
+        const content = document.createElement('div');
+        content.className = 'tutorial-asset-content';
+
+        const title = document.createElement('h4');
+        title.className = 'tutorial-asset-title';
+        title.textContent = assetConfig.title;
+        content.appendChild(title);
+
+        if (assetConfig.description) {
+            const description = document.createElement('p');
+            description.className = 'tutorial-asset-description';
+            description.textContent = assetConfig.description;
+            content.appendChild(description);
+        }
+
+        card.appendChild(content);
+        grid.appendChild(card);
+    });
+
+    return grid;
+}
+
+function createTutorialDirectoryHero(tabConfig) {
+    const hero = document.createElement('section');
+    hero.className = 'tutorial-directory-hero';
+
+    const copy = document.createElement('div');
+    copy.className = 'tutorial-directory-hero-copy';
+
+    if (tabConfig.eyebrow) {
+        const eyebrow = document.createElement('div');
+        eyebrow.className = 'tutorial-directory-eyebrow';
+        eyebrow.textContent = tabConfig.eyebrow;
+        copy.appendChild(eyebrow);
+    }
+
+    const title = document.createElement('h3');
+    title.className = 'tutorial-directory-title';
+    title.textContent = tabConfig.title;
+    copy.appendChild(title);
+
+    if (tabConfig.description) {
+        const description = document.createElement('p');
+        description.className = 'tutorial-directory-description';
+        description.textContent = tabConfig.description;
+        copy.appendChild(description);
+    }
+
+    if (tabConfig.chips && tabConfig.chips.length) {
+        const chips = document.createElement('div');
+        chips.className = 'tutorial-directory-chips';
+        tabConfig.chips.forEach(chipText => {
+            const chip = document.createElement('span');
+            chip.className = 'tutorial-directory-chip';
+            chip.textContent = chipText;
+            chips.appendChild(chip);
+        });
+        copy.appendChild(chips);
+    }
+
+    hero.appendChild(copy);
+
+    if (tabConfig.image) {
+        const media = document.createElement('div');
+        media.className = 'tutorial-directory-hero-media';
+
+        const image = document.createElement('img');
+        image.className = 'tutorial-directory-hero-image';
+        image.src = tabConfig.image;
+        image.alt = tabConfig.alt || tabConfig.title || 'Tutorial topic';
+        image.width = 140;
+        image.height = 140;
+        media.appendChild(image);
+        hero.appendChild(media);
+    }
+
+    return hero;
+}
+
+function createTutorialDirectoryLayout(prompt) {
+    const directory = document.createElement('div');
+    directory.className = 'tutorial-directory';
+
+    const nav = document.createElement('div');
+    nav.className = 'tutorial-directory-tabs';
+    directory.appendChild(nav);
+
+    const content = document.createElement('div');
+    content.className = 'tutorial-directory-content';
+    directory.appendChild(content);
+
+    const tabs = Array.isArray(prompt.tabs) ? prompt.tabs : [];
+    if (!tabs.length) {
+        return directory;
+    }
+
+    const tabButtons = [];
+
+    const renderActiveTab = (tabId) => {
+        const activeTab = tabs.find(tab => tab.id === tabId) || tabs[0];
+        content.innerHTML = '';
+
+        tabButtons.forEach(button => {
+            const isActive = button.dataset.tabId === activeTab.id;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        content.appendChild(createTutorialDirectoryHero(activeTab));
+
+        if (activeTab.assets && activeTab.assets.length) {
+            content.appendChild(createTutorialAssetGrid(activeTab.assets));
+        }
+
+        if (activeTab.sections && activeTab.sections.length) {
+            const sectionsWrap = document.createElement('div');
+            sectionsWrap.className = 'tutorial-directory-sections';
+            activeTab.sections.forEach(sectionConfig => {
+                sectionsWrap.appendChild(createTutorialSection(sectionConfig));
+            });
+            content.appendChild(sectionsWrap);
+        }
+    };
+
+    tabs.forEach((tabConfig, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'tutorial-directory-tab';
+        button.dataset.tabId = tabConfig.id;
+
+        const label = document.createElement('span');
+        label.className = 'tutorial-directory-tab-label';
+        label.textContent = tabConfig.label;
+        button.appendChild(label);
+
+        if (tabConfig.navHint) {
+            const hint = document.createElement('span');
+            hint.className = 'tutorial-directory-tab-hint';
+            hint.textContent = tabConfig.navHint;
+            button.appendChild(hint);
+        }
+
+        button.addEventListener('click', () => {
+            renderActiveTab(tabConfig.id);
+        });
+
+        nav.appendChild(button);
+        tabButtons.push(button);
+
+        if (index === 0) {
+            renderActiveTab(tabConfig.id);
+        }
+    });
+
+    return directory;
+}
+
+function ensureTutorialOverlay() {
+    let overlay = document.getElementById('tutorial-overlay');
+    if (overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'tutorial-overlay';
+    overlay.className = 'tutorial-overlay';
+    document.body.appendChild(overlay);
+
+    const modal = document.createElement('div');
+    modal.id = 'tutorial-modal';
+    modal.className = 'tutorial-modal';
+    overlay.appendChild(modal);
+
+    const title = document.createElement('h2');
+    title.id = 'tutorial-title';
+    title.className = 'tutorial-title';
+    modal.appendChild(title);
+
+    const intro = document.createElement('p');
+    intro.id = 'tutorial-intro';
+    intro.className = 'tutorial-intro';
+    modal.appendChild(intro);
+
+    const body = document.createElement('div');
+    body.id = 'tutorial-body';
+    body.className = 'tutorial-body';
+    modal.appendChild(body);
+
+    const actions = document.createElement('div');
+    actions.id = 'tutorial-actions';
+    actions.className = 'tutorial-actions';
+    modal.appendChild(actions);
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay && activeTutorialPrompt?.allowOverlayClose) {
+            closeTutorialOverlay();
+        }
+    });
+
+    return overlay;
+}
+
+function buildFullTutorialPrompt(options = {}) {
+    const controls = getGameplayControlHints();
+    const mrCLocation = getMrCTutorialLocationInfo();
+    const pauseMenuVisible = document.getElementById('pause-menu')?.style.display === 'flex';
+    const allowQuestShortcut = !title_screen && !pauseMenuVisible && typeof player !== 'undefined' && !!player;
+
+    return {
+        type: 'full-tutorial',
+        layout: 'directory',
+        allowOverlayClose: true,
+        title: 'How To Play',
+        intro: 'Use the tabs to learn the core loop, recognize important assets, and find the next useful thing to do.',
+        tabs: [
+            {
+                id: 'start',
+                label: 'Start',
+                navHint: 'first quest',
+                eyebrow: 'First Objective',
+                title: 'Meet Mr.C and start the run',
+                description: 'If you skip the opening Mr.C conversation, the main story does not move and the game feels stalled.',
+                image: 'images/npc/mrC.png',
+                alt: 'Mr.C',
+                chips: [
+                    mrCLocation.levelName,
+                    getInteractTutorialActionLabel(),
+                    'Follow the world highlight'
+                ],
+                assets: [
+                    {
+                        image: 'images/ui/Chat_Icon.png',
+                        title: 'Chat Icon',
+                        description: 'Stand close until this appears, then interact to start talking.'
+                    },
+                    {
+                        image: 'images/ui/QuestMarker.png',
+                        title: 'Quest Marker',
+                        description: 'NPCs with markers are usually tied to quests or useful progression.'
+                    },
+                    {
+                        image: 'images/ui/coin.png',
+                        title: 'Quest Rewards',
+                        description: 'Talking to the right people unlocks rewards, goals, and better routes forward.'
+                    }
+                ],
+                sections: [
+                    {
+                        title: 'Do This First',
+                        highlight: true,
+                        lines: [
+                            'Go to ' + mrCLocation.levelName + '.',
+                            mrCLocation.instructions[1],
+                            'Walk up until the chat icon appears, then ' + getInteractTutorialActionLabel().toLowerCase() + '.'
+                        ]
+                    },
+                    {
+                        title: 'How To Know It Worked',
+                        lines: [
+                            'Finish the full conversation with Mr.C.',
+                            'If the top-left goal still mentions Mr.C, the conversation is not done yet.',
+                            'Open the quest log any time you need to re-check the active objective.'
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'farming',
+                label: 'Farming',
+                navHint: 'crop loop',
+                eyebrow: 'Main Money Loop',
+                title: 'Plant, water, harvest, sell',
+                description: 'Most early progress comes from simple farming. Learn the loop once and everything else gets easier.',
+                image: 'images/items/Corn_Seed_bag.png',
+                alt: 'Corn seeds',
+                chips: ['Plant', 'Water', 'Harvest'],
+                assets: [
+                    {
+                        image: 'images/items/Hoe.png',
+                        title: 'Hoe',
+                        description: 'Use tools to prepare land and support your crop loop.'
+                    },
+                    {
+                        image: 'images/items/Corn_Seed_bag.png',
+                        title: 'Seed Bags',
+                        description: 'Seeds start the loop. Keep a few on hand so you can replant quickly.'
+                    },
+                    {
+                        image: 'images/items/Sprinkler.png',
+                        title: 'Sprinklers',
+                        description: 'Automation saves time once you can afford it.'
+                    },
+                    {
+                        image: 'images/items/Corn_item.png',
+                        title: 'Harvest',
+                        description: 'Crops become coins, quest items, or emergency food.'
+                    }
+                ],
+                sections: [
+                    {
+                        title: 'Basic Crop Loop',
+                        highlight: true,
+                        lines: [
+                            'Get seeds, plant them on workable soil, and keep them watered.',
+                            'Come back when they finish growing, harvest them, then sell or save the crop.',
+                            'Replant quickly so your field keeps making money every day.'
+                        ]
+                    },
+                    {
+                        title: 'Good Habits',
+                        lines: [
+                            'Do not spend every coin at once. Keep enough for more seeds and food.',
+                            'Use sprinklers and tools to reduce repetitive work.',
+                            'As new crops unlock, compare their speed, value, and quest usefulness.'
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'money',
+                label: 'Money',
+                navHint: 'shops + upgrades',
+                eyebrow: 'Economy',
+                title: 'Earn coins and spend them well',
+                description: 'Coins are not just score. They control how fast you scale your farm, storage, and equipment.',
+                image: 'images/ui/coin.png',
+                alt: 'Coin',
+                chips: ['Sell crops', 'Buy tools', 'Scale up'],
+                assets: [
+                    {
+                        image: 'images/ui/coin.png',
+                        title: 'Coins',
+                        description: 'Treat coins as fuel for progress, not something to hoard forever.'
+                    },
+                    {
+                        image: 'images/items/Corn_item.png',
+                        title: 'Produce',
+                        description: 'Selling produce is the most reliable early-game income.'
+                    },
+                    {
+                        image: 'images/items/tomato.png',
+                        title: 'Better Crops',
+                        description: 'Different crops open stronger value and quest options over time.'
+                    },
+                    {
+                        image: 'images/items/backPack.png',
+                        title: 'Storage',
+                        description: 'Backpacks and chests reduce wasted trips and lost opportunities.'
+                    }
+                ],
+                sections: [
+                    {
+                        title: 'How To Earn',
+                        highlight: true,
+                        lines: [
+                            'Sell crops often instead of letting your farm sit full.',
+                            'Quest rewards and NPC requests add extra coins, items, and direction.',
+                            'Larger harvests matter more than random grinding without a plan.'
+                        ]
+                    },
+                    {
+                        title: 'How To Spend',
+                        lines: [
+                            'Prioritize seeds, tools, food, and storage before vanity purchases.',
+                            'Use your next upgrade to remove the biggest bottleneck in your current routine.',
+                            'If you are always full on inventory, fix storage before anything else.'
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'survival',
+                label: 'Survival',
+                navHint: 'hunger + time',
+                eyebrow: 'Stay Alive',
+                title: 'Manage hunger and day progression',
+                description: 'Runs get sloppy when players ignore hunger or burn entire days without purpose.',
+                image: 'images/items/HotDog.png',
+                alt: 'Food',
+                chips: [formatTutorialKey(Controls_Eat_button_key, 'Q'), 'Sleep advances time', 'Carry food'],
+                assets: [
+                    {
+                        image: 'images/ui/Corn_empty.png',
+                        title: 'Low Hunger',
+                        description: 'When the meter drops, you are close to a problem.'
+                    },
+                    {
+                        image: 'images/ui/Corn_Filled.png',
+                        title: 'Recovered Hunger',
+                        description: 'Keep food ready so recovery is quick instead of panicked.'
+                    },
+                    {
+                        image: 'images/items/HotDog.png',
+                        title: 'Food',
+                        description: controls.eat
+                    }
+                ],
+                sections: [
+                    {
+                        title: 'Hunger',
+                        highlight: true,
+                        lines: [
+                            'Watch the hunger meter and eat before it becomes an emergency.',
+                            'Carry food before long trips or work sessions away from home.',
+                            'Low hunger slows good decision making because every task becomes urgent.'
+                        ]
+                    },
+                    {
+                        title: 'Days And Deadlines',
+                        lines: [
+                            'Sleeping advances the day, and quest timers continue moving.',
+                            'Do not waste full days if the main quest deadline is close.',
+                            'A good day has a clear goal before you go to bed.'
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'tools',
+                label: 'Tools',
+                navHint: 'storage + travel',
+                eyebrow: 'Systems',
+                title: 'Use tools, storage, and helpers to scale up',
+                description: 'The game opens up once you stop doing everything manually and start using the systems around you.',
+                image: 'images/npc/Ticket_Master.png',
+                alt: 'Ticket Master',
+                chips: ['Storage', 'Automation', 'Travel'],
+                assets: [
+                    {
+                        image: 'images/items/backPack.png',
+                        title: 'Backpack',
+                        description: 'Carry more so you can work longer before returning home.'
+                    },
+                    {
+                        image: 'images/items/Chest.png',
+                        title: 'Chest',
+                        description: 'Store overflow items instead of clogging your inventory.'
+                    },
+                    {
+                        image: 'images/items/robot.png',
+                        title: 'Robots',
+                        description: 'Helpers and commands can automate repeat jobs later in the run.'
+                    },
+                    {
+                        image: 'images/npc/Ticket_Master.png',
+                        title: 'Travel',
+                        description: 'Use travel systems and map exits to reach other areas and opportunities.'
+                    }
+                ],
+                sections: [
+                    {
+                        title: 'Reduce Friction',
+                        highlight: true,
+                        lines: [
+                            'Storage is a progression tool. Fix inventory pressure early.',
+                            'Use hoes, axes, shovels, sprinklers, and machines to remove routine busywork.',
+                            'Helpers matter once your farm is large enough to punish manual play.'
+                        ]
+                    },
+                    {
+                        title: 'Explore Smart',
+                        lines: [
+                            controls.quest,
+                            'Talk to NPCs, watch for quest markers, and explore new areas for better tools and quests.',
+                            'Save and Quit from the pause menu whenever you need to step away safely.'
+                        ]
+                    }
+                ]
+            }
+        ],
+        buttons: allowQuestShortcut ? [
+            { label: 'Open Quests', variant: 'secondary', action: 'open-quests' },
+            { label: 'Got It', variant: 'primary', action: 'close' }
+        ] : [
+            { label: 'Close', variant: 'primary', action: 'close' }
+        ],
+        onShow: () => {
+            if (options.auto) {
+                const state = getTutorialState();
+                state.fullTutorialSeen = true;
+                persistTutorialState();
+            }
+        }
+    };
+}
+
+function buildMrCHintPrompt() {
+    if (!isMainQuestMrCPending() || days < 1) {
+        return null;
+    }
+
+    const mrCLocation = getMrCTutorialLocationInfo();
+
+    return {
+        type: 'mr-c-reminder',
+        theme: 'urgent',
+        allowOverlayClose: true,
+        title: 'Talk To Mr.C Now',
+        intro: 'The run is stalled because the first main quest conversation has not happened yet.',
+        spotlight: {
+            eyebrow: 'Find This NPC',
+            name: 'Mr.C',
+            image: 'images/npc/mrC.png',
+            alt: 'Mr.C',
+            location: mrCLocation.levelName,
+            action: getInteractTutorialActionLabel(),
+            detail: mrCLocation.shortLabel
+        },
+        steps: [
+            {
+                title: 'Find Mr.C',
+                highlight: true,
+                lines: mrCLocation.instructions
+            },
+            {
+                title: 'Stand Right Next To Mr.C',
+                lines: [
+                    'Move close until the chat icon appears above him.',
+                    'If no icon appears, take one more step closer and face him.'
+                ]
+            },
+            {
+                title: getInteractTutorialActionLabel(),
+                lines: [
+                    'Use the interact control to start the conversation.',
+                    'Keep talking until the dialogue finishes and the goal updates.'
+                ]
+            }
+        ],
+        sections: [
+            {
+                title: 'Why You Are Stuck',
+                highlight: true,
+                lines: [
+                    'The first main quest does not move forward until you finish talking to Mr.C.',
+                    'If you skip that conversation, the game feels like it is not progressing.',
+                    'Mr.C is highlighted in the world now, so follow the glow to him.'
+                ]
+            },
+            {
+                title: 'Quick Check',
+                lines: [
+                    'Open the quest log and look for "Save Cloudy Meadows" if you need a reminder.',
+                    getMrCInteractionHint(),
+                    'If the top-left goal still says to talk to Mr.C, you have not done it yet.',
+                    'After you talk to him, the current goal will change and the run will start moving forward.'
+                ]
+            }
+        ],
+        buttons: [
+            { label: 'Show Main Quest', variant: 'secondary', action: 'open-quests' },
+            { label: 'Got It', variant: 'primary', action: 'close' }
+        ],
+        onShow: () => {
+            const state = getTutorialState();
+            state.lastMrCHintDayShown = days;
+            const mainQuestIndex = getMainQuestIndex();
+            if (mainQuestIndex >= 0 && player) {
+                player.current_quest = mainQuestIndex;
+            }
+            persistTutorialState();
+        }
+    };
+}
+
+function buildTutorialPrompt(type, options = {}) {
+    if (type === 'mr-c-reminder') {
+        return buildMrCHintPrompt();
+    }
+    return buildFullTutorialPrompt(options);
+}
+
+function renderTutorialPrompt(prompt) {
+    const overlay = ensureTutorialOverlay();
+    const modal = document.getElementById('tutorial-modal');
+    const title = document.getElementById('tutorial-title');
+    const intro = document.getElementById('tutorial-intro');
+    const body = document.getElementById('tutorial-body');
+    const actions = document.getElementById('tutorial-actions');
+
+    if (!modal || !title || !intro || !body || !actions) {
+        return;
+    }
+
+    overlay.className = 'tutorial-overlay' +
+        (prompt.theme === 'urgent' ? ' tutorial-overlay-urgent' : '') +
+        (prompt.layout === 'directory' ? ' tutorial-overlay-directory' : '');
+    modal.className = 'tutorial-modal' +
+        (prompt.theme === 'urgent' ? ' tutorial-modal-urgent' : '') +
+        (prompt.layout === 'directory' ? ' tutorial-modal-directory' : '');
+    title.textContent = prompt.title;
+    intro.textContent = prompt.intro || '';
+    intro.style.display = prompt.intro ? 'block' : 'none';
+    body.className = 'tutorial-body' + (prompt.layout === 'directory' ? ' tutorial-body-directory' : '');
+    body.innerHTML = '';
+    actions.innerHTML = '';
+
+    if (prompt.layout === 'directory' && prompt.tabs && prompt.tabs.length) {
+        body.appendChild(createTutorialDirectoryLayout(prompt));
+    } else if (prompt.spotlight) {
+        body.appendChild(createTutorialSpotlightCard(prompt.spotlight));
+        if (prompt.steps && prompt.steps.length) {
+            body.appendChild(createTutorialStepCards(prompt.steps));
+        }
+        (prompt.sections || []).forEach(sectionConfig => {
+            body.appendChild(createTutorialSection(sectionConfig));
+        });
+    } else {
+        if (prompt.steps && prompt.steps.length) {
+            body.appendChild(createTutorialStepCards(prompt.steps));
+        }
+        (prompt.sections || []).forEach(sectionConfig => {
+            body.appendChild(createTutorialSection(sectionConfig));
+        });
+    }
+
+    prompt.buttons.forEach(buttonConfig => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tutorial-button' + (buttonConfig.variant === 'secondary' ? ' tutorial-button-secondary' : '');
+        btn.textContent = buttonConfig.label;
+        btn.addEventListener('click', () => {
+            if (buttonConfig.action === 'open-quests') {
+                closeTutorialOverlay(() => {
+                    openQuestLogFromTutorial();
+                });
+                return;
+            }
+
+            closeTutorialOverlay();
+        });
+        actions.appendChild(btn);
+    });
+
+    hideUIPopups();
+    tutorialShouldReturnToPauseMenu = document.getElementById('pause-menu')?.style.display === 'flex';
+    if (tutorialShouldReturnToPauseMenu) {
+        hidePaused();
+    }
+    tutorialShouldResumeGameplay = !title_screen && !paused;
+    if (tutorialShouldResumeGameplay) {
+        paused = true;
+    }
+
+    overlay.style.display = 'flex';
+    activeTutorialPrompt = prompt;
+    if (typeof prompt.onShow === 'function') {
+        prompt.onShow();
+    }
+    updateCanvasPointerEvents();
+}
+
+function showNextTutorialPrompt() {
+    if (activeTutorialPrompt || tutorialPromptQueue.length === 0) {
+        return;
+    }
+
+    const nextPrompt = tutorialPromptQueue.shift();
+    const prompt = buildTutorialPrompt(nextPrompt.type, nextPrompt.options);
+    if (!prompt) {
+        showNextTutorialPrompt();
+        return;
+    }
+
+    renderTutorialPrompt(prompt);
+}
+
+function queueTutorialPrompt(type, options = {}) {
+    const dedupeKey = options.dedupeKey || type;
+    if (activeTutorialPrompt?.type === type) {
+        return;
+    }
+    if (tutorialPromptQueue.some(prompt => prompt.dedupeKey === dedupeKey)) {
+        return;
+    }
+
+    tutorialPromptQueue.push({ type, options, dedupeKey });
+    showNextTutorialPrompt();
+}
+
+function closeTutorialOverlay(afterClose) {
+    const overlay = document.getElementById('tutorial-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+
+    activeTutorialPrompt = null;
+    if (tutorialShouldReturnToPauseMenu) {
+        paused = true;
+    } else if (tutorialShouldResumeGameplay) {
+        paused = false;
+    }
+    tutorialShouldResumeGameplay = false;
+    tutorialShouldReturnToPauseMenu = false;
+    updateCanvasPointerEvents();
+
+    if (typeof afterClose === 'function') {
+        afterClose();
+    }
+
+    showNextTutorialPrompt();
+}
+
+function openQuestLogFromTutorial() {
+    if (!player) {
+        return;
+    }
+
+    const mainQuestIndex = getMainQuestIndex();
+    if (mainQuestIndex >= 0) {
+        player.current_quest = mainQuestIndex;
+    }
+    player.show_quests = true;
+    showQuests();
+}
+
+function shouldAutoShowFullTutorial() {
+    const state = getTutorialState();
+    return !state.fullTutorialSeen && !title_screen && !lose_screen && days <= 0 && isMainQuestMrCPending();
+}
+
+function maybeQueueFullGameTutorial() {
+    if (shouldAutoShowFullTutorial()) {
+        queueTutorialPrompt('full-tutorial', { auto: true, dedupeKey: 'full-tutorial-auto' });
+    }
+}
+
+function shouldShowMrCHint() {
+    const state = getTutorialState();
+    return !title_screen && !lose_screen && days >= 1 && isMainQuestMrCPending() && state.lastMrCHintDayShown !== days;
+}
+
+function maybeQueueMrCHint() {
+    if (shouldShowMrCHint()) {
+        queueTutorialPrompt('mr-c-reminder', { dedupeKey: 'mr-c-day-' + days });
+    }
+}
+
+function scheduleContextualTutorials(delay = 200) {
+    if (tutorialScheduleTimer) {
+        window.clearTimeout(tutorialScheduleTimer);
+    }
+
+    tutorialScheduleTimer = window.setTimeout(() => {
+        maybeQueueFullGameTutorial();
+        maybeQueueMrCHint();
+    }, delay);
+}
+
+function showFullGameTutorial(options = {}) {
+    queueTutorialPrompt('full-tutorial', { manual: true, dedupeKey: options.dedupeKey || ('full-tutorial-manual-' + (options.source || 'default')) });
+}
+
+window.addEventListener('newDay', () => {
+    scheduleContextualTutorials(250);
+});
+
 // Hide UI popups (goal and location) when not in gameplay
 function hideUIPopups() {
     const goalPopup = document.getElementById('current-goal-popup');
@@ -853,9 +1965,10 @@ function deleteSave() {
 
 function selectDifficulty(difficulty){
     dificulty = difficulty;
+    resetTutorialStateForNewGame();
     
     try {
-        localData.set('Day_curLvl_Dif', {day: 0, currentLevel_y, currentLevel_x, dificulty});
+        localData.set('Day_curLvl_Dif', {day: 0, currentLevel_y, currentLevel_x, dificulty, tutorialState: getTutorialStateForSave()});
         console.log('Difficulty saved:', difficulty);
     } catch (e) {
         console.warn('Failed to save difficulty:', e);
@@ -873,10 +1986,12 @@ function selectDifficulty(difficulty){
         try { generateDailyWeather(); } catch(e) { console.warn('Failed to roll weather at game start:', e); }
     }
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+    scheduleContextualTutorials(250);
 }
 
 function selectCustomDifficulty(features){
     dificulty = 3; // Custom difficulty
+    resetTutorialStateForNewGame();
     
     const questCoinsInput = document.getElementById('custom-quest-coins');
     const questDaysInput = document.getElementById('custom-quest-days');
@@ -914,7 +2029,7 @@ function selectCustomDifficulty(features){
     console.log('selectCustomDifficulty: Final rules with weatherWeights:', rules.weatherWeights);
     
     try {
-        localData.set('Day_curLvl_Dif', {day: 0, currentLevel_y, currentLevel_x, dificulty, customRules: window.customRules});
+        localData.set('Day_curLvl_Dif', {day: 0, currentLevel_y, currentLevel_x, dificulty, customRules: window.customRules, tutorialState: getTutorialStateForSave()});
         console.log('Custom difficulty saved:', window.customRules);
     } catch (e) {
         console.warn('Failed to save custom difficulty:', e);
@@ -971,6 +2086,7 @@ function selectCustomDifficulty(features){
     removeDisabledItemsFromInventory();
 
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+    scheduleContextualTutorials(250);
 }
 
 let controlsContainer = null;
@@ -1352,6 +2468,13 @@ function showTitleOptions(){
         // Buttons section
         const buttonGroup = document.createElement('div');
         buttonGroup.className = 'options-button-group';
+        const tutorialBtn = document.createElement('button');
+        tutorialBtn.className = 'options-button';
+        tutorialBtn.textContent = 'How to Play';
+        tutorialBtn.addEventListener('click', () => {
+            showFullGameTutorial({ source: 'title-options' });
+        });
+        buttonGroup.appendChild(tutorialBtn);
         const resetBtn = document.createElement('button');
         resetBtn.id = 'reset-controls-btn';
         resetBtn.className = 'options-button';
@@ -1538,7 +2661,7 @@ function ensureConfigModal() {
         container.appendChild(row);
     }
 
-    function addBulkToggleActions(container, grid) {
+    function addBulkToggleActions(container, grid, onChange) {
         const actions = document.createElement('div');
         actions.className = 'config-actions config-inline-actions';
 
@@ -1548,6 +2671,7 @@ function ensureConfigModal() {
         allOnBtn.textContent = 'All On';
         allOnBtn.addEventListener('click', () => {
             Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.add('active'));
+            if (typeof onChange === 'function') onChange();
         });
 
         const allOffBtn = document.createElement('button');
@@ -1556,6 +2680,7 @@ function ensureConfigModal() {
         allOffBtn.textContent = 'All Off';
         allOffBtn.addEventListener('click', () => {
             Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => el.classList.remove('active'));
+            if (typeof onChange === 'function') onChange();
         });
 
         actions.appendChild(allOnBtn);
@@ -1563,7 +2688,7 @@ function ensureConfigModal() {
         container.appendChild(actions);
     }
 
-    const corePanel = createTabPanel('core', 'Core', 'Quest goals and survival rules live here.');
+    const corePanel = createTabPanel('core', 'Rules', 'Quest goals and survival rules live here.');
     const worldPanel = createTabPanel('world', 'World', 'Weather and area access are grouped together.');
     const peoplePanel = createTabPanel('people', 'People', 'NPC and critter availability can be managed separately.');
     const itemsPanel = createTabPanel('items', 'Items', 'Item unlocks and price overrides are organized here.');
@@ -1755,6 +2880,116 @@ function ensureConfigModal() {
 
     // Items toggle grid with individual prices
     const itemsSection = createSection(itemsPanel, 'Items', 'Toggle individual items and override any base shop price.');
+    const itemDefs = typeof ITEM_DEFINITIONS !== 'undefined' ? ITEM_DEFINITIONS : [];
+    const ITEM_CLASS_LABELS = {
+        Eat: 'Food',
+        Seed: 'Seeds',
+        Placeable: 'Placeables',
+        Command: 'Commands',
+        Tool: 'Tools',
+        Item: 'Materials',
+        Backpack: 'Storage'
+    };
+    const itemClasses = [];
+    itemDefs.forEach(item => {
+        if (!item || !item.name) return;
+        const itemClass = item.class || 'Item';
+        if (!itemClasses.includes(itemClass)) {
+            itemClasses.push(itemClass);
+        }
+    });
+
+    const itemsToolbar = document.createElement('div');
+    itemsToolbar.className = 'config-items-toolbar';
+
+    const itemsToolbarTop = document.createElement('div');
+    itemsToolbarTop.className = 'config-items-toolbar-top';
+
+    const itemsSearchWrap = document.createElement('div');
+    itemsSearchWrap.className = 'config-item-search-wrap';
+
+    const itemsSearch = document.createElement('input');
+    itemsSearch.type = 'search';
+    itemsSearch.id = 'cfg-items-search';
+    itemsSearch.className = 'config-input config-item-search';
+    itemsSearch.placeholder = 'Search items by name, type, or price state';
+    itemsSearch.autocomplete = 'off';
+    itemsSearch.addEventListener('input', () => {
+        applyItemConfigFilters();
+        updateItemConfigSearchUI();
+    });
+    itemsSearchWrap.appendChild(itemsSearch);
+
+    const itemsSearchClear = document.createElement('button');
+    itemsSearchClear.type = 'button';
+    itemsSearchClear.id = 'cfg-items-search-clear';
+    itemsSearchClear.className = 'config-btn config-item-search-clear';
+    itemsSearchClear.textContent = 'Clear';
+    itemsSearchClear.addEventListener('click', () => {
+        itemsSearch.value = '';
+        applyItemConfigFilters();
+        updateItemConfigSearchUI();
+        itemsSearch.focus();
+    });
+    itemsSearchWrap.appendChild(itemsSearchClear);
+
+    itemsToolbarTop.appendChild(itemsSearchWrap);
+
+    const itemsSummary = document.createElement('div');
+    itemsSummary.id = 'cfg-items-summary';
+    itemsSummary.className = 'config-items-summary';
+    [
+        { key: 'showing', label: 'Showing', value: '0/0' },
+        { key: 'enabled', label: 'Enabled', value: '0' },
+        { key: 'custom', label: 'Custom', value: '0' }
+    ].forEach(summaryDef => {
+        const chip = document.createElement('div');
+        chip.className = 'config-items-summary-chip';
+
+        const label = document.createElement('span');
+        label.className = 'config-items-summary-label';
+        label.textContent = summaryDef.label;
+        chip.appendChild(label);
+
+        const value = document.createElement('span');
+        value.className = 'config-items-summary-value';
+        value.dataset.summaryValue = summaryDef.key;
+        value.textContent = summaryDef.value;
+        chip.appendChild(value);
+
+        itemsSummary.appendChild(chip);
+    });
+    itemsToolbarTop.appendChild(itemsSummary);
+
+    itemsToolbar.appendChild(itemsToolbarTop);
+
+    const itemsFilters = document.createElement('div');
+    itemsFilters.id = 'cfg-items-filters';
+    itemsFilters.className = 'config-chip-bar';
+    const itemFilterDefs = [
+        { value: 'all', label: 'All' },
+        { value: 'enabled', label: 'Enabled' },
+        { value: 'disabled', label: 'Disabled' },
+        { value: 'custom-price', label: 'Custom Price' }
+    ].concat(itemClasses.map(itemClass => ({
+        value: 'class:' + itemClass,
+        label: ITEM_CLASS_LABELS[itemClass] || itemClass
+    })));
+
+    itemFilterDefs.forEach(filterDef => {
+        const filterBtn = document.createElement('button');
+        filterBtn.type = 'button';
+        filterBtn.className = 'config-filter-chip';
+        filterBtn.dataset.filter = filterDef.value;
+        filterBtn.textContent = filterDef.label;
+        filterBtn.addEventListener('click', () => {
+            setActiveItemConfigFilter(filterDef.value);
+        });
+        itemsFilters.appendChild(filterBtn);
+    });
+    itemsToolbar.appendChild(itemsFilters);
+    itemsSection.appendChild(itemsToolbar);
+
     const itemsGrid = document.createElement('div');
     itemsGrid.id = 'cfg-items-grid';
     itemsGrid.className = 'config-grid config-sprite-grid';
@@ -1811,8 +3046,6 @@ function ensureConfigModal() {
         'Fruit Juice': 'images/items/veg_oil.png'
     };
     
-    // Build item list from ITEM_DEFINITIONS
-    const itemDefs = typeof ITEM_DEFINITIONS !== 'undefined' ? ITEM_DEFINITIONS : [];
     itemDefs.forEach((item, idx) => {
         if (!item || idx === 0) return; // Skip empty slot
         if (!item.name) return;
@@ -1822,12 +3055,20 @@ function ensureConfigModal() {
         itemRow.className = 'config-item-row';
         itemRow.dataset.itemIdx = idx;
         itemRow.dataset.itemName = item.name;
+        itemRow.dataset.itemClass = item.class || 'Item';
+        itemRow.dataset.searchText = (item.name + ' ' + (ITEM_CLASS_LABELS[item.class] || item.class || 'Item')).toLowerCase();
+
+        const itemMain = document.createElement('div');
+        itemMain.className = 'config-item-main';
+        itemRow.appendChild(itemMain);
         
         // Toggle button
         const btn = document.createElement('button');
-        btn.className = 'config-grid-item config-sprite-item active'; // Items on by default
+        btn.type = 'button';
+        btn.className = 'config-grid-item config-sprite-item config-item-toggle active'; // Items on by default
         btn.dataset.itemIdx = idx;
         btn.dataset.itemName = item.name;
+        btn.dataset.itemClass = item.class || 'Item';
         
         // Create sprite img element
         const spriteImg = document.createElement('img');
@@ -1848,38 +3089,110 @@ function ensureConfigModal() {
         
         btn.addEventListener('click', () => {
             btn.classList.toggle('active');
+            updateItemConfigRowState(itemRow);
+            applyItemConfigFilters();
         });
-        itemRow.appendChild(btn);
+        itemMain.appendChild(btn);
+
+        const meta = document.createElement('div');
+        meta.className = 'config-item-meta';
+
+        const stateBadge = document.createElement('span');
+        stateBadge.className = 'config-item-badge config-item-state-badge';
+        stateBadge.textContent = 'Enabled';
+        meta.appendChild(stateBadge);
+
+        const classBadge = document.createElement('span');
+        classBadge.className = 'config-item-badge';
+        classBadge.textContent = ITEM_CLASS_LABELS[item.class] || item.class || 'Item';
+        meta.appendChild(classBadge);
         
         // Price input (only for items that have a base price)
         const basePrice = item.price || 0;
+        const priceBadge = document.createElement('span');
+        priceBadge.className = 'config-item-badge';
+        priceBadge.textContent = basePrice > 0 ? ('Base $' + basePrice) : 'No shop price';
+        meta.appendChild(priceBadge);
+        itemMain.appendChild(meta);
+
+        const controls = document.createElement('div');
+        controls.className = 'config-item-controls';
+        itemRow.appendChild(controls);
+
         if (basePrice > 0) {
             const priceWrapper = document.createElement('div');
             priceWrapper.className = 'config-price-wrapper';
-            
+
+            const priceHeading = document.createElement('span');
+            priceHeading.className = 'config-price-caption';
+            priceHeading.textContent = 'Shop Price';
+            priceWrapper.appendChild(priceHeading);
+
+            const priceStatus = document.createElement('span');
+            priceStatus.className = 'config-item-price-status';
+            priceStatus.textContent = 'Base price';
+            priceWrapper.appendChild(priceStatus);
+
+            const priceInputWrap = document.createElement('div');
+            priceInputWrap.className = 'config-price-input-wrap';
+
             const priceLabel = document.createElement('span');
             priceLabel.className = 'config-price-label';
             priceLabel.textContent = '$';
-            priceWrapper.appendChild(priceLabel);
+            priceInputWrap.appendChild(priceLabel);
             
             const priceInput = document.createElement('input');
             priceInput.type = 'number';
             priceInput.className = 'config-item-price';
             priceInput.dataset.itemIdx = idx;
+            priceInput.dataset.defaultPrice = String(basePrice);
             priceInput.min = '1';
             priceInput.max = '999999';
             priceInput.value = basePrice;
             priceInput.title = 'Price for ' + item.name;
-            priceInput.placeholder = basePrice;
-            priceWrapper.appendChild(priceInput);
-            
-            itemRow.appendChild(priceWrapper);
+            priceInput.placeholder = String(basePrice);
+            priceInput.addEventListener('input', () => {
+                updateItemConfigRowState(itemRow);
+                applyItemConfigFilters();
+            });
+            priceInputWrap.appendChild(priceInput);
+
+            const resetBtn = document.createElement('button');
+            resetBtn.type = 'button';
+            resetBtn.className = 'config-price-reset';
+            resetBtn.textContent = 'Reset';
+            resetBtn.addEventListener('click', () => {
+                priceInput.value = String(basePrice);
+                updateItemConfigRowState(itemRow);
+                applyItemConfigFilters();
+            });
+            priceInputWrap.appendChild(resetBtn);
+
+            priceWrapper.appendChild(priceInputWrap);
+            controls.appendChild(priceWrapper);
+        } else {
+            const noPriceNote = document.createElement('div');
+            noPriceNote.className = 'config-item-note';
+            noPriceNote.textContent = 'No shop price to override';
+            controls.appendChild(noPriceNote);
         }
         
         itemsGrid.appendChild(itemRow);
+        updateItemConfigRowState(itemRow);
     });
     itemsSection.appendChild(itemsGrid);
-    addBulkToggleActions(itemsSection, itemsGrid);
+
+    const itemsEmptyState = document.createElement('div');
+    itemsEmptyState.id = 'cfg-items-empty';
+    itemsEmptyState.className = 'config-empty-state';
+    itemsEmptyState.textContent = 'No items match the current search or filter.';
+    itemsEmptyState.hidden = true;
+    itemsSection.appendChild(itemsEmptyState);
+
+    addBulkToggleActions(itemsSection, itemsGrid, () => {
+        Array.from(itemsGrid.querySelectorAll('.config-item-row')).forEach(updateItemConfigRowState);
+        applyItemConfigFilters();
+    });
 
     const actions = document.createElement('div');
     actions.className = 'config-actions';
@@ -1900,6 +3213,7 @@ function ensureConfigModal() {
     modal.appendChild(actions);
 
     setActiveConfigTab('core');
+    setActiveItemConfigFilter('all');
 
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) hideConfigModal();
@@ -1923,6 +3237,135 @@ function setActiveConfigTab(tabId) {
     Array.from(overlay.querySelectorAll('.config-panel')).forEach(panel => {
         panel.classList.toggle('active', panel.dataset.tab === tabId);
     });
+}
+
+function updateItemConfigRowState(row) {
+    if (!row) return;
+
+    const toggleBtn = row.querySelector('.config-item-toggle');
+    const priceInput = row.querySelector('.config-item-price');
+    const enabled = toggleBtn ? toggleBtn.classList.contains('active') : true;
+    if (toggleBtn) {
+        toggleBtn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    }
+    row.dataset.enabled = enabled ? 'true' : 'false';
+    row.classList.toggle('disabled', !enabled);
+
+    const stateBadge = row.querySelector('.config-item-state-badge');
+    if (stateBadge) {
+        stateBadge.textContent = enabled ? 'Enabled' : 'Disabled';
+    }
+
+    let hasCustomPrice = false;
+    if (priceInput) {
+        const defaultPrice = parseInt(priceInput.dataset.defaultPrice);
+        const currentPrice = parseInt(priceInput.value);
+        hasCustomPrice = !isNaN(defaultPrice) && !isNaN(currentPrice) && currentPrice > 0 && currentPrice !== defaultPrice;
+
+        const status = row.querySelector('.config-item-price-status');
+        if (status) {
+            status.textContent = hasCustomPrice ? 'Custom price' : 'Base price';
+        }
+
+        const resetBtn = row.querySelector('.config-price-reset');
+        if (resetBtn) {
+            resetBtn.disabled = !hasCustomPrice;
+        }
+    }
+
+    row.dataset.customPrice = hasCustomPrice ? 'true' : 'false';
+    row.classList.toggle('custom-price', hasCustomPrice);
+}
+
+function updateItemConfigSearchUI() {
+    const searchInput = document.getElementById('cfg-items-search');
+    const clearButton = document.getElementById('cfg-items-search-clear');
+    if (!clearButton) return;
+
+    clearButton.disabled = !searchInput || !searchInput.value.trim();
+}
+
+function applyItemConfigFilters() {
+    const grid = document.getElementById('cfg-items-grid');
+    if (!grid) return;
+
+    const searchValue = (document.getElementById('cfg-items-search')?.value || '').trim().toLowerCase();
+    const activeFilter = document.querySelector('#cfg-items-filters .config-filter-chip.active')?.dataset.filter || 'all';
+
+    let totalCount = 0;
+    let visibleCount = 0;
+    let visibleEnabledCount = 0;
+    let visibleCustomCount = 0;
+
+    Array.from(grid.querySelectorAll('.config-item-row')).forEach(row => {
+        totalCount++;
+
+        const matchesSearch = !searchValue || (row.dataset.searchText || '').includes(searchValue);
+        let matchesFilter = true;
+
+        if (activeFilter === 'enabled') {
+            matchesFilter = row.dataset.enabled === 'true';
+        } else if (activeFilter === 'disabled') {
+            matchesFilter = row.dataset.enabled === 'false';
+        } else if (activeFilter === 'custom-price') {
+            matchesFilter = row.dataset.customPrice === 'true';
+        } else if (activeFilter.startsWith('class:')) {
+            matchesFilter = row.dataset.itemClass === activeFilter.slice(6);
+        }
+
+        const isVisible = matchesSearch && matchesFilter;
+        row.hidden = !isVisible;
+
+        if (isVisible) {
+            visibleCount++;
+            if (row.dataset.enabled === 'true') visibleEnabledCount++;
+            if (row.dataset.customPrice === 'true') visibleCustomCount++;
+        }
+    });
+
+    const summary = document.getElementById('cfg-items-summary');
+    if (summary) {
+        const showingValue = summary.querySelector('[data-summary-value="showing"]');
+        const enabledValue = summary.querySelector('[data-summary-value="enabled"]');
+        const customValue = summary.querySelector('[data-summary-value="custom"]');
+
+        if (showingValue) {
+            showingValue.textContent = visibleCount + '/' + totalCount;
+        }
+        if (enabledValue) {
+            enabledValue.textContent = String(visibleEnabledCount);
+        }
+        if (customValue) {
+            customValue.textContent = String(visibleCustomCount);
+        }
+    }
+
+    const emptyState = document.getElementById('cfg-items-empty');
+    if (emptyState) {
+        emptyState.hidden = visibleCount !== 0;
+    }
+
+    updateItemConfigSearchUI();
+}
+
+function setActiveItemConfigFilter(filterValue) {
+    const filterButtons = Array.from(document.querySelectorAll('#cfg-items-filters .config-filter-chip'));
+    if (!filterButtons.length) return;
+
+    filterButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filterValue);
+    });
+
+    applyItemConfigFilters();
+}
+
+function resetItemConfigFilters() {
+    const searchInput = document.getElementById('cfg-items-search');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    updateItemConfigSearchUI();
+    setActiveItemConfigFilter('all');
 }
 
 function showConfigModal() {
@@ -1985,24 +3428,26 @@ function showConfigModal() {
         });
     }
 
-    // Items grid state (in More section)
+    // Items grid state
     const itemsGrid = document.getElementById('cfg-items-grid');
     const itemsEnabled = rules.itemsEnabled || null;
     const itemPrices = rules.itemPrices || {};
     if (itemsGrid) {
-        Array.from(itemsGrid.querySelectorAll('.config-grid-item')).forEach(el => {
+        Array.from(itemsGrid.querySelectorAll('.config-item-toggle')).forEach(el => {
             const idx = el.dataset.itemIdx;
             const isOn = itemsEnabled == null ? true : !!itemsEnabled[idx];
             el.classList.toggle('active', isOn);
         });
-        // Load per-item prices
+
         Array.from(itemsGrid.querySelectorAll('.config-item-price')).forEach(inp => {
             const idx = inp.dataset.itemIdx;
-            if (itemPrices[idx] !== undefined) {
-                inp.value = itemPrices[idx];
-            }
+            const defaultPrice = parseInt(inp.dataset.defaultPrice);
+            inp.value = itemPrices[idx] !== undefined ? itemPrices[idx] : defaultPrice;
         });
+
+        Array.from(itemsGrid.querySelectorAll('.config-item-row')).forEach(updateItemConfigRowState);
     }
+    resetItemConfigFilters();
 
     // Critters grid state
     const crittersGrid = document.getElementById('cfg-critters-grid');
@@ -2083,7 +3528,7 @@ function saveConfigModal() {
             const grid = document.getElementById('cfg-items-grid');
             const out = {};
             if (grid) {
-                Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => {
+                Array.from(grid.querySelectorAll('.config-item-toggle')).forEach(el => {
                     const idx = el.dataset.itemIdx;
                     const isActive = el.classList.contains('active');
                     out[idx] = isActive;
@@ -2115,7 +3560,8 @@ function saveConfigModal() {
                 Array.from(grid.querySelectorAll('.config-item-price')).forEach(inp => {
                     const idx = inp.dataset.itemIdx;
                     const price = parseInt(inp.value);
-                    if (!isNaN(price) && price > 0) {
+                    const defaultPrice = parseInt(inp.dataset.defaultPrice);
+                    if (!isNaN(price) && price > 0 && price !== defaultPrice) {
                         out[idx] = price;
                     }
                 });
@@ -2395,6 +3841,12 @@ function applyItemPrices() {
     
     // Apply custom prices to all_items
     if (typeof all_items !== 'undefined') {
+        for (let i = 0; i < all_items.length; i++) {
+            if (all_items[i] && window._originalItemPrices[i] !== undefined) {
+                all_items[i].price = window._originalItemPrices[i];
+            }
+        }
+
         for (const [idx, price] of Object.entries(prices)) {
             const i = parseInt(idx);
             if (!isNaN(i) && all_items[i] && price > 0) {
@@ -2417,11 +3869,11 @@ function applyItemPrices() {
                                 if (tile.inv[j] != 0 && tile.inv[j].name) {
                                     const itemNum = typeof item_name_to_num === 'function' ? item_name_to_num(tile.inv[j].name) : -1;
                                     const strKey = String(itemNum);
-                                    if (prices[strKey] !== undefined && prices[strKey] > 0) {
-                                        tile.inv[j].price = prices[strKey];
-                                        tile.originalPrices[j] = prices[strKey];
-                                        console.log('Updated shop', tile.name, 'item', tile.inv[j].name, 'price to', prices[strKey]);
-                                    }
+                                    const defaultPrice = window._originalItemPrices?.[itemNum] ?? tile.inv[j].price;
+                                    const effectivePrice = prices[strKey] !== undefined && prices[strKey] > 0 ? prices[strKey] : defaultPrice;
+                                    tile.inv[j].price = effectivePrice;
+                                    tile.originalPrices[j] = effectivePrice;
+                                    console.log('Updated shop', tile.name, 'item', tile.inv[j].name, 'price to', effectivePrice);
                                 }
                             }
                         }
@@ -2609,6 +4061,15 @@ function ensurePauseMenuContainer() {
         // Render control buttons once (only on desktop)
         renderControlButtons(controlsSection);
     }
+
+    const tutorialBtn = document.createElement('button');
+    tutorialBtn.id = 'pause-tutorial-btn';
+    tutorialBtn.className = 'pause-button';
+    tutorialBtn.textContent = 'How to Play';
+    tutorialBtn.addEventListener('click', () => {
+        showFullGameTutorial({ source: 'pause-menu' });
+    });
+    pauseMenu.appendChild(tutorialBtn);
 
     //back button
     const backBtn = document.createElement('button');
@@ -3274,7 +4735,8 @@ function saveAll(){
         currentWeather: currentWeather,
         time: time,
         timephase: timephase,
-        customRules: window.customRules || null
+        customRules: window.customRules || null,
+        tutorialState: getTutorialStateForSave()
     });
     let lvlLength = 0;
     for(let i = 0; i < levels.length; i++){
@@ -3331,6 +4793,7 @@ function loadAll(){
         }
     }
     if(localData.get('Day_curLvl_Dif') != null){
+        loadTutorialState(localData.get('Day_curLvl_Dif').tutorialState || null);
         days = localData.get('Day_curLvl_Dif').days || 0;
         // Ensure days is a valid number
         if (isNaN(days)) {
@@ -3362,6 +4825,8 @@ function loadAll(){
         // Load time of day
         time = localData.get('Day_curLvl_Dif').time || 0;
         timephase = localData.get('Day_curLvl_Dif').timephase || 0;
+    } else {
+        loadTutorialState(null);
     }
     if(localData.get('Controls') != null){
         Controls_Interact_button_key = localData.get('Controls').Controls_Interact_button_key

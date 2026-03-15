@@ -2401,7 +2401,8 @@ function render_ui() {
         }
     }
 
-    if(paused){
+    const tutorialOverlayOpen = typeof isTutorialOverlayVisible === 'function' && isTutorialOverlayVisible();
+    if(paused && !tutorialOverlayOpen){
         showPaused();
         // Disable canvas pointer events so pause menu can receive clicks
         const canvas = document.querySelector('canvas');

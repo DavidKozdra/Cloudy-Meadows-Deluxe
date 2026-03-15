@@ -3394,7 +3394,7 @@
   ,
   "Kiah": [
     {
-      "phrase": "Hi! I'm Kiah. I love exploring the Big City and finding great food spots. I'm always up for an adventure! As long as that adventure isnt programmed by DAVID KOZDRA. I dont like that guy so negative",
+      "phrase": "Hi! I'm Kiah. I'm always up for an adventure! As long as that adventure isnt programmed by DAVID KOZDRA.",
       "replies": [
         { "phrase": "Nice to meet you, Kiah!", "dialouge_num": 1, "quest": -1 },
         { "phrase": "Enjoy the city!", "dialouge_num": -1, "quest": -1 }
