@@ -1105,8 +1105,7 @@ window.addEventListener('keymapCapture', (e) => {
     const titleControlsContainer = document.getElementById('title-controls-container');
     if (titleControlsContainer) {
         console.log('Refreshing title controls');
-        titleControlsContainer.innerHTML = ''; // Clear so it re-renders
-        showTitleOptions();
+        renderControlButtons(titleControlsContainer);
     }
 });
 

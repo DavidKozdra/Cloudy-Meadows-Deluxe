@@ -2276,7 +2276,7 @@ function resetControls() {
     // Refresh the controls display if the options menu is open
     const controlsContainer = document.getElementById('title-controls-container');
     if (controlsContainer) {
-        showTitleOptions();
+        renderControlButtons(controlsContainer);
     }
     
     // Refresh pause menu controls if pause menu is open
@@ -2883,7 +2883,7 @@ function showTitleOptions(){
         fxSliderDOM.value = fxSlider.value();
     }
 
-    if (controlsContainer) {
+    if (controlsContainer && controlsContainer.childElementCount === 0) {
         renderControlButtons(controlsContainer);
     }
 
