@@ -1702,6 +1702,13 @@ function triggerTravelTransition(callback, destination = 'Unknown') {
     if (destinationText) {
         destinationText.textContent = `Traveling to ${destination}`;
     }
+
+    if (typeof shouldReduceMotion === 'function' && shouldReduceMotion()) {
+        if (callback) {
+            callback();
+        }
+        return;
+    }
     
     overlay.classList.add('active');
     
@@ -1719,6 +1726,14 @@ function triggerTravelTransition(callback, destination = 'Unknown') {
 // Menu fade transition trigger
 function triggerMenuFadeOut(callback) {
     const overlay = document.getElementById('menuOverlay');
+
+    if (typeof shouldReduceMotion === 'function' && shouldReduceMotion()) {
+        if (callback) {
+            callback();
+        }
+        return;
+    }
+
     overlay.classList.add('active');
     
     // Call callback at peak fade (500ms in)
@@ -1816,8 +1831,12 @@ function draw() {
         applyWeatherEffects();
         
         if (!paused){
-            // Resume GIF animations
-            animatedGifs.forEach(gif => gif.play());
+            const reduceMotionEnabled = typeof shouldReduceMotion === 'function' && shouldReduceMotion();
+            if (reduceMotionEnabled) {
+                animatedGifs.forEach(gif => gif.pause());
+            } else {
+                animatedGifs.forEach(gif => gif.play());
+            }
             // Update all levels so plants grow offscreen
             for(let y = 0; y < levels.length; y++){
                 for(let x = 0; x < levels[y].length; x++){

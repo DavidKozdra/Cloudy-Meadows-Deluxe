@@ -7,6 +7,170 @@ window.addEventListener('unhandledrejection', event => {
     }
 });
 
+const ACCESSIBILITY_OPTION_DEFAULTS = Object.freeze({
+    reduceMotion: false,
+    highContrast: false,
+    largeText: false,
+    largeControls: false,
+    uiScale: 1
+});
+
+function getOptionsStore() {
+    try {
+        if (typeof localData !== 'undefined' && localData) {
+            return localData;
+        }
+    } catch (err) {
+        console.warn('Primary options store unavailable, falling back to bootstrap store.', err);
+    }
+
+    if (!window.__bootstrapLocalData && typeof localDataStorage === 'function') {
+        window.__bootstrapLocalData = localDataStorage('passphrase.life');
+    }
+
+    return window.__bootstrapLocalData || null;
+}
+
+function clampAccessibilityUIScale(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+        return ACCESSIBILITY_OPTION_DEFAULTS.uiScale;
+    }
+
+    return Math.min(1.4, Math.max(0.9, numericValue));
+}
+
+function normalizeAccessibilityOptions(rawOptions = {}) {
+    return {
+        reduceMotion: !!rawOptions.reduceMotion,
+        highContrast: !!rawOptions.highContrast,
+        largeText: !!rawOptions.largeText,
+        largeControls: !!rawOptions.largeControls,
+        uiScale: clampAccessibilityUIScale(rawOptions.uiScale)
+    };
+}
+
+function getStoredOptions() {
+    const store = getOptionsStore();
+    if (!store) {
+        return null;
+    }
+
+    try {
+        return store.get('Options') || null;
+    } catch (err) {
+        console.warn('Failed to read stored options.', err);
+        return null;
+    }
+}
+
+let cachedAccessibilityOptions = normalizeAccessibilityOptions(getStoredOptions() || {});
+
+function buildMergedOptions(overrides = {}) {
+    const previousOptions = getStoredOptions() || {};
+    const mergedOptions = {
+        ...previousOptions,
+        ...overrides
+    };
+
+    return {
+        ...mergedOptions,
+        ...normalizeAccessibilityOptions(mergedOptions)
+    };
+}
+
+function persistOptionsData(overrides = {}) {
+    const nextOptions = buildMergedOptions(overrides);
+    const store = getOptionsStore();
+
+    if (!store) {
+        return nextOptions;
+    }
+
+    try {
+        store.set('Options', nextOptions);
+    } catch (err) {
+        console.warn('Failed to persist options.', err);
+    }
+
+    return nextOptions;
+}
+
+function getAccessibilityOptions(sourceOptions) {
+    if (sourceOptions) {
+        return normalizeAccessibilityOptions(sourceOptions);
+    }
+
+    return cachedAccessibilityOptions;
+}
+
+function syncAccessibilityControls(sourceOptions) {
+    const accessibilityOptions = getAccessibilityOptions(sourceOptions);
+
+    Array.from(document.querySelectorAll('[data-accessibility-setting]')).forEach(input => {
+        const settingKey = input.dataset.accessibilitySetting;
+        if (!(settingKey in accessibilityOptions)) {
+            return;
+        }
+
+        if (input.type === 'checkbox') {
+            input.checked = !!accessibilityOptions[settingKey];
+            input.setAttribute('aria-checked', input.checked ? 'true' : 'false');
+        } else {
+            input.value = accessibilityOptions[settingKey];
+        }
+    });
+
+    Array.from(document.querySelectorAll('[data-accessibility-value="uiScale"]')).forEach(node => {
+        node.textContent = accessibilityOptions.uiScale.toFixed(2) + 'x';
+    });
+}
+
+function applyAccessibilityPrefs(sourceOptions) {
+    const accessibilityOptions = getAccessibilityOptions(sourceOptions || getStoredOptions() || {});
+    cachedAccessibilityOptions = accessibilityOptions;
+    const targetNodes = [document.documentElement];
+
+    if (document.body) {
+        targetNodes.push(document.body);
+    }
+
+    targetNodes.forEach(node => {
+        node.classList.toggle('acc-reduce-motion', accessibilityOptions.reduceMotion);
+        node.classList.toggle('acc-high-contrast', accessibilityOptions.highContrast);
+        node.classList.toggle('acc-large-text', accessibilityOptions.largeText);
+        node.classList.toggle('acc-large-ui', accessibilityOptions.largeControls);
+    });
+
+    document.documentElement.style.setProperty('--ui-scale', accessibilityOptions.uiScale.toFixed(2));
+    syncAccessibilityControls(accessibilityOptions);
+    return accessibilityOptions;
+}
+
+function shouldReduceMotion() {
+    return getAccessibilityOptions().reduceMotion;
+}
+
+function updateAccessibilityOption(settingKey, value) {
+    const normalizedValue = settingKey === 'uiScale'
+        ? clampAccessibilityUIScale(value)
+        : !!value;
+    const nextOptions = persistOptionsData({ [settingKey]: normalizedValue });
+    applyAccessibilityPrefs(nextOptions);
+    return nextOptions;
+}
+
+window.applyAccessibilityPrefs = applyAccessibilityPrefs;
+window.shouldReduceMotion = shouldReduceMotion;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        applyAccessibilityPrefs();
+    }, { once: true });
+} else {
+    applyAccessibilityPrefs();
+}
+
 // Helper function to update canvas pointer-events based on visible menus
 function updateCanvasPointerEvents() {
     const canvas = document.querySelector('canvas');
@@ -2272,6 +2436,133 @@ function hideControls() {
 
 }
 
+function createAccessibilityToggleControl(contextId, settingKey, labelText, descriptionText) {
+    const row = document.createElement('label');
+    row.className = 'accessibility-toggle-row';
+    row.htmlFor = contextId + '-accessibility-' + settingKey;
+
+    const copy = document.createElement('span');
+    copy.className = 'accessibility-copy';
+
+    const title = document.createElement('span');
+    title.className = 'accessibility-label';
+    title.textContent = labelText;
+    copy.appendChild(title);
+
+    const description = document.createElement('span');
+    description.className = 'accessibility-description';
+    description.id = contextId + '-accessibility-' + settingKey + '-description';
+    description.textContent = descriptionText;
+    copy.appendChild(description);
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = contextId + '-accessibility-' + settingKey;
+    input.className = 'accessibility-toggle-input';
+    input.dataset.accessibilitySetting = settingKey;
+    input.setAttribute('aria-describedby', description.id);
+    input.addEventListener('change', () => {
+        updateAccessibilityOption(settingKey, input.checked);
+    });
+
+    row.appendChild(copy);
+    row.appendChild(input);
+    return row;
+}
+
+function createAccessibilityScaleControl(contextId) {
+    const row = document.createElement('div');
+    row.className = 'accessibility-scale-row';
+
+    const copy = document.createElement('div');
+    copy.className = 'accessibility-copy';
+
+    const title = document.createElement('label');
+    title.className = 'accessibility-label';
+    title.htmlFor = contextId + '-accessibility-uiScale';
+    title.textContent = 'UI Scale';
+    copy.appendChild(title);
+
+    const description = document.createElement('span');
+    description.className = 'accessibility-description';
+    description.id = contextId + '-accessibility-uiScale-description';
+    description.textContent = 'Scale menu and overlay interface elements without changing browser zoom.';
+    copy.appendChild(description);
+
+    const controls = document.createElement('div');
+    controls.className = 'accessibility-scale-input-wrap';
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.id = contextId + '-accessibility-uiScale';
+    input.className = 'accessibility-scale-input';
+    input.min = '0.9';
+    input.max = '1.4';
+    input.step = '0.05';
+    input.dataset.accessibilitySetting = 'uiScale';
+    input.setAttribute('aria-describedby', description.id);
+    input.addEventListener('input', () => {
+        updateAccessibilityOption('uiScale', input.value);
+    });
+
+    const value = document.createElement('span');
+    value.className = 'accessibility-scale-value';
+    value.dataset.accessibilityValue = 'uiScale';
+    value.textContent = ACCESSIBILITY_OPTION_DEFAULTS.uiScale.toFixed(2) + 'x';
+
+    controls.appendChild(input);
+    controls.appendChild(value);
+    row.appendChild(copy);
+    row.appendChild(controls);
+    return row;
+}
+
+function createAccessibilitySettingsSection(contextId, sectionOptions = {}) {
+    const section = document.createElement('div');
+    section.className = (sectionOptions.compact ? 'pause-menu-section' : 'options-section') + ' accessibility-settings-section';
+
+    const title = document.createElement(sectionOptions.compact ? 'div' : 'h3');
+    title.className = sectionOptions.compact ? 'pause-controls-title' : 'options-section-title';
+    title.textContent = 'Accessibility';
+    section.appendChild(title);
+
+    const intro = document.createElement('p');
+    intro.className = (sectionOptions.compact ? 'pause-menu-label' : 'options-section-description') + ' accessibility-section-intro';
+    intro.textContent = 'Tune motion, contrast, text, and control size so the interface stays comfortable to use.';
+    section.appendChild(intro);
+
+    const list = document.createElement('div');
+    list.className = 'accessibility-settings-list';
+    list.appendChild(createAccessibilityScaleControl(contextId));
+    list.appendChild(createAccessibilityToggleControl(
+        contextId,
+        'reduceMotion',
+        'Reduce Motion',
+        'Disable menu transitions and animated interface movement where possible.'
+    ));
+    list.appendChild(createAccessibilityToggleControl(
+        contextId,
+        'highContrast',
+        'High Contrast UI',
+        'Strengthen panel, text, and focus contrast for menus and overlay controls.'
+    ));
+    list.appendChild(createAccessibilityToggleControl(
+        contextId,
+        'largeText',
+        'Larger Text',
+        'Increase menu, prompt, and overlay text for better legibility.'
+    ));
+    list.appendChild(createAccessibilityToggleControl(
+        contextId,
+        'largeControls',
+        'Larger UI Controls',
+        'Increase button size and touch targets across menu and mobile controls.'
+    ));
+    section.appendChild(list);
+
+    return section;
+}
+
 function showOptions(){
     push()
     stroke(149, 108, 65);
@@ -2304,10 +2595,13 @@ function setActiveTitleOptionsTab(tabId) {
         const isActive = tab.dataset.tab === tabId;
         tab.classList.toggle('active', isActive);
         tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        tab.setAttribute('tabindex', isActive ? '0' : '-1');
     });
 
     Array.from(optionsMenu.querySelectorAll('.options-tab-panel')).forEach(panel => {
-        panel.classList.toggle('active', panel.dataset.tab === tabId);
+        const isActive = panel.dataset.tab === tabId;
+        panel.classList.toggle('active', isActive);
+        panel.hidden = !isActive;
     });
 }
 
@@ -2319,18 +2613,23 @@ function showTitleOptions(){
         optionsMenu.className = 'title-options-menu';
         document.body.appendChild(optionsMenu);
 
+        const optionsShell = document.createElement('div');
+        optionsShell.className = 'title-options-shell';
+        optionsMenu.appendChild(optionsShell);
+
         const title = document.createElement('h2');
         title.className = 'options-title';
         title.textContent = 'Options';
-        optionsMenu.appendChild(title);
+        optionsShell.appendChild(title);
 
         const tabBar = document.createElement('div');
         tabBar.className = 'options-tab-bar';
-        optionsMenu.appendChild(tabBar);
+        tabBar.setAttribute('role', 'tablist');
+        optionsShell.appendChild(tabBar);
 
         const panelWrap = document.createElement('div');
         panelWrap.className = 'options-panel-wrap';
-        optionsMenu.appendChild(panelWrap);
+        optionsShell.appendChild(panelWrap);
 
         const createOptionsPanel = (tabId, label) => {
             const tab = document.createElement('button');
@@ -2338,6 +2637,11 @@ function showTitleOptions(){
             tab.className = 'options-tab';
             tab.dataset.tab = tabId;
             tab.textContent = label;
+            tab.id = 'title-options-tab-' + tabId;
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-controls', 'title-options-panel-' + tabId);
+            tab.setAttribute('aria-selected', 'false');
+            tab.setAttribute('tabindex', '-1');
             tab.addEventListener('click', () => {
                 setActiveTitleOptionsTab(tabId);
             });
@@ -2346,11 +2650,16 @@ function showTitleOptions(){
             const panel = document.createElement('div');
             panel.className = 'options-tab-panel';
             panel.dataset.tab = tabId;
+            panel.id = 'title-options-panel-' + tabId;
+            panel.setAttribute('role', 'tabpanel');
+            panel.setAttribute('aria-labelledby', tab.id);
+            panel.hidden = true;
             panelWrap.appendChild(panel);
             return panel;
         };
 
         const audioPanel = createOptionsPanel('audio', 'Audio');
+        const accessibilityPanel = createOptionsPanel('accessibility', 'Accessibility');
         const controlsPanel = !isMobile ? createOptionsPanel('controls', 'Controls') : null;
         const dataPanel = createOptionsPanel('data', 'Data');
         const helpPanel = createOptionsPanel('help', 'Help');
@@ -2406,6 +2715,7 @@ function showTitleOptions(){
         fxRow.appendChild(fxSlider);
         audioSection.appendChild(fxRow);
         audioPanel.appendChild(audioSection);
+        accessibilityPanel.appendChild(createAccessibilitySettingsSection('title'));
 
         if (controlsPanel) {
             const controlsSection = document.createElement('div');
@@ -2557,7 +2867,7 @@ function showTitleOptions(){
             paused = false;
             hideTitleOptions();
         });
-        optionsMenu.appendChild(backBtn);
+        optionsShell.appendChild(backBtn);
 
         setActiveTitleOptionsTab('audio');
     }
@@ -2580,6 +2890,7 @@ function showTitleOptions(){
     const preferredTab = optionsMenu.dataset.activeTab || 'audio';
     const availableTab = optionsMenu.querySelector('.options-tab[data-tab="' + preferredTab + '"]') ? preferredTab : 'audio';
     setActiveTitleOptionsTab(availableTab);
+    syncAccessibilityControls();
     refreshSaveTransferButtons();
     optionsMenu.style.display = 'flex';
     updateCanvasPointerEvents();
@@ -4053,6 +4364,8 @@ function showPaused(){
             const availableTab = pauseMenu.querySelector('.pause-tab[data-tab="' + preferredTab + '"]') ? preferredTab : 'audio';
             setActivePauseMenuTab(availableTab);
         }
+
+        syncAccessibilityControls();
     }
 }
 
@@ -4074,10 +4387,13 @@ function setActivePauseMenuTab(tabId) {
         const isActive = tab.dataset.tab === tabId;
         tab.classList.toggle('active', isActive);
         tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        tab.setAttribute('tabindex', isActive ? '0' : '-1');
     });
 
     Array.from(pauseMenu.querySelectorAll('.pause-tab-panel')).forEach(panel => {
-        panel.classList.toggle('active', panel.dataset.tab === tabId);
+        const isActive = panel.dataset.tab === tabId;
+        panel.classList.toggle('active', isActive);
+        panel.hidden = !isActive;
     });
 
     if (tabId === 'help') {
@@ -4126,6 +4442,7 @@ function ensurePauseMenuContainer() {
 
     const tabBar = document.createElement('div');
     tabBar.className = 'options-tab-bar pause-tab-bar';
+    tabBar.setAttribute('role', 'tablist');
     pauseMenu.appendChild(tabBar);
 
     const panelWrap = document.createElement('div');
@@ -4138,6 +4455,11 @@ function ensurePauseMenuContainer() {
         tab.className = 'options-tab pause-tab';
         tab.dataset.tab = tabId;
         tab.textContent = label;
+        tab.id = 'pause-tab-' + tabId;
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('aria-controls', 'pause-panel-' + tabId);
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
         tab.addEventListener('click', () => {
             setActivePauseMenuTab(tabId);
         });
@@ -4146,11 +4468,16 @@ function ensurePauseMenuContainer() {
         const panel = document.createElement('div');
         panel.className = 'options-tab-panel pause-tab-panel';
         panel.dataset.tab = tabId;
+        panel.id = 'pause-panel-' + tabId;
+        panel.setAttribute('role', 'tabpanel');
+        panel.setAttribute('aria-labelledby', tab.id);
+        panel.hidden = true;
         panelWrap.appendChild(panel);
         return panel;
     };
 
     const audioPanel = createPausePanel('audio', 'Audio');
+    const accessibilityPanel = createPausePanel('accessibility', 'Accessibility');
     const controlsPanel = !isMobile ? createPausePanel('controls', 'Controls') : null;
     const helpPanel = createPausePanel('help', 'Help');
 
@@ -4203,6 +4530,7 @@ function ensurePauseMenuContainer() {
     sliderSection.appendChild(fxRow);
 
     audioPanel.appendChild(sliderSection);
+    accessibilityPanel.appendChild(createAccessibilitySettingsSection('pause', { compact: true }));
 
     if (controlsPanel) {
         const controlsSection = document.createElement('div');
@@ -4943,7 +5271,15 @@ function saveAll(){
 }
 
 function saveOptions(){
-    localData.set('Options', {musicVolume: musicSlider.value(), fxVolume: fxSlider.value()});
+    const optionOverrides = {};
+    if (typeof musicSlider !== 'undefined' && musicSlider && typeof musicSlider.value === 'function') {
+        optionOverrides.musicVolume = musicSlider.value();
+    }
+    if (typeof fxSlider !== 'undefined' && fxSlider && typeof fxSlider.value === 'function') {
+        optionOverrides.fxVolume = fxSlider.value();
+    }
+
+    persistOptionsData(optionOverrides);
     localData.set('Controls', {
         Controls_Interact_button_key: Controls_Interact_button_key,
         Controls_Eat_button_key: Controls_Eat_button_key,
@@ -5037,6 +5373,7 @@ function loadAll(){
         special_key = localData.get('Controls').special_key
         quest_key = localData.get('Controls').quest_key
     }
+    applyAccessibilityPrefs(localData.get('Options'));
     if(localData.get('extralvlStuff') != null){
         extraCount = localData.get('extralvlStuff').extraCount
         let lvlLength = localData.get('extralvlStuff').lvlLength;
