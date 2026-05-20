@@ -3915,8 +3915,12 @@ button {
     /* Main Menu Mobile Adjustments */
     .main-menu {
         gap: 15px;
+        overflow-y: auto;
+        justify-content: flex-start;
+        padding-top: 30px;
+        padding-bottom: 30px;
     }
-    
+
     .main-menu-title-image {
         width: 280px;
         margin-bottom: 15px;
@@ -4084,21 +4088,23 @@ button {
 @media (max-width: 480px) {
     /* Main Menu - Very Small Screens */
     .main-menu {
-        padding: 15px;
+        padding: 20px 15px;
         gap: 10px;
+        overflow-y: auto;
+        justify-content: flex-start;
     }
-    
+
     .main-menu-title-image {
-        width: 220px;
-        margin-bottom: 10px;
+        width: 200px;
+        margin-bottom: 8px;
     }
-    
+
     .deluxe-text {
-        font-size: 22px;
+        font-size: 20px;
         letter-spacing: 3px;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
     }
-    
+
     .main-menu-button {
         font-size: 12px;
         padding: 10px 20px;
@@ -4338,30 +4344,37 @@ button {
         max-height: 85vh;
         max-width: 50vw;
     }
-    
+
     .quests-list {
         max-height: 55vh;
         min-height: 40vh;
     }
-    
+
     .main-menu {
         gap: 8px;
+        overflow-y: auto;
+        justify-content: flex-start;
+        padding: 12px 15px;
     }
-    
+
     .main-menu-title-image {
-        width: 180px;
-        margin-bottom: 5px;
+        width: 100px;
+        margin-bottom: 0;
     }
-    
+
     .deluxe-text {
-        font-size: 18px;
-        margin-bottom: 8px;
+        font-size: 14px;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+        animation: none;
     }
-    
+
     .main-menu-button {
-        padding: 8px 20px;
+        padding: 8px 16px;
+        font-size: 12px;
+        width: 160px;
     }
-    
+
     .difficulty-container {
         flex-direction: row;
         max-height: fit-content;
@@ -5003,5 +5016,34 @@ body.acc-high-contrast .mobile-inv-slot.selected {
 
     .pause-slider-label {
         font-size: calc(10px * var(--ui-scale) * var(--acc-text-scale));
+    }
+}
+
+/* Mobile landscape: shrink title image so everything fits without scrolling.
+   This block is last so it wins over the accessibility var() rules above. */
+@media (max-height: 500px) and (orientation: landscape) {
+    .main-menu {
+        gap: 8px;
+        overflow-y: auto;
+        justify-content: flex-start;
+        padding: 12px 15px;
+    }
+
+    .main-menu-title-image {
+        width: 90px !important;
+        margin-bottom: 0;
+    }
+
+    .deluxe-text {
+        font-size: 13px !important;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+        animation: none;
+    }
+
+    .main-menu-button {
+        width: 160px !important;
+        font-size: 12px !important;
+        padding: 8px 16px !important;
     }
 }

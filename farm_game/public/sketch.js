@@ -1223,14 +1223,14 @@ function initializeRain(dropletCount = 200) {
 function generateDailyWeather() {
     // Default weights mirror original probabilities
     let weights = {
-        'frog-rain': 0.5,
+        'frog-rain': 0.1,
         'thunderstorm': 2,
         'rain': 8,
         'sunshower': 8,
         'overcast': 10,
         'partly-cloudy': 15,
         'fog': 7,
-        'clear': 49.5
+        'clear': 49.9
     };
     // Override with custom rules if provided - REPLACE defaults entirely
     if (typeof window !== 'undefined' && window.customRules && window.customRules.weatherWeights) {
@@ -1250,6 +1250,12 @@ function generateDailyWeather() {
             'clear': custom['clear'] != null ? Number(custom['clear']) : Math.max(0, 100 - sumOthers)
         };
         console.log('Using custom weather weights:', weights);
+    }
+    // Keep day-one frog rain possible, but prevent stale/custom weights from making it common.
+    if (days <= 0 && weights['frog-rain'] > 0) {
+        const originalFrogRainWeight = Number(weights['frog-rain']) || 0;
+        weights['frog-rain'] = Math.min(originalFrogRainWeight, 0.1);
+        weights.clear = (Number(weights.clear) || 0) + (originalFrogRainWeight - weights['frog-rain']);
     }
     // Weighted random selection
     const entries = Object.entries(weights);

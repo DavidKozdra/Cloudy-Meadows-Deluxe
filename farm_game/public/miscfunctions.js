@@ -175,7 +175,7 @@ if (document.readyState === 'loading') {
 function updateCanvasPointerEvents() {
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
-    
+
     const mainMenuVisible = document.getElementById('main-menu-container')?.style.display !== 'none';
     const difficultyMenuVisible = document.getElementById('difficulty-menu')?.style.display !== 'none';
     const optionsMenuVisible = document.getElementById('options-menu')?.style.display !== 'none';
@@ -185,7 +185,7 @@ function updateCanvasPointerEvents() {
     const loseScreenVisible = document.getElementById('lose-screen')?.style.display !== 'none';
     const configModalVisible = document.getElementById('config-overlay')?.style.display !== 'none';
     const tutorialVisible = document.getElementById('tutorial-overlay')?.style.display !== 'none';
-    
+
     const anyMenuVisible = mainMenuVisible || difficultyMenuVisible || optionsMenuVisible || creditsMenuVisible || pauseMenuVisible || questsVisible || loseScreenVisible || configModalVisible || tutorialVisible;
     canvas.style.pointerEvents = anyMenuVisible ? 'none' : 'auto';
 }
@@ -214,7 +214,7 @@ function updateQuestContent(){
     if (!questsContainer) return; // Quest panel not open yet
     const questsList = questsContainer.querySelector('.quests-list');
     if (!questsList) return;
-    
+
     const buttons = questsList.querySelectorAll('.quest-item');
     buttons.forEach(btn => {
         const questIndex = parseInt(btn.getAttribute('data-quest-index'));
@@ -1721,7 +1721,8 @@ function openQuestLogFromTutorial() {
 
 function shouldAutoShowFullTutorial() {
     const state = getTutorialState();
-    return !state.fullTutorialSeen && !title_screen && !lose_screen && days <= 0 && isMainQuestMrCPending();
+    const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
+    return !mobileOrSmallScreen && !state.fullTutorialSeen && !title_screen && !lose_screen && days <= 0 && isMainQuestMrCPending();
 }
 
 function maybeQueueFullGameTutorial() {
@@ -1753,6 +1754,11 @@ function scheduleContextualTutorials(delay = 200) {
 }
 
 function showFullGameTutorial(options = {}) {
+    const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
+    if (mobileOrSmallScreen) {
+        return;
+    }
+
     queueTutorialPrompt('full-tutorial', { manual: true, dedupeKey: options.dedupeKey || ('full-tutorial-manual-' + (options.source || 'default')) });
 }
 
@@ -1775,7 +1781,7 @@ function hideUIPopups() {
 function showTitle(){
     // Hide UI popups on title screen
     hideUIPopups();
-    
+
     // Render background on canvas
   
         /*
@@ -1830,19 +1836,19 @@ function showMainMenu(){
         titleImg.alt = 'Title';
         titleImg.className = 'main-menu-title-image';
         container.appendChild(titleImg);
-        
+
         const deluxeText = document.createElement('div');
         deluxeText.className = 'deluxe-text';
         deluxeText.textContent = 'DELUXE';
         container.appendChild(deluxeText);
-        
+
         startBtn = document.createElement('button');
         startBtn.id = 'start-btn';
         startBtn.className = 'main-menu-button';
         startBtn.textContent = 'Start'; // Default label in case save check fails early
         startBtn.addEventListener('click', start);
         container.appendChild(startBtn);
-        
+
         const optionsBtn = document.createElement('button');
         optionsBtn.id = 'options-btn';
         optionsBtn.className = 'main-menu-button';
@@ -1852,7 +1858,7 @@ function showMainMenu(){
             creditsOn = false;
         });
         container.appendChild(optionsBtn);
-        
+
         const creditsBtn = document.createElement('button');
         creditsBtn.id = 'credits-btn';
         creditsBtn.className = 'main-menu-button';
@@ -1892,7 +1898,7 @@ function showDificulty(){
         clouds[i].render()
     }
     pop();
-    
+
     // Show DOM-based difficulty menu
     showDifficultyMenu();
 }
@@ -2071,7 +2077,7 @@ function showDifficultyMenu(){
         scrollHint.innerHTML = 'Scroll for more ↓';
         difficultyMenu.insertBefore(scrollHint, difficultyMenu.firstChild);
     }
-    
+
     difficultyMenu.style.display = 'flex';
     updateCanvasPointerEvents();
 }
@@ -2132,32 +2138,72 @@ function deleteSave() {
 
 function selectDifficulty(difficulty){
     dificulty = difficulty;
-    resetTutorialStateForNewGame();
-    
-    try {
-        localData.set('Day_curLvl_Dif', {day: 0, currentLevel_y, currentLevel_x, dificulty, tutorialState: getTutorialStateForSave()});
-        console.log('Difficulty saved:', difficulty);
-    } catch (e) {
-        console.warn('Failed to save difficulty:', e);
+    window.customRules = null;
+    days = 0;
+    dayOfWeek = 0;
+    time = 0;
+    timephase = 0;
+    currentWeather = 'clear';
+    if (typeof lastRainDay !== 'undefined') {
+        lastRainDay = -999;
     }
+    if (typeof lastFrogRainDay !== 'undefined') {
+        lastFrogRainDay = -999;
+    }
+    if (typeof frogRainEntities !== 'undefined') {
+        frogRainEntities = [];
+    }
+    resetTutorialStateForNewGame();
     
     // Proceed directly into the game without showing difficulty screen again
     hideDifficultyMenu();
     dificulty_screen = false;
     title_screen = false;
     paused = false;
-    
+
     console.log('Starting game with difficulty:', difficulty);
     // Ensure weather is rolled for the current day when starting a game
     if (typeof generateDailyWeather === 'function') {
         try { generateDailyWeather(); } catch(e) { console.warn('Failed to roll weather at game start:', e); }
     }
+
+    try {
+        localData.set('Day_curLvl_Dif', {
+            days: 0,
+            currentLevel_y,
+            currentLevel_x,
+            dificulty,
+            currentWeather,
+            time,
+            timephase,
+            customRules: null,
+            tutorialState: getTutorialStateForSave()
+        });
+        console.log('Difficulty saved:', difficulty);
+    } catch (e) {
+        console.warn('Failed to save difficulty:', e);
+    }
+
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
     scheduleContextualTutorials(250);
 }
 
 function selectCustomDifficulty(features){
     dificulty = 3; // Custom difficulty
+    days = 0;
+    dayOfWeek = 0;
+    time = 0;
+    timephase = 0;
+    currentWeather = 'clear';
+    if (typeof lastRainDay !== 'undefined') {
+        lastRainDay = -999;
+    }
+    if (typeof lastFrogRainDay !== 'undefined') {
+        lastFrogRainDay = -999;
+    }
+    if (typeof frogRainEntities !== 'undefined') {
+        frogRainEntities = [];
+    }
     resetTutorialStateForNewGame();
     
     const questCoinsInput = document.getElementById('custom-quest-coins');
@@ -2195,13 +2241,6 @@ function selectCustomDifficulty(features){
     window.customRules = rules;
     console.log('selectCustomDifficulty: Final rules with weatherWeights:', rules.weatherWeights);
     
-    try {
-        localData.set('Day_curLvl_Dif', {day: 0, currentLevel_y, currentLevel_x, dificulty, customRules: window.customRules, tutorialState: getTutorialStateForSave()});
-        console.log('Custom difficulty saved:', window.customRules);
-    } catch (e) {
-        console.warn('Failed to save custom difficulty:', e);
-    }
-    
     // Proceed directly into the game
     hideDifficultyMenu();
     dificulty_screen = false;
@@ -2214,6 +2253,23 @@ function selectCustomDifficulty(features){
         try { generateDailyWeather(); } catch(e) { console.warn('Failed to roll weather at custom start:', e); }
     }
     
+    try {
+        localData.set('Day_curLvl_Dif', {
+            days: 0,
+            currentLevel_y,
+            currentLevel_x,
+            dificulty,
+            currentWeather,
+            time,
+            timephase,
+            customRules: window.customRules,
+            tutorialState: getTutorialStateForSave()
+        });
+        console.log('Custom difficulty saved:', window.customRules);
+    } catch (e) {
+        console.warn('Failed to save custom difficulty:', e);
+    }
+
     // Update player quests if player already exists
     if (typeof player !== 'undefined' && player.quests) {
         for (let q of player.quests) {
@@ -2658,11 +2714,12 @@ function showTitleOptions(){
             return panel;
         };
 
+        const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
         const audioPanel = createOptionsPanel('audio', 'Audio');
         const accessibilityPanel = createOptionsPanel('accessibility', 'Accessibility');
-        const controlsPanel = !isMobile ? createOptionsPanel('controls', 'Controls') : null;
+        const controlsPanel = !mobileOrSmallScreen ? createOptionsPanel('controls', 'Controls') : null;
         const dataPanel = createOptionsPanel('data', 'Data');
-        const helpPanel = createOptionsPanel('help', 'Help');
+        const helpPanel = !mobileOrSmallScreen ? createOptionsPanel('help', 'Help') : null;
 
         const audioSection = document.createElement('div');
         audioSection.className = 'options-section';
@@ -2837,27 +2894,29 @@ function showTitleOptions(){
         dataSection.appendChild(dataEditor);
         dataPanel.appendChild(dataSection);
 
-        const helpSection = document.createElement('div');
-        helpSection.className = 'options-section';
-        const helpTitle = document.createElement('h3');
-        helpTitle.className = 'options-section-title';
-        helpTitle.textContent = 'How to Play';
-        helpSection.appendChild(helpTitle);
-        const helpDescription = document.createElement('p');
-        helpDescription.className = 'options-section-description';
-        helpDescription.textContent = 'Open the tabbed gameplay guide with art, controls, and progression tips.';
-        helpSection.appendChild(helpDescription);
-        const helpActions = document.createElement('div');
-        helpActions.className = 'options-button-group';
-        const tutorialBtn = document.createElement('button');
-        tutorialBtn.className = 'options-button';
-        tutorialBtn.textContent = 'How to Play';
-        tutorialBtn.addEventListener('click', () => {
-            showFullGameTutorial({ source: 'title-options' });
-        });
-        helpActions.appendChild(tutorialBtn);
-        helpSection.appendChild(helpActions);
-        helpPanel.appendChild(helpSection);
+        if (helpPanel) {
+            const helpSection = document.createElement('div');
+            helpSection.className = 'options-section';
+            const helpTitle = document.createElement('h3');
+            helpTitle.className = 'options-section-title';
+            helpTitle.textContent = 'How to Play';
+            helpSection.appendChild(helpTitle);
+            const helpDescription = document.createElement('p');
+            helpDescription.className = 'options-section-description';
+            helpDescription.textContent = 'Open the tabbed gameplay guide with art, controls, and progression tips.';
+            helpSection.appendChild(helpDescription);
+            const helpActions = document.createElement('div');
+            helpActions.className = 'options-button-group';
+            const tutorialBtn = document.createElement('button');
+            tutorialBtn.className = 'options-button';
+            tutorialBtn.textContent = 'How to Play';
+            tutorialBtn.addEventListener('click', () => {
+                showFullGameTutorial({ source: 'title-options' });
+            });
+            helpActions.appendChild(tutorialBtn);
+            helpSection.appendChild(helpActions);
+            helpPanel.appendChild(helpSection);
+        }
 
         const backBtn = document.createElement('button');
         backBtn.id = 'back-btn';
@@ -3212,7 +3271,7 @@ function ensureConfigModal() {
     addSliderRow(weatherSection, 'Sunshower', 'cfg-weather-sunshower', 0, 100, 1);
     addSliderRow(weatherSection, 'Rain', 'cfg-weather-rain', 0, 100, 1);
     addSliderRow(weatherSection, 'Thunderstorm', 'cfg-weather-thunderstorm', 0, 100, 1);
-    addSliderRow(weatherSection, 'Frog Rain', 'cfg-weather-frog', 0, 100, 1);
+    addSliderRow(weatherSection, 'Frog Rain', 'cfg-weather-frog', 0, 100, 0.1);
 
     // Total indicator (always kept at 100%)
     const totalRow = document.createElement('div');
@@ -3772,14 +3831,14 @@ function showConfigModal() {
     }
     // Weather weights defaults mirror current system probabilities
     const ww = rules.weatherWeights ?? {
-        'clear': 49.5,
+        'clear': 49.9,
         'partly-cloudy': 15,
         'overcast': 10,
         'fog': 7,
         'sunshower': 8,
         'rain': 8,
         'thunderstorm': 2,
-        'frog-rain': 0.5
+        'frog-rain': 0.1
     };
     const setSlider = (id, v) => { const el = document.getElementById(id); const badge = el?.parentElement?.querySelector('.config-slider-value'); if (el) el.value = v; if (badge) badge.textContent = String(v); };
     setSlider('cfg-weather-partly', ww['partly-cloudy']);
@@ -3852,6 +3911,12 @@ function clampInt(val, min, max, fallback) {
     return Math.max(min, Math.min(max, n));
 }
 
+function clampNumber(val, min, max, fallback) {
+    const n = parseFloat(val);
+    if (isNaN(n)) return fallback;
+    return Math.max(min, Math.min(max, n));
+}
+
 function saveConfigModal() {
     const newRules = {
         mainQuestCoins: clampInt(document.getElementById('cfg-main-quest-coins').value, 0, 100000000, 10000),
@@ -3873,7 +3938,7 @@ function saveConfigModal() {
             return out;
         })(),
         weatherWeights: (() => {
-            const get = (id) => clampInt(document.getElementById(id).value, 0, 100, 0);
+            const get = (id) => clampNumber(document.getElementById(id).value, 0, 100, 0);
             const ww = {
                 'partly-cloudy': get('cfg-weather-partly'),
                 'overcast': get('cfg-weather-overcast'),
@@ -4010,11 +4075,11 @@ function normalizeWeatherTotal(changedId) {
         'cfg-weather-thunderstorm',
         'cfg-weather-frog'
     ];
-    const get = (id) => { const el = document.getElementById(id); return el ? parseInt(el.value) || 0 : 0; };
+    const get = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) || 0 : 0; };
     const set = (id, v) => {
         const el = document.getElementById(id);
         if (el) {
-            const val = Math.max(0, Math.min(100, Math.round(v)));
+            const val = Math.max(0, Math.min(100, Math.round(v * 10) / 10));
             el.value = String(val);
             const badge = el.parentElement?.querySelector('.config-slider-value');
             if (badge) badge.textContent = String(val);
@@ -4476,10 +4541,11 @@ function ensurePauseMenuContainer() {
         return panel;
     };
 
+    const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
     const audioPanel = createPausePanel('audio', 'Audio');
     const accessibilityPanel = createPausePanel('accessibility', 'Accessibility');
-    const controlsPanel = !isMobile ? createPausePanel('controls', 'Controls') : null;
-    const helpPanel = createPausePanel('help', 'Help');
+    const controlsPanel = !mobileOrSmallScreen ? createPausePanel('controls', 'Controls') : null;
+    const helpPanel = !mobileOrSmallScreen ? createPausePanel('help', 'Help') : null;
 
     const sliderSection = document.createElement('div');
     sliderSection.className = 'pause-menu-section';
@@ -4562,25 +4628,27 @@ function ensurePauseMenuContainer() {
         renderControlButtons(controlsContainer);
     }
 
-    const helpSection = document.createElement('div');
-    helpSection.className = 'pause-menu-section pause-help-section';
+    if (helpPanel) {
+        const helpSection = document.createElement('div');
+        helpSection.className = 'pause-menu-section pause-help-section';
 
-    const helpTitle = document.createElement('div');
-    helpTitle.id = 'pause-help-title';
-    helpTitle.className = 'pause-controls-title';
-    helpTitle.textContent = 'How To Play';
-    helpSection.appendChild(helpTitle);
+        const helpTitle = document.createElement('div');
+        helpTitle.id = 'pause-help-title';
+        helpTitle.className = 'pause-controls-title';
+        helpTitle.textContent = 'How To Play';
+        helpSection.appendChild(helpTitle);
 
-    const helpDescription = document.createElement('p');
-    helpDescription.id = 'pause-help-intro';
-    helpDescription.className = 'pause-menu-label pause-help-intro';
-    helpSection.appendChild(helpDescription);
+        const helpDescription = document.createElement('p');
+        helpDescription.id = 'pause-help-intro';
+        helpDescription.className = 'pause-menu-label pause-help-intro';
+        helpSection.appendChild(helpDescription);
 
-    const helpContent = document.createElement('div');
-    helpContent.id = 'pause-inline-tutorial';
-    helpContent.className = 'pause-inline-tutorial';
-    helpSection.appendChild(helpContent);
-    helpPanel.appendChild(helpSection);
+        const helpContent = document.createElement('div');
+        helpContent.id = 'pause-inline-tutorial';
+        helpContent.className = 'pause-inline-tutorial';
+        helpSection.appendChild(helpContent);
+        helpPanel.appendChild(helpSection);
+    }
 
     const actions = document.createElement('div');
     actions.className = 'pause-actions';
@@ -4615,7 +4683,9 @@ function ensurePauseMenuContainer() {
     actions.appendChild(quitBtn);
     pauseMenu.appendChild(actions);
 
-    renderPauseHelpTabContent();
+    if (helpPanel) {
+        renderPauseHelpTabContent();
+    }
     setActivePauseMenuTab('audio');
 }
 
@@ -5213,6 +5283,7 @@ function new_item_from_num(num, amount) {
 
 function saveAll(){
     save_anim = 255;
+    removeTemporaryRainFrogsFromLevels();
     
     // 1. Prepare all levels and entities (clear circular references and non-serializable objects)
     for(let i = 0; i < levels.length; i++){
@@ -5268,6 +5339,30 @@ function saveAll(){
         }
     }
     localData.set('extralvlStuff', {extraCount: extraCount, lvlLength: lvlLength});
+}
+
+function removeTemporaryRainFrogsFromLevels(){
+    if (!levels) return;
+
+    if (typeof frogRainEntities !== 'undefined') {
+        frogRainEntities = [];
+    }
+
+    for(let y = 0; y < levels.length; y++){
+        for(let x = 0; x < levels[y].length; x++){
+            const level = levels[y][x];
+            if(!level || !level.map) continue;
+
+            for(let row = 0; row < level.map.length; row++){
+                for(let col = 0; col < level.map[row].length; col++){
+                    const tile = level.map[row][col];
+                    if(tile && tile.rainFrog){
+                        level.map[row][col] = tile.under_tile || new_tile_from_num(1, col * tileSize, row * tileSize);
+                    }
+                }
+            }
+        }
+    }
 }
 
 function saveOptions(){
@@ -5455,6 +5550,19 @@ function loadLevel(level, lvlx = 0, lvly = 0){
             for(let j = 0; j < newLvl.map[i].length; j++){
                 const savedTile = newLvl.map[i][j];
                 const currentTile = level.map?.[i]?.[j];
+                if(savedTile && savedTile.rainFrog){
+                    if(savedTile.under_tile && savedTile.under_tile !== 0 && savedTile.under_tile.name){
+                        const underTileNum = tile_name_to_num(savedTile.under_tile.name);
+                        if(underTileNum !== undefined){
+                            const underPos = savedTile.under_tile.pos || currentTile?.pos || { x: j * tileSize, y: i * tileSize };
+                            level.map[i][j] = new_tile_from_num(underTileNum, underPos.x, underPos.y);
+                            if(level.map[i][j] && typeof level.map[i][j].load === 'function'){
+                                level.map[i][j].load(savedTile.under_tile);
+                            }
+                        }
+                    }
+                    continue;
+                }
                 if(savedTile && savedTile !== 0 && currentTile && currentTile !== 0 && savedTile.name){
                     const tileNum = tile_name_to_num(savedTile.name);
                     if(tileNum !== undefined) {

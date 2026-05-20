@@ -266,13 +266,16 @@ class Level {
             const container = document.createElement('div');
             container.id = 'ui-popup-container';
             document.body.appendChild(container);
-            
+
             const canvas = document.querySelector('canvas');
             if (canvas) {
                 const canvasRect = canvas.getBoundingClientRect();
+                const isMobileOrSmall = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
                 container.style.position = 'fixed';
-                container.style.top = (canvasRect.top + 2) + 'px';
-                container.style.left = (canvasRect.left + 2) + 'px';
+                // On mobile the canvas may be centered low; pin the popup near the top of the viewport instead
+                container.style.top = isMobileOrSmall ? '15px' : (canvasRect.top + 2) + 'px';
+                // On mobile, offset right of the mobile-menu-buttons (2 buttons × 50px + gap + left offset)
+                container.style.left = isMobileOrSmall ? '130px' : (canvasRect.left + 2) + 'px';
                 container.style.display = 'flex';
                 container.style.flexDirection = 'column';
                 container.style.zIndex = '1000';
