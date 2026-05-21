@@ -84,7 +84,7 @@ class Level {
                         append(this.lights, new Light(this.map[i][j].pos.x, this.map[i][j].pos.y, (tileSize * 1)+5, 255, 255, 0));
                     }
                     if (this.map[i][j].name == 'bridge'){
-                        if(this.fore[i+2][j] != undefined && this.fore[i+2][j].type != 1 && this.type != 4 && this.type != 5 && this.type != 6){
+                        if(this.fore[i+2] && this.fore[i+2][j] != undefined && this.fore[i+2][j].type != 1 && this.fore[i+2][j].type != 4 && this.fore[i+2][j].type != 5 && this.fore[i+2][j].type != 6){
                             this.fore[i+2][j].dim = 100;
                         }
                     }
@@ -365,8 +365,8 @@ class Level {
         }
         this.lightingBuffer.noErase();
         
-        // Draw the lighting buffer to main canvas at camera position in world space
-        image(this.lightingBuffer, camX, camY);
+        // Draw the lighting buffer to main canvas in screen space
+        image(this.lightingBuffer, 0, 0);
     }
 
     getReadyForSave() {
@@ -478,34 +478,36 @@ class Level {
         }
         for (let i = 0; i < this.map.length; i++) {
             for (let j = 0; j < this.map[i].length; j++) {
-                if(this.map[i][j].class == 'Shop'){
-                    this.map[i][j].daily_update();
+                const tile = this.map[i][j];
+                if (!tile || tile === 0) continue;
+                if(tile.class == 'Shop'){
+                    tile.daily_update();
                 }
-                if (this.map[i][j].age >= 0 && this.map[i][j].class != 'Plant') {
-                    this.map[i][j].age += 1;
-                    if (this.map[i][j].name == 'compost_tile') {
-                        if (this.map[i][j].age >= 2) {
+                if (tile.age >= 0 && tile.class != 'Plant') {
+                    tile.age += 1;
+                    if (tile.name == 'compost_tile') {
+                        if (tile.age >= 2) {
                             this.map[i][j] = new_tile_from_num(2, (j * tileSize), (i * tileSize));
                         }
                     }
-                    if (this.map[i][j].name == 'plot') {
-                        if (this.map[i][j].age >= 5) {
+                    if (tile.name == 'plot') {
+                        if (tile.age >= 5) {
                             this.map[i][j] = new_tile_from_num(4, (j * tileSize), (i * tileSize));
                         }
                     }
-                    if (this.map[i][j].name == 'ladybug') {
-                        if (this.map[i][j].age >= 10) {
+                    if (tile.name == 'ladybug') {
+                        if (tile.age >= 10) {
                             this.ladybugs -= 1;
                             this.map[i][j] = new_tile_from_num(2, (j * tileSize), (i * tileSize));
                         }
                     }
-                    if (this.map[i][j].name == 'Bees') {
-                        if (this.map[i][j].age >= 7) {
-                            this.map[i][j] = this.map[i][j].under_tile;
+                    if (tile.name == 'Bees') {
+                        if (tile.age >= 7) {
+                            this.map[i][j] = tile.under_tile;
                         }
                     }
-                    if (this.map[i][j].name == 'Flower_Done'){
-                        if (this.map[i][j].age >= 5) {
+                    if (tile.name == 'Flower_Done'){
+                        if (tile.age >= 5) {
                             this.map[i][j] = new_tile_from_num(2, (j * tileSize), (i * tileSize));
                         }
                     }

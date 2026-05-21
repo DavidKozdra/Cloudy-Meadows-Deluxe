@@ -84,7 +84,7 @@ class Dialouge {
         text('Replies:', (canvasWidth / 2) - 10, canvasHeight - 140);
         textSize(13);
         strokeWeight(2);
-        text(String.fromCharCode(eat_button) + ' to leave', ((3*canvasWidth) / 4) + 10, canvasHeight - 140);
+        text((typeof Controls_Eat_button_key !== 'undefined' ? Controls_Eat_button_key.toUpperCase() : 'Q') + ' to leave', ((3*canvasWidth) / 4) + 10, canvasHeight - 140);
         if (this.done == false){
             this.textWait -= 1;
             if(this.textWait <= 0){

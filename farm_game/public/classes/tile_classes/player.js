@@ -1216,7 +1216,7 @@ function takeInput() {
                     player.talking.current_dialouge = 0;
                     for(let i = 0; i < player.talking.dialouges.length; i++){
                         player.talking.dialouges[i].done = false;
-                        player.talking.dialouges[i].text_i = 0;
+                        player.talking.dialouges[i].text_i = -1;
                         player.talking.dialouges[i].phrase = [];
                         if(player.talking.dialouges[i].new_phrase != -1){
                             player.talking.dialouges[i].phrase2 = player.talking.dialouges[i].new_phrase;

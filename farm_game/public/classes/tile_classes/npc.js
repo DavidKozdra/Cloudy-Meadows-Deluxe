@@ -115,14 +115,17 @@ class NPC extends GridMoveEntity {
         this.options = obj.options || this.options || ['up', 'down', 'left', 'right'];
         
         for(let i = 0; i < obj.dialouges.length; i++){
+            if(!this.dialouges[i]) continue; // saved NPC had more dialogues than current definition
             this.dialouges[i].phrase2 = obj.dialouges[i].phrase2;
             this.dialouges[i].amount = obj.dialouges[i].amount;
-            this.dialouges[i].replies = obj.dialouges[i].replies;
-            for(let j = 0; j < obj.dialouges[i].replies.length; j++){
-                this.dialouges[i].replies[j].consumed = !!obj.dialouges[i].replies[j].consumed;
-                if(obj.dialouges[i].replies[j].quest != -1){
-                    this.dialouges[i].replies[j].quest = new Quest(obj.dialouges[i].replies[j].quest.og_name, obj.dialouges[i].replies[j].quest.goals, obj.dialouges[i].replies[j].quest.days, (obj.dialouges[i].replies[j].quest.reward_item == 0 ? 0 : {num: item_name_to_num(obj.dialouges[i].replies[j].quest.reward_item.name), amount: obj.dialouges[i].replies[j].quest.reward_item.amount}), obj.dialouges[i].replies[j].quest.reward_coins);
-                    this.dialouges[i].replies[j].quest.load(obj.dialouges[i].replies[j].quest);
+            // Restore replies onto the existing array (do not replace the reference)
+            const savedReplies = obj.dialouges[i].replies;
+            for(let j = 0; j < savedReplies.length; j++){
+                if(!this.dialouges[i].replies[j]) continue; // extra saved replies beyond current definition
+                this.dialouges[i].replies[j].consumed = !!savedReplies[j].consumed;
+                if(savedReplies[j].quest != -1 && savedReplies[j].quest && typeof savedReplies[j].quest === 'object'){
+                    this.dialouges[i].replies[j].quest = new Quest(savedReplies[j].quest.og_name, savedReplies[j].quest.goals, savedReplies[j].quest.days, (savedReplies[j].quest.reward_item == 0 ? 0 : {num: item_name_to_num(savedReplies[j].quest.reward_item.name), amount: savedReplies[j].quest.reward_item.amount}), savedReplies[j].quest.reward_coins);
+                    this.dialouges[i].replies[j].quest.load(savedReplies[j].quest);
                 }
             }
         }

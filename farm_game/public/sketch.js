@@ -1867,21 +1867,21 @@ function draw() {
             animatedGifs.forEach(gif => gif.pause());
         }
         player.render();
-        
-        // Tree tops render above player so they appear as canopy
+
         const currentLvl = levels[currentLevel_y]?.[currentLevel_x];
+
+        // Tree tops render above player but below the night overlay so darkness shades them correctly
         if(!player.dead && currentLvl && typeof currentLvl.renderTreeTops === 'function'){
             currentLvl.renderTreeTops();
         }
-        
-        // Apply darkness with light cutouts as final pass
-        // This ensures lights properly illuminate everything underneath
+
+        // End camera transformation
+        pop();
+
+        // Night darkness overlay in screen space — covers everything including tree tops
         if(!player.dead && time > 0 && currentLvl && typeof currentLvl.renderLights === 'function'){
             currentLvl.renderLights();
         }
-        
-        // End camera transformation
-        pop();
         
         // Render death screen in screen space (not affected by camera zoom)
         if(player.hp <= 0){
