@@ -5172,8 +5172,9 @@ function checkForSpace(to, item_obj_num){
 }
 
 function item_name_to_num(item_name) {
+    if (!item_name) return undefined;
     for (let i = 0; i < all_items.length; i++) {
-        if (item_name == all_items[i].name) {
+        if (all_items[i] && all_items[i] !== 0 && item_name === all_items[i].name) {
             return i;
         }
     }
@@ -5245,6 +5246,9 @@ function new_tile_from_num(num, x, y) {
         }
         else if (all_tiles[num-1].class == 'PayToMoveEntity'){
             return new PayToMoveEntity(all_tiles[num-1].name, all_tiles[num - 1].png, x, y, all_tiles[num - 1].age, all_tiles[num - 1].under_tile_num, all_tiles[num - 1].price)
+        }
+        else if (all_tiles[num-1].class == 'FarmRobot'){
+            return new FarmRobot(all_tiles[num-1].name, all_tiles[num-1].png, x, y, all_tiles[num-1].instructions, all_tiles[num-1].moving_timer);
         }
     }
     else {

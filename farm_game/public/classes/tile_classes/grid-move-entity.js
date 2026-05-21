@@ -182,19 +182,14 @@ class GridMoveEntity extends MoveableEntity{
         this.current_instruction = obj.current_instruction;
         this.move_bool = obj.move_bool;
         for(let i = 0; i < obj.inv.length; i++){
-            if(obj.inv[i] != 0 && this.inv[i] != 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
+            if(obj.inv[i] != 0 && obj.inv[i]){
+                const itemNum = item_name_to_num(obj.inv[i].name);
+                if(itemNum === undefined){ this.inv[i] = 0; continue; }
+                this.inv[i] = new_item_from_num(itemNum, obj.inv[i].amount);
+                if(this.inv[i] && this.inv[i].class == 'Backpack'){
                     this.inv[i].load(obj.inv[i])
                 }
-            }
-            else if (obj.inv[i] != 0 && this.inv[i] == 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
-                    this.inv[i].load(obj.inv[i])
-                }
-            }
-            else if (obj.inv[i] == 0 && this.inv[i] != 0){
+            } else {
                 this.inv[i] = 0;
             }
         }

@@ -343,36 +343,26 @@ class Robot extends GridMoveEntity{
         this.day_pause = obj.day_pause;
         this.day_paused = obj.day_paused;
         for(let i = 0; i < obj.instructions.length; i++){
-            if(obj.instructions[i] != 0 && this.instructions[i] != 0){
-                this.instructions[i] = new_item_from_num(item_name_to_num(obj.instructions[i].name), obj.instructions[i].amount);
-                if(this.instructions[i].class == 'Backpack'){
+            if(obj.instructions[i] != 0 && obj.instructions[i]){
+                const itemNum = item_name_to_num(obj.instructions[i].name);
+                if(itemNum === undefined){ this.instructions[i] = 0; continue; }
+                this.instructions[i] = new_item_from_num(itemNum, obj.instructions[i].amount);
+                if(this.instructions[i] && this.instructions[i].class == 'Backpack'){
                     this.instructions[i].load(obj.instructions[i])
                 }
-            }
-            else if (obj.instructions[i] != 0 && this.instructions[i] == 0){
-                this.instructions[i] = new_item_from_num(item_name_to_num(obj.instructions[i].name), obj.instructions[i].amount);
-                if(this.instructions[i].class == 'Backpack'){
-                    this.instructions[i].load(obj.instructions[i])
-                }
-            }
-            else if (obj.instructions[i] == 0 && this.instructions[i] != 0){
+            } else {
                 this.instructions[i] = 0;
             }
         }
         for(let i = 0; i < obj.inv.length; i++){
-            if(obj.inv[i] != 0 && this.inv[i] != 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
+            if(obj.inv[i] != 0 && obj.inv[i]){
+                const itemNum = item_name_to_num(obj.inv[i].name);
+                if(itemNum === undefined){ this.inv[i] = 0; continue; }
+                this.inv[i] = new_item_from_num(itemNum, obj.inv[i].amount);
+                if(this.inv[i] && this.inv[i].class == 'Backpack'){
                     this.inv[i].load(obj.inv[i])
                 }
-            }
-            else if (obj.inv[i] != 0 && this.inv[i] == 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
-                    this.inv[i].load(obj.inv[i])
-                }
-            }
-            else if (obj.inv[i] == 0 && this.inv[i] != 0){
+            } else {
                 this.inv[i] = 0;
             }
         }

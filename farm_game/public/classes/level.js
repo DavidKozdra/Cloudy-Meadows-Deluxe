@@ -403,6 +403,9 @@ class Level {
                     if (tile.class === 'Robot') {
                         tile.move(x, y);
                     }
+                    if (tile.class === 'FarmRobot') {
+                        tile.move(x, y);
+                    }
                     if (tile.class === 'FreeMoveEntity'){
                         tile.randomMove(x, y);
                     }
@@ -446,6 +449,9 @@ class Level {
                         this.map[i][j].move(j, i);
                     }
                     if (this.map[i][j].class == 'Robot') {
+                        this.map[i][j].move(j, i);
+                    }
+                    if (this.map[i][j].class == 'FarmRobot') {
                         this.map[i][j].move(j, i);
                     }
                     if (this.map[i][j].class == 'FreeMoveEntity'){
