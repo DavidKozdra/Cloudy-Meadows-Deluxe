@@ -5172,9 +5172,8 @@ function checkForSpace(to, item_obj_num){
 }
 
 function item_name_to_num(item_name) {
-    if (!item_name) return undefined;
     for (let i = 0; i < all_items.length; i++) {
-        if (all_items[i] && all_items[i] !== 0 && item_name === all_items[i].name) {
+        if (item_name == all_items[i].name) {
             return i;
         }
     }
