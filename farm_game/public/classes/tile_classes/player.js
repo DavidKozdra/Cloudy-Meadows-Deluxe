@@ -105,23 +105,6 @@ class Player extends MoveableEntity {
         this.deaths = obj.deaths;
         this.touching = 0;
         this.oldlooking_name = obj.oldlooking_name;
-        for(let i = 0; i < obj.inv.length; i++){
-            if(obj.inv[i] != 0 && this.inv[i] != 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
-                    this.inv[i].load(obj.inv[i])
-                }
-            }
-            else if (obj.inv[i] != 0 && this.inv[i] == 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
-                    this.inv[i].load(obj.inv[i])
-                }
-            }
-            else if (obj.inv[i] == 0 && this.inv[i] != 0){
-                this.inv[i] = 0;
-            }
-        }
     }
 
     save(){
@@ -512,17 +495,15 @@ class Player extends MoveableEntity {
                     if (this.hunger > maxHunger) {
                         this.hunger = maxHunger;
                     }
-                    this.inv[this.hand].amount -= 1;
+                    // Capture all needed values before zeroing the slot
                     this.hunger_counter = 0;
                     this.hunger_timer = this.inv[this.hand].hunger_timer;
                     this.lastFoodnum = item_name_to_num(this.inv[this.hand].name);
                     let seed_obj_num = this.inv[this.hand].seed_num;
-                    if (this.inv[this.hand].amount == 0) {
-                        this.inv[this.hand] = 0;
-                    }
-                    // Use item's seed_min/seed_max or defaults
                     let seed_min = this.inv[this.hand].seed_min || 1;
                     let seed_max = this.inv[this.hand].seed_max || 3;
+                    this.inv[this.hand].amount -= 1;
+                    this.inv[this.hand] = 0;
                     let seed_amount = floor(random(seed_min, seed_max + 1));
                     addItem(this, seed_obj_num, seed_amount);
                 }
@@ -532,17 +513,17 @@ class Player extends MoveableEntity {
                     if (this.hunger > maxHunger) {
                         this.hunger = maxHunger;
                     }
-                    this.inv[this.hand].amount -= 1;
+                    // Capture all needed values before potentially zeroing the slot
                     this.hunger_counter = 0;
                     this.hunger_timer = this.inv[this.hand].hunger_timer;
                     this.lastFoodnum = item_name_to_num(this.inv[this.hand].name);
                     let seed_obj_num = this.inv[this.hand].seed_num;
+                    let seed_min = this.inv[this.hand].seed_min || 1;
+                    let seed_max = this.inv[this.hand].seed_max || 3;
+                    this.inv[this.hand].amount -= 1;
                     if (this.inv[this.hand].amount == 0) {
                         this.inv[this.hand] = 0;
                     }
-                    // Use item's seed_min/seed_max or defaults
-                    let seed_min = this.inv[this.hand].seed_min || 1;
-                    let seed_max = this.inv[this.hand].seed_max || 3;
                     let seed_amount = floor(random(seed_min, seed_max + 1));
                     addItem(this, seed_obj_num, seed_amount);
                 }

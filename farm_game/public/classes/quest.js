@@ -1181,7 +1181,7 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
                     if(this.npc_gave_items){
                         // Verify we still have the items
                         for(let i = 0; i < player.inv.length; i++){
-                            if(player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+                            if(player.inv[i] != 0 && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
                                 this.done = true;
                                 break;
                             }
@@ -1190,7 +1190,7 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
                 } else {
                     // Need to give item to NPC
                     for(let i = 0; i < player.inv.length; i++){
-                        if(player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+                        if(player.inv[i] != 0 && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
                             player.inv[i].amount -= this.amount;
                             if(player.inv[i].amount <= 0){
                                 player.inv[i] = 0;
@@ -1236,7 +1236,7 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
                     if(this.npc_gave_items){
                         // Verify we still have the items
                         for(let i = 0; i < player.inv.length; i++){
-                            if(!this.done && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+                            if(!this.done && player.inv[i] != 0 && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
                                 this.done = true;
                                 break;
                             }
@@ -1246,7 +1246,7 @@ class TalkingGoal extends Goal{  // Talk to _(npc_name)  and Give _(amount) _(it
                 else{
                     // For give type: check if we have items to give, then remove them
                     for(let i = 0; i < player.inv.length; i++){
-                        if(!this.done && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+                        if(!this.done && player.inv[i] != 0 && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
                             player.inv[i].amount -= this.amount;
                             if(player.inv[i].amount <= 0){
                                 player.inv[i] = 0;
@@ -1368,7 +1368,7 @@ class HaveGoal extends Goal{ // Have _(amount) of _(item_name)
 
     update(){
         for(let i = 0; i < player.inv.length; i++){
-            if(player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
+            if(player.inv[i] != 0 && player.inv[i].name == this.item_name && player.inv[i].amount >= this.amount){
                 this.done = true;
             }
         }

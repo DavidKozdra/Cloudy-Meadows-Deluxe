@@ -3914,28 +3914,27 @@ button {
 @media (max-width: 768px) {
     /* Main Menu Mobile Adjustments */
     .main-menu {
-        gap: 15px;
+        gap: 16px;
         overflow-y: auto;
-        justify-content: flex-start;
-        padding-top: 30px;
-        padding-bottom: 30px;
+        justify-content: center;
+        padding: 30px 20px;
     }
 
     .main-menu-title-image {
-        width: 280px;
-        margin-bottom: 15px;
+        width: min(320px, 75vw);
+        margin-bottom: 10px;
     }
-    
+
     .deluxe-text {
-        font-size: 28px;
+        font-size: clamp(24px, 6vw, 36px);
         letter-spacing: 4px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
-    
+
     .main-menu-button {
-        font-size: 14px;
-        padding: 12px 30px;
-        width: 200px;
+        font-size: clamp(14px, 3.5vw, 18px);
+        padding: 16px 20px;
+        width: min(320px, 78vw);
     }
     
     /* Quest Screen Mobile Adjustments */
@@ -4088,27 +4087,27 @@ button {
 @media (max-width: 480px) {
     /* Main Menu - Very Small Screens */
     .main-menu {
-        padding: 20px 15px;
-        gap: 10px;
+        padding: 24px 16px;
+        gap: 14px;
         overflow-y: auto;
-        justify-content: flex-start;
+        justify-content: center;
     }
 
     .main-menu-title-image {
-        width: 200px;
+        width: min(280px, 72vw);
         margin-bottom: 8px;
     }
 
     .deluxe-text {
-        font-size: 20px;
+        font-size: clamp(22px, 7vw, 30px);
         letter-spacing: 3px;
         margin-bottom: 12px;
     }
 
     .main-menu-button {
-        font-size: 12px;
-        padding: 10px 20px;
-        width: 180px;
+        font-size: clamp(14px, 4vw, 18px);
+        padding: 16px 20px;
+        width: min(300px, 80vw);
     }
     
     /* Quest Screen - Very Small Screens */
@@ -5019,14 +5018,32 @@ body.acc-high-contrast .mobile-inv-slot.selected {
     }
 }
 
+/* Mobile portrait: big buttons, fills the screen width.
+   After accessibility var() rules so these win. */
+@media (max-width: 768px) and (orientation: portrait) {
+    .main-menu-button {
+        width: min(320px, 78vw) !important;
+        font-size: clamp(14px, 3.5vw, 18px) !important;
+        padding: 16px 20px !important;
+    }
+
+    .main-menu-title-image {
+        width: min(320px, 75vw) !important;
+    }
+
+    .deluxe-text {
+        font-size: clamp(22px, 6vw, 34px) !important;
+    }
+}
+
 /* Mobile landscape: shrink title image so everything fits without scrolling.
    This block is last so it wins over the accessibility var() rules above. */
 @media (max-height: 500px) and (orientation: landscape) {
     .main-menu {
-        gap: 8px;
+        gap: 10px;
         overflow-y: auto;
-        justify-content: flex-start;
-        padding: 12px 15px;
+        justify-content: center;
+        padding: 14px 20px;
     }
 
     .main-menu-title-image {
@@ -5035,15 +5052,15 @@ body.acc-high-contrast .mobile-inv-slot.selected {
     }
 
     .deluxe-text {
-        font-size: 13px !important;
+        font-size: 14px !important;
         letter-spacing: 2px;
         margin-bottom: 4px;
         animation: none;
     }
 
     .main-menu-button {
-        width: 160px !important;
-        font-size: 12px !important;
-        padding: 8px 16px !important;
+        width: min(280px, 55vw) !important;
+        font-size: 14px !important;
+        padding: 12px 16px !important;
     }
 }

@@ -136,7 +136,7 @@ class Robot extends GridMoveEntity{
             let fueled = false;
             if(this.name == 'Robot1'){
                 for (let i = 0; i < this.inv.length; i++){
-                    if(this.inv[i].name == 'Veggy Oil' && this.fuel < this.max_fuel - 10){
+                    if(this.inv[i] != 0 && this.inv[i].name == 'Veggie Oil' && this.fuel < this.max_fuel - 10){
                         this.fuel += 10;
                         fueled = true;
                         this.inv[i].amount -= 1;
@@ -177,11 +177,14 @@ class Robot extends GridMoveEntity{
                 this.facing = 0;
                 this.collide = true;
                 if (this.pos.y - tileSize < 0) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y-1][x].map[18][this.pos.x / tileSize];
-                    levels[y-1][x].map[18][this.pos.x / tileSize] = temp;
-                    this.pos.y = canvasHeight - tileSize;
+                    if (!levels[y-1] || !levels[y-1][x] || typeof levels[y-1][x] !== 'object') { /* no level above, stay */ }
+                    else {
+                        let temp = this;
+                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
+                        temp.under_tile = levels[y-1][x].map[18][this.pos.x / tileSize];
+                        levels[y-1][x].map[18][this.pos.x / tileSize] = temp;
+                        this.pos.y = canvasHeight - tileSize;
+                    }
                 }
                 else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
                     let temp = this;
@@ -195,11 +198,14 @@ class Robot extends GridMoveEntity{
                 this.facing = 1;
                 this.collide = true;
                 if (this.pos.x + tileSize >= canvasWidth) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y][x+1].map[this.pos.y / tileSize][0];
-                    levels[y][x+1].map[this.pos.y / tileSize][0] = temp;
-                    this.pos.x = 0;
+                    if (!levels[y][x+1] || typeof levels[y][x+1] !== 'object') { /* no level to the right, stay */ }
+                    else {
+                        let temp = this;
+                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
+                        temp.under_tile = levels[y][x+1].map[this.pos.y / tileSize][0];
+                        levels[y][x+1].map[this.pos.y / tileSize][0] = temp;
+                        this.pos.x = 0;
+                    }
                 }
                 else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
                     let temp = this;
@@ -213,11 +219,14 @@ class Robot extends GridMoveEntity{
                 this.facing = 2;
                 this.collide = true;
                 if (this.pos.y + tileSize >= canvasHeight) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y+1][x].map[0][this.pos.x / tileSize];
-                    levels[y+1][x].map[0][this.pos.x / tileSize] = temp;
-                    this.pos.y = 0;
+                    if (!levels[y+1] || !levels[y+1][x] || typeof levels[y+1][x] !== 'object') { /* no level below, stay */ }
+                    else {
+                        let temp = this;
+                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
+                        temp.under_tile = levels[y+1][x].map[0][this.pos.x / tileSize];
+                        levels[y+1][x].map[0][this.pos.x / tileSize] = temp;
+                        this.pos.y = 0;
+                    }
                 }
                 else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
                     let temp = this;
@@ -231,11 +240,14 @@ class Robot extends GridMoveEntity{
                 this.facing = 3;
                 this.collide = true;
                 if (this.pos.x - tileSize < 0) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y][x-1].map[this.pos.y / tileSize][22];
-                    levels[y][x-1].map[this.pos.y / tileSize][22] = temp;
-                    this.pos.x = canvasWidth - tileSize;
+                    if (!levels[y][x-1] || typeof levels[y][x-1] !== 'object') { /* no level to the left, stay */ }
+                    else {
+                        let temp = this;
+                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
+                        temp.under_tile = levels[y][x-1].map[this.pos.y / tileSize][22];
+                        levels[y][x-1].map[this.pos.y / tileSize][22] = temp;
+                        this.pos.x = canvasWidth - tileSize;
+                    }
                 }
                 else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
                     let temp = this;
@@ -310,7 +322,7 @@ class Robot extends GridMoveEntity{
                 this.current_instruction = 0;
             }
             this.anim += 1;
-            if (this.anim > all_imgs[this.png][this.facing].length) {
+            if (this.anim >= all_imgs[this.png][this.facing].length) {
                 this.anim = 0;
             }
             this.moving_timer = this.max_moving_timer;

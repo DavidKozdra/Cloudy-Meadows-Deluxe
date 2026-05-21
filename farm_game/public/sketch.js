@@ -2246,7 +2246,7 @@ function render_ui() {
             strokeWeight(4);
             text('Sell', player.looking(currentLevel_x, currentLevel_y).pos.x + (tileSize / 2), player.looking(currentLevel_x, currentLevel_y).pos.y - (tileSize * 1.5), 90, 70);
             image(coin_img, player.looking(currentLevel_x, currentLevel_y).pos.x - (tileSize / 2) - 5, player.looking(currentLevel_x, currentLevel_y).pos.y - (tileSize * 1));
-            if (player.inv[player.hand].price == 0 || player.inv[player.hand] == 0) {
+            if (player.inv[player.hand] == 0 || player.inv[player.hand].price == 0) {
                 fill(255, 0, 0);
                 text("No", player.looking(currentLevel_x, currentLevel_y).pos.x + (tileSize), player.looking(currentLevel_x, currentLevel_y).pos.y - (tileSize / 2));
             }
