@@ -155,13 +155,11 @@ class Backpack extends Item {
 	load(obj){
 		for(let i = 0; i < obj.inv.length; i++){
 			for(let j = 0; j < obj.inv[i].length; j++){
-				if(obj.inv[i][j] != 0 && this.inv[i][j] != 0){
-					this.inv[i][j] = new_item_from_num(item_name_to_num(obj.inv[i][j].name), obj.inv[i][j].amount);
-				}
-				else if (obj.inv[i][j] != 0 && this.inv[i][j] == 0){
-					this.inv[i][j] = new_item_from_num(item_name_to_num(obj.inv[i][j].name), obj.inv[i][j].amount);
-				}
-				else if (obj.inv[i][j] == 0 && this.inv[i][j] != 0){
+				if(obj.inv[i][j] != 0 && obj.inv[i][j]){
+					const itemNum = item_name_to_num(obj.inv[i][j].name);
+					if(itemNum === undefined){ this.inv[i][j] = 0; continue; }
+					this.inv[i][j] = new_item_from_num(itemNum, obj.inv[i][j].amount);
+				} else {
 					this.inv[i][j] = 0;
 				}
 			}

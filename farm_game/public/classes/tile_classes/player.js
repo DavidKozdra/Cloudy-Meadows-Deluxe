@@ -1,5 +1,5 @@
 class Player extends MoveableEntity {
-    constructor(name, png, x, y, inv = [{ num: 1, amount: 1 }, { num: 2, amount: 5 }, { num: 3, amount: 5}, 0, 0, 0, 0, 0]) {
+    constructor(name, png, x, y, inv = [{ num: 1, amount: 1 }, { num: 2, amount: 5 }, { num: 3, amount: 5}, { num: 49, amount: 1 }, 0, 0, 0, 0]) {
         super(name, png, x, y, inv, 0, 3, 0, 0);
         
         let mainQuestCoins = 10000;
@@ -54,8 +54,8 @@ class Player extends MoveableEntity {
         }
         this.current_quest = obj.current_quest;
         this.hunger = obj.hunger;
-        this.lastFoodnum = obj.lastFoodnum;
-        this.hunger_timer = all_items[this.lastFoodnum].hunger_timer;
+        this.lastFoodnum = obj.lastFoodnum || 2;
+        this.hunger_timer = (all_items[this.lastFoodnum] || all_items[2]).hunger_timer;
         this.hunger_counter = 0;
         this.coins = obj.coins;
         this.hp = obj.hp;
@@ -78,24 +78,20 @@ class Player extends MoveableEntity {
         this.last_work_day = obj.last_work_day || 0;
         this.days_worked = obj.days_worked || 0;
         for(let i = 0; i < obj.inv.length; i++){
-            if(obj.inv[i] != 0 && this.inv[i] != 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
+            if(obj.inv[i] != 0 && obj.inv[i]){
+                const itemNum = item_name_to_num(obj.inv[i].name);
+                if(itemNum === undefined){ this.inv[i] = 0; continue; }
+                this.inv[i] = new_item_from_num(itemNum, obj.inv[i].amount);
+                if(this.inv[i] && this.inv[i].class == 'Backpack'){
                     this.inv[i].load(obj.inv[i])
                 }
             }
-            else if (obj.inv[i] != 0 && this.inv[i] == 0){
-                this.inv[i] = new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount);
-                if(this.inv[i].class == 'Backpack'){
-                    this.inv[i].load(obj.inv[i])
-                }
-            }
-            else if (obj.inv[i] == 0 && this.inv[i] != 0){
+            else{
                 this.inv[i] = 0;
             }
         }
-        this.lastFoodnum = obj.lastFoodnum;
-        this.hunger_timer = all_items[this.lastFoodnum].hunger_timer;
+        this.lastFoodnum = obj.lastFoodnum || 2;
+        this.hunger_timer = (all_items[this.lastFoodnum] || all_items[2]).hunger_timer;
         this.hunger_counter = obj.hunger_counter;
         this.coins = obj.coins;
         this.hp = obj.hp;
@@ -1147,6 +1143,8 @@ function takeInput() {
         }
     }
     else if(paused){
+        timeSpeed = 1;
+        timeSpeedIndex = 4;
         if(control_set == 1 && key != lastKey){
             interact_button = keyCode;
             Controls_Interact_button_key = key;
@@ -1203,6 +1201,8 @@ function takeInput() {
         }
     }
     else if(player.talking != 0){
+        timeSpeed = 1;
+        timeSpeedIndex = 4;
         if(keyIsDown(pause_button) || virtualInput.pause){
             if (millis() - lastMili > 200 && !player.dead) {
                 paused = true;
@@ -1436,6 +1436,25 @@ function takeInput() {
                         current_reply = max(0, activeReplies.length - 1);
                     }
                     const selectedReply = activeReplies[current_reply];
+                    // Scientist Time Watch purchase: deduct 500 coins or deny
+                    if (player.talking.name === 'Scientist' && selectedReply.dialouge_num === 1) {
+                        if (player.coins < 500) {
+                            player.talking.dialouges[player.talking.current_dialouge].new_phrase = [];
+                            let denyMsg = "You don't have enough coins! I need 500 coins for this.";
+                            for (let i = 0; i < denyMsg.length; i++) {
+                                player.talking.dialouges[player.talking.current_dialouge].new_phrase[i] = denyMsg[i];
+                            }
+                            player.talking.dialouges[player.talking.current_dialouge].new_replies = [{phrase: 'I\'ll come back!', dialouge_num: -1, quest: -1}];
+                            player.talking.dialouges[player.talking.current_dialouge].done = false;
+                            player.talking.dialouges[player.talking.current_dialouge].text_i = -1;
+                            player.talking.dialouges[player.talking.current_dialouge].phrase = [];
+                            lastMili = millis();
+                            player.lastinteractMili = millis();
+                            return;
+                        }
+                        player.coins -= 500;
+                        moneySound.play();
+                    }
                     // Fire replyUsed so TellGoals can listen for it
                     window.dispatchEvent(new CustomEvent('replyUsed', {
                         detail: { npcName: player.talking.name, reply: selectedReply.phrase }
@@ -1628,6 +1647,23 @@ function takeInput() {
                 player.show_quests = !player.show_quests;
                 lastMili = millis();
             }
+        }
+        // Time Watch controls: Q steps rewind, E steps fast-forward (only when Time Watch is held)
+        if (player.inv[player.hand] != 0 && player.inv[player.hand].name === 'Time Watch') {
+            if (millis() - lastTimeWatchMili > 200) {
+                if (keyIsDown(eat_button)) {
+                    timeSpeedIndex = max(0, timeSpeedIndex - 1);
+                    lastTimeWatchMili = millis();
+                } else if (keyIsDown(interact_button)) {
+                    timeSpeedIndex = min(8, timeSpeedIndex + 1);
+                    lastTimeWatchMili = millis();
+                }
+            }
+            const TIME_WATCH_SPEEDS = [-16, -8, -4, -2, 1, 2, 4, 8, 16];
+            timeSpeed = TIME_WATCH_SPEEDS[timeSpeedIndex];
+        } else {
+            timeSpeedIndex = 4;
+            timeSpeed = 1;
         }
         // Debug: Toggle FPS display with F1 key (key code 112)
         if (keyIsDown(112)) {

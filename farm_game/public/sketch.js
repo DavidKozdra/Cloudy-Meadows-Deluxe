@@ -49,6 +49,9 @@ var maxHunger = 6;
 var time = 0;
 var timephase = 0;
 var lastTimeMili = 0;
+var timeSpeed = 1;
+var timeSpeedIndex = 4; // index into [-16,-8,-4,-2, 1, 2, 4, 8, 16], 4 = normal
+var lastTimeWatchMili = 0;
 var lastHungerMili = 0;
 var days = 0;
 var title_screen = true;
@@ -1924,21 +1927,26 @@ function draw() {
                 }
             }
             if (millis() - lastTimeMili > 300) { //300 for 2 min 1 day, 150 for 1 min 1 day
-                if (timephase == 0) {
-                    if (player.touching.name == 'bed') {
-                        time += 3;
+                if (timeSpeed < 0) {
+                    time += timeSpeed;
+                    if (time < 100 && timephase == 1) { timephase = 0; }
+                    if (time < 0) {
+                        if (days > 0) {
+                            days -= 1;
+                            dayOfWeek = days % 5;
+                            time = 200;
+                            timephase = 1;
+                        } else {
+                            time = 0;
+                            timephase = 0;
+                        }
                     }
-                    else {
-                        time += 1;
-                    }
-                }
-                if (timephase == 1) {
-                    if (player.touching.name == 'bed') {
-                        time -= 3;
-                    }
-                    else {
-                        time -= 1;
-                    }
+                } else if (timephase == 0) {
+                    const bedBonus = player.touching.name == 'bed' ? 2 : 0;
+                    time += timeSpeed + bedBonus;
+                } else if (timephase == 1) {
+                    const bedBonus = player.touching.name == 'bed' ? 2 : 0;
+                    time -= timeSpeed + bedBonus;
                 }
                 if (time >= 200) {
                     time = 200;
@@ -1949,6 +1957,9 @@ function draw() {
                     // Generate weather for the new day
                     generateDailyWeather();
                     
+                    if(days >= 88 && level36.map[7][8].name != 'Scientist'){
+                        level36.map[7][8] = new_tile_from_num(124, 8*tileSize, 7*tileSize);
+                    }
                     if(days >= 100 && level5.map[9][2].name != 'Mr.C'){
                         level5.map[9][2] = new_tile_from_num(98, 2*tileSize, 9*tileSize);
                         if(player.quests[0].done){
@@ -2003,7 +2014,7 @@ function draw() {
                     saveAll();
                     newDayChime.play();
                 }
-                if (time <= 0) {
+                if (time <= 0 && timeSpeed >= 0) {
                     time = 0;
                     timephase = 0;
                     for (let y = 0; y < levels.length; y++) {
@@ -2072,6 +2083,27 @@ function render_ui() {
  
     if(levels[currentLevel_y][currentLevel_x].level_name_popup){
         levels[currentLevel_y][currentLevel_x].name_render();
+    }
+
+    // Time Watch HUD indicator
+    if (player.inv[player.hand] != 0 && player.inv[player.hand].name === 'Time Watch') {
+        push();
+        textFont(player_2);
+        textAlign(CENTER, CENTER);
+        stroke(0);
+        strokeWeight(3);
+        textSize(16);
+        const TIME_WATCH_LABELS = ['<< x16', '<< x8', '<< x4', '<< x2', 'Normal', 'x2 >>', 'x4 >>', 'x8 >>', 'x16 >>'];
+        const label = TIME_WATCH_LABELS[timeSpeedIndex];
+        if (timeSpeed < 0) {
+            fill(100, 180, 255);
+        } else if (timeSpeed > 1) {
+            fill(255, 200, 50);
+        } else {
+            fill(200, 200, 200);
+        }
+        text('Time Watch: ' + label + '  [Q] slower  [E] faster', canvasWidth / 2, 18);
+        pop();
     }
 
     if(player.inv_warn_anim > 0){

@@ -3392,6 +3392,25 @@
     }
   ]
   ,
+  "Scientist": [
+    {
+      "phrase": "Psst! Over here. I've been working on something incredible... a Time Watch! With it you can bend time itself. Press Q to slow time, E to speed it up!",
+      "replies": [
+        { "phrase": "I'll take it! (500 coins)", "dialouge_num": 1, "quest": -1 },
+        { "phrase": "No thanks.", "dialouge_num": -1, "quest": -1 }
+      ],
+      "hand_num": -1,
+      "amount": 0
+    },
+    {
+      "phrase": "Excellent choice! Handle it with care — time is a fragile thing. Remember: Q to slow, E to speed!",
+      "replies": [
+        { "phrase": "Amazing, thank you!", "dialouge_num": -1, "quest": -1 }
+      ],
+      "hand_num": 0,
+      "amount": 1
+    }
+  ],
   "Kiah": [
     {
       "phrase": "Hi! I'm Kiah. I'm always up for an adventure! As long as that adventure isnt programmed by DAVID KOZDRA.",
