@@ -1761,7 +1761,13 @@ function draw() {
 
     // Update mobile controls visibility
     updateMobileControlsVisibility();
-    
+
+    // Poll gamepad/Xbox controller and feed it into virtualInput before input
+    // is consumed this frame.
+    if (typeof pollGamepad === 'function') {
+        pollGamepad();
+    }
+
     // Ensure player's hand isn't on a disabled item
     if (typeof player !== 'undefined' && player.inv && !isSlotEnabled(player.hand)) {
         player.hand = findNextEnabledSlot(player.hand, 1);

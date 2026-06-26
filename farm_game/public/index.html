@@ -3,15 +3,26 @@
 <head>
     <meta charset="UTF-8">
     
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cloudy Meadows">
+    <meta name="application-name" content="Cloudy Meadows">
+    <meta name="theme-color" content="#7ec0ee">
+    <meta name="description" content="An urban vertical farming community game. Farm with composting and helpful animals, meet interesting people, and save the meadows in 100 days.">
     <title>Cloudy Meadows: Deluxe Edition</title>
+
+    <!-- PWA: installable, offline-capable -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="images/pwa/apple-touch-icon.png">
+    <script type="text/javascript" src="pwa-register.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/p5.min.js"></script>
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/addons/p5.sound.min.js"></script>
 
-    <link rel="icon" type="image/x-icon" href="images/ui/Title_Screen.gif">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/pwa/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="images/pwa/icon-512.png">
     <script type="text/javascript" src="localDataStorage-3.0.0.min.js"></script>
     
     <!-- Class definitions (must load before usage in preload.js) -->
@@ -45,6 +56,7 @@
     <!-- Main game files -->
     <script type="text/javascript" src="miscfunctions.js?v=7"></script>
     <script type="text/javascript" src="preload.js?v=7"></script>
+    <script type="text/javascript" src="gamepad.js?v=7"></script>
     <script type="text/javascript" src="sketch.js?v=7"></script>
 
     <style>
