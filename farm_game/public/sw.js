@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -48,6 +48,7 @@ const APP_SHELL = [
   './classes/tile_classes/robot.js?v=7',
   './classes/tile_classes/farm-robot.js?v=7',
   './classes/tile_classes/air_ballon.js?v=7',
+  './classes/cooperative-exchange.js?v=8',
   './config/constants.js?v=7',
   './config/items.js?v=7',
   './config/tiles.js?v=7',

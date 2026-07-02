@@ -159,6 +159,11 @@ class GridMoveEntity extends MoveableEntity{
                 if (this.name === 'Mr.C' && typeof restoreMainQuestNPCs === 'function') {
                     restoreMainQuestNPCs();
                 }
+                // Opening Mr.C just walked off — teach the player about bridges.
+                // The endgame Mr.C (day 99+ lawsuit) uses mainQuestNPCs; skip it there.
+                if (this.name === 'Mr.C' && !window.mainQuestNPCs && typeof startBridgeTutorial === 'function') {
+                    startBridgeTutorial();
+                }
             }
 
             this.anim += 1;

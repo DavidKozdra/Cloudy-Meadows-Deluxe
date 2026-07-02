@@ -185,8 +185,10 @@ function updateCanvasPointerEvents() {
     const loseScreenVisible = document.getElementById('lose-screen')?.style.display !== 'none';
     const configModalVisible = document.getElementById('config-overlay')?.style.display !== 'none';
     const tutorialVisible = document.getElementById('tutorial-overlay')?.style.display !== 'none';
+    const cooperativeExchangeOverlay = document.getElementById('cooperative-exchange-overlay');
+    const cooperativeExchangeVisible = !!cooperativeExchangeOverlay && cooperativeExchangeOverlay.style.display !== 'none';
 
-    const anyMenuVisible = mainMenuVisible || difficultyMenuVisible || optionsMenuVisible || creditsMenuVisible || pauseMenuVisible || questsVisible || loseScreenVisible || configModalVisible || tutorialVisible;
+    const anyMenuVisible = mainMenuVisible || difficultyMenuVisible || optionsMenuVisible || creditsMenuVisible || pauseMenuVisible || questsVisible || loseScreenVisible || configModalVisible || tutorialVisible || cooperativeExchangeVisible;
     canvas.style.pointerEvents = anyMenuVisible ? 'none' : 'auto';
 }
 
@@ -333,6 +335,36 @@ function ensureKiahInLegacyDowntownSave() {
 
     downtown.map[spawnSpot.y][spawnSpot.x] = new_tile_from_num(kiahTileNum, spawnSpot.x * tileSize, spawnSpot.y * tileSize);
     return true;
+}
+
+// Backfill the Cooperative Exchange into saves made before the Harbor board was interactive.
+function ensureCooperativeExchangeBoard() {
+    if (!levels || !levels.length) return false;
+    let harbor = null;
+    for (let y = 0; y < levels.length && !harbor; y++) {
+        for (let x = 0; x < levels[y].length; x++) {
+            if (levels[y][x]?.name === 'The Big City: Harbor District') {
+                harbor = levels[y][x];
+                break;
+            }
+        }
+    }
+    if (!harbor?.map) return false;
+    for (const row of harbor.map) {
+        if (row.some(tile => tile?.name === 'Job Board')) return true;
+    }
+    const x = 10;
+    const y = 6;
+    const current = harbor.map?.[y]?.[x];
+    if (!current || (current.class === 'Tile' && !current.collide)) {
+        const boardNum = tile_name_to_num('Job Board');
+        if (boardNum) {
+            harbor.map[y][x] = new_tile_from_num(boardNum, x * tileSize, y * tileSize);
+            return true;
+        }
+    }
+    console.warn('Unable to place Cooperative Exchange board in Harbor District');
+    return false;
 }
 
 let saveTransferStatus = {
@@ -857,6 +889,192 @@ function shouldHighlightMrCInWorld(tile) {
         typeof isMainQuestMrCPending === 'function' &&
         isMainQuestMrCPending();
 }
+
+// --- First-time bridge tutorial ----------------------------------------------
+// After Mr.C walks off at the start of the game, new players are stranded in the
+// Home screen with no idea that the plank/"bridge" tiles at the edges carry them
+// to the next area (their farm, the market, etc.). The first time this happens
+// we enter a lightweight tutorial mode: every bridge tile on the current screen
+// gets a pulsing glow + arrow drawn over it, and an explanatory banner appears.
+// The mode ends (and is never shown again) once the player crosses a bridge.
+const BRIDGE_TUTORIAL_SEEN_KEY = 'BridgeTutorialSeen';
+const BRIDGE_TILE_NAMES = ['Bridge', 'bridge2'];
+
+function isBridgeTile(tile) {
+    return !!tile && typeof tile === 'object' && BRIDGE_TILE_NAMES.indexOf(tile.name) !== -1;
+}
+
+function hasSeenBridgeTutorial() {
+    const store = getOptionsStore();
+    if (!store) return false;
+    try {
+        return store.get(BRIDGE_TUTORIAL_SEEN_KEY) === true;
+    } catch (err) {
+        console.warn('Failed to read bridge tutorial flag.', err);
+        return false;
+    }
+}
+
+function markBridgeTutorialSeen() {
+    const store = getOptionsStore();
+    if (!store) return;
+    try {
+        store.set(BRIDGE_TUTORIAL_SEEN_KEY, true);
+    } catch (err) {
+        console.warn('Failed to persist bridge tutorial flag.', err);
+    }
+}
+
+// Called when the opening Mr.C conversation ends and he walks away. Starts the
+// tutorial once per save; no-ops if it has already been shown.
+function startBridgeTutorial() {
+    if (hasSeenBridgeTutorial()) return;
+    if (window.bridgeTutorialActive) return;
+    window.bridgeTutorialActive = true;
+    // Remember the screen we started on so we can detect the player crossing.
+    window.bridgeTutorialStartLevel = (typeof levels !== 'undefined' &&
+        levels[currentLevel_y] && levels[currentLevel_y][currentLevel_x])
+        ? levels[currentLevel_y][currentLevel_x].name
+        : null;
+    showBridgeTutorialBanner();
+}
+
+// Ends the tutorial and records that it has been seen so it never returns.
+function endBridgeTutorial() {
+    if (!window.bridgeTutorialActive) return;
+    window.bridgeTutorialActive = false;
+    markBridgeTutorialSeen();
+    hideBridgeTutorialBanner();
+}
+
+// Draw a pulsing glow + arrow over every bridge tile on the current screen so
+// the player's eye is pulled straight to the exit. Mirrors the Mr.C world
+// highlight style in level.js. Call from the level render pass (world space).
+function renderBridgeTutorialHighlights(level) {
+    if (!window.bridgeTutorialActive || !level || !level.map) return;
+
+    // The player crossed to a new screen — mission accomplished, end the tutorial.
+    if (window.bridgeTutorialStartLevel && level.name !== window.bridgeTutorialStartLevel) {
+        endBridgeTutorial();
+        return;
+    }
+
+    const reduceMotion = typeof shouldReduceMotion === 'function' && shouldReduceMotion();
+    const pulse = reduceMotion ? 0.8 : (0.55 + (0.45 * Math.abs(Math.sin(millis() * 0.006))));
+
+    push();
+    for (let i = 0; i < level.map.length; i++) {
+        for (let j = 0; j < level.map[i].length; j++) {
+            const tile = level.map[i][j];
+            if (!isBridgeTile(tile)) continue;
+
+            const centerX = tile.pos.x + (tileSize / 2);
+            const centerY = tile.pos.y + (tileSize / 2);
+
+            // Soft glow behind the plank
+            noStroke();
+            fill(255, 216, 104, 40 + (45 * pulse));
+            ellipse(centerX, centerY, tileSize * (1.5 + (0.12 * pulse)), tileSize * (1.5 + (0.12 * pulse)));
+
+            // Bright ring outline
+            stroke(255, 239, 174, 220);
+            strokeWeight(3);
+            noFill();
+            rect(tile.pos.x + 2, tile.pos.y + 2, tileSize - 4, tileSize - 4);
+        }
+    }
+
+    // Draw a bouncing arrow above the bridge tile nearest the player so it reads
+    // as "go here" rather than just "these tiles are special".
+    const target = findNearestBridgeTile(level);
+    if (target) {
+        const bounce = reduceMotion ? 0 : (4 * Math.sin(millis() * 0.006));
+        const ax = target.pos.x + (tileSize / 2);
+        const ay = target.pos.y - 14 - bounce;
+        noStroke();
+        fill(255, 239, 174, 235);
+        // Simple downward-pointing chevron
+        triangle(ax - 9, ay - 8, ax + 9, ay - 8, ax, ay + 6);
+    }
+    pop();
+}
+
+function findNearestBridgeTile(level) {
+    if (typeof player === 'undefined' || !player || !level || !level.map) return null;
+    let best = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < level.map.length; i++) {
+        for (let j = 0; j < level.map[i].length; j++) {
+            const tile = level.map[i][j];
+            if (!isBridgeTile(tile)) continue;
+            const dx = tile.pos.x - player.pos.x;
+            const dy = tile.pos.y - player.pos.y;
+            const dist = (dx * dx) + (dy * dy);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = tile;
+            }
+        }
+    }
+    return best;
+}
+
+function showBridgeTutorialBanner() {
+    // Reuse the shared UI popup container that level-name banners live in so the
+    // banner is positioned/stacked consistently with the rest of the HUD.
+    if (typeof levels !== 'undefined' &&
+        levels[currentLevel_y] &&
+        levels[currentLevel_y][currentLevel_x] &&
+        typeof levels[currentLevel_y][currentLevel_x].ensurePopupContainer === 'function') {
+        levels[currentLevel_y][currentLevel_x].ensurePopupContainer();
+    }
+
+    const container = document.getElementById('ui-popup-container');
+    if (!container) return;
+
+    let banner = document.getElementById('bridge-tutorial-banner');
+    if (banner) return; // already showing
+
+    banner = document.createElement('div');
+    banner.id = 'bridge-tutorial-banner';
+
+    const isMobileOrSmall = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
+    const fontSize = isMobileOrSmall ? '11px' : '15px';
+    const borderWidth = isMobileOrSmall ? '3px' : '5px';
+    const maxWidth = isMobileOrSmall ? '200px' : '320px';
+
+    banner.style.maxWidth = maxWidth;
+    banner.style.minHeight = (isMobileOrSmall ? 35 : 50) + 'px';
+    banner.style.padding = isMobileOrSmall ? '6px 8px' : '8px 12px';
+    banner.style.backgroundColor = 'rgb(187, 132, 75)';
+    banner.style.border = borderWidth + ' solid rgb(149, 108, 65)';
+    banner.style.boxSizing = 'border-box';
+    banner.style.fontFamily = 'pixelFont, monospace';
+    banner.style.color = 'rgb(255, 255, 255)';
+    banner.style.fontSize = fontSize;
+    banner.style.lineHeight = '1.35';
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.justifyContent = 'center';
+    banner.style.textAlign = 'center';
+    banner.style.fontWeight = 'bold';
+    banner.style.textShadow = (isMobileOrSmall ? '2px 2px' : '4px 4px') + ' 0px rgba(0, 0, 0, 0.5)';
+    banner.style.marginBottom = '5px';
+
+    banner.textContent = "See the glowing bridge? Walk onto it to cross to the next area.";
+
+    container.appendChild(banner);
+}
+
+function hideBridgeTutorialBanner() {
+    const banner = document.getElementById('bridge-tutorial-banner');
+    if (banner) banner.remove();
+}
+
+window.startBridgeTutorial = startBridgeTutorial;
+window.endBridgeTutorial = endBridgeTutorial;
+window.renderBridgeTutorialHighlights = renderBridgeTutorialHighlights;
+window.isBridgeTile = isBridgeTile;
 
 function createTutorialSection(sectionConfig) {
     const section = document.createElement('section');
@@ -5319,6 +5537,7 @@ function saveAll(){
     if(player.talking == 0){
         player.save()
     }
+    const previousDayState = localData.get('Day_curLvl_Dif') || {};
     localData.set('Day_curLvl_Dif', {
         days: days, 
         currentLevel_x: currentLevel_x, 
@@ -5328,7 +5547,8 @@ function saveAll(){
         time: time,
         timephase: timephase,
         customRules: window.customRules || null,
-        tutorialState: getTutorialStateForSave()
+        tutorialState: getTutorialStateForSave(),
+        hasBeatenGame: previousDayState.hasBeatenGame || hasCompletedMainQuest()
     });
     let lvlLength = 0;
     for(let i = 0; i < levels.length; i++){
@@ -5494,6 +5714,7 @@ function loadAll(){
     }
     
     ensureKiahInLegacyDowntownSave();
+    ensureCooperativeExchangeBoard();
 
     // Apply NPC/Area/Price/Critter rules AFTER all levels have loaded from storage
     applyNPCFilterRules();

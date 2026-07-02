@@ -5075,3 +5075,122 @@ body.acc-high-contrast .mobile-inv-slot.selected {
     background-color: rgb(130, 90, 50);
     border-color: rgb(255, 221, 102);
 }
+
+/* Postgame Regional Cooperative Exchange */
+.cooperative-exchange-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(18, 25, 35, 0.82);
+    font-family: pixelFont, "Press Start 2P", monospace;
+}
+
+.cooperative-exchange-panel {
+    position: relative;
+    width: min(860px, 94vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 24px;
+    color: #382817;
+    background: #ead39c;
+    border: 6px solid #8b6237;
+    box-shadow: 0 10px 0 #392818;
+}
+
+.cooperative-exchange-panel h2 {
+    margin: 0 48px 18px 0;
+    color: #68451f;
+    font-size: clamp(16px, 3vw, 25px);
+    line-height: 1.4;
+}
+
+.cooperative-exchange-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 42px;
+    height: 42px;
+    font-size: 25px;
+}
+
+.cooperative-summary,
+.cooperative-prosperity {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.cooperative-summary span,
+.cooperative-prosperity span {
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.42);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.cooperative-contract-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.cooperative-evaluation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 14px;
+    padding: 12px;
+    background: #d2b878;
+    border: 3px solid #94703c;
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.cooperative-evaluation button {
+    flex: 0 0 auto;
+    padding: 9px;
+    color: white;
+    background: #6c8f4e;
+    border: 3px solid #3f5d2c;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.cooperative-contract {
+    padding: 14px;
+    background: #f8e8bd;
+    border: 4px solid #a97840;
+}
+
+.cooperative-contract-accepted { border-color: #4f8d67; }
+.cooperative-contract h3 { margin: 8px 0; font-size: 13px; line-height: 1.45; }
+.cooperative-contract p { margin: 7px 0; font-size: 9px; line-height: 1.6; }
+.cooperative-contract-district { color: #866027; font-size: 9px; }
+.cooperative-contract button,
+.cooperative-exchange-close {
+    cursor: pointer;
+    color: white;
+    background: #6c8f4e;
+    border: 3px solid #3f5d2c;
+    font-family: inherit;
+    padding: 10px;
+}
+.cooperative-contract button:disabled { cursor: default; opacity: 0.5; }
+.cooperative-contract .cooperative-contract-abandon {
+    margin-right: 8px;
+    background: #9b654c;
+    border-color: #6e3e2e;
+}
+.cooperative-exchange-locked { display: grid; gap: 14px; padding: 30px; text-align: center; line-height: 1.7; }
+
+@media (max-width: 700px) {
+    .cooperative-exchange-panel { padding: 16px; }
+    .cooperative-contract-list { grid-template-columns: 1fr; }
+}

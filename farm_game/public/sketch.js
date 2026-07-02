@@ -1840,11 +1840,12 @@ function draw() {
         if (levels[currentLevel_y][currentLevel_x] && typeof levels[currentLevel_y][currentLevel_x] === 'object') {
             levels[currentLevel_y][currentLevel_x].fore_render();
             levels[currentLevel_y][currentLevel_x].render();
+            // First-time tutorial: glow/arrow over bridge tiles after Mr.C leaves
+            if (typeof renderBridgeTutorialHighlights === 'function') {
+                renderBridgeTutorialHighlights(levels[currentLevel_y][currentLevel_x]);
+            }
         }
-        
-        // Apply weather visual effects
-        applyWeatherEffects();
-        
+
         if (!paused){
             const reduceMotionEnabled = typeof shouldReduceMotion === 'function' && shouldReduceMotion();
             if (reduceMotionEnabled) {
@@ -1886,6 +1887,11 @@ function draw() {
 
         // End camera transformation
         pop();
+
+        // Weather effects in screen space — rain/fog/lightning/frogs are authored in
+        // canvas coordinates, so they must draw outside the camera zoom/translate (fixes
+        // the mobile bug where the overlay only covered the top-left quarter of the screen).
+        applyWeatherEffects();
 
         // Night darkness overlay in screen space — covers everything including tree tops
         if(!player.dead && time > 0 && currentLvl && typeof currentLvl.renderLights === 'function'){

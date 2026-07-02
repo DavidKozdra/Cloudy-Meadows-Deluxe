@@ -41,6 +41,7 @@ class Player extends MoveableEntity {
         this.current_job = null;
         this.last_work_day = 0;
         this.days_worked = 0;
+        this.cooperativeExchange = createDefaultCooperativeState();
         this.class = 'Player';
     }
 
@@ -77,6 +78,11 @@ class Player extends MoveableEntity {
         this.current_job = obj.current_job || null;
         this.last_work_day = obj.last_work_day || 0;
         this.days_worked = obj.days_worked || 0;
+        this.cooperativeExchange = normalizeCooperativeState(obj.cooperativeExchange);
+        if (this.quests.some(quest => quest && quest.og_name === 'Save Cloudy Meadows' && quest.done)) {
+            this.cooperativeExchange.unlocked = true;
+            if (this.cooperativeExchange.unlockedDay == null) this.cooperativeExchange.unlockedDay = Number(days) || 0;
+        }
         for(let i = 0; i < obj.inv.length; i++){
             if(obj.inv[i] != 0 && obj.inv[i]){
                 const itemNum = item_name_to_num(obj.inv[i].name);
@@ -130,7 +136,7 @@ class Player extends MoveableEntity {
         noTint();
         image(player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
         if(this.looking(currentLevel_x, currentLevel_y) != undefined && this.looking(currentLevel_x, currentLevel_y) != 0 && this.talking == 0){
-            if(((this.looking(currentLevel_x, currentLevel_y).class == 'NPC' || this.looking(currentLevel_x, currentLevel_y).class == 'Shop' || this.looking(currentLevel_x, currentLevel_y).class == 'Chest' || this.looking(currentLevel_x, currentLevel_y).class == 'Robot' || this.looking(currentLevel_x, currentLevel_y).class == 'AirBallon'))){
+            if(((this.looking(currentLevel_x, currentLevel_y).class == 'NPC' || this.looking(currentLevel_x, currentLevel_y).class == 'Shop' || this.looking(currentLevel_x, currentLevel_y).class == 'Chest' || this.looking(currentLevel_x, currentLevel_y).class == 'Robot' || this.looking(currentLevel_x, currentLevel_y).class == 'AirBallon' || this.looking(currentLevel_x, currentLevel_y).name == 'Job Board'))){
                 push()
                 fill(255)
                 stroke(0)
@@ -528,86 +534,6 @@ class Player extends MoveableEntity {
         this.lasteatMili = millis();
     }
 
-    /*
-    handleJobBoard() {
-        const jobBoard = this.looking(currentLevel_x, currentLevel_y);
-        const currentDay = days; // Use game days instead of real time
-        
-        // Check if player can work today
-        if (this.current_job && currentDay <= this.last_work_day) {
-            this.talking = {
-                name: 'Job Board',
-                dialouges: [{
-                    phrase: `You already worked today as a ${this.current_job}. Come back tomorrow for more work!`,
-                    replies: [{
-                        phrase: "I'll come back tomorrow.",
-                        dialouge_num: -1,
-                        quest: -1
-                    }],
-                    hand_num: -1,
-                    amount: 0
-                }]
-            };
-            return;
-        }
-        
-        // Create job selection dialogue
-        let jobOptions = jobBoard.jobs_available.map((job, index) => ({
-            phrase: `Work as ${job} (${jobBoard.daily_wages[index]} coins/day)`,
-            dialouge_num: -1,
-            quest: -1,
-            jobIndex: index
-        }));
-        
-        jobOptions.push({
-            phrase: "Maybe later",
-            dialouge_num: -1,
-            quest: -1
-        });
-        
-        this.talking = {
-            name: 'Job Board',
-            dialouges: [{
-                phrase: "Available jobs in the Big City. Each job pays daily wages:",
-                replies: jobOptions,
-                hand_num: -1,
-                amount: 0
-            }],
-            jobBoard: jobBoard
-        };
-    }
-    */
-
-    /*
-    acceptJob(jobIndex) {
-        const jobBoard = this.looking(currentLevel_x, currentLevel_y);
-        const job = jobBoard.jobs_available[jobIndex];
-        const wage = jobBoard.daily_wages[jobIndex];
-        const currentDay = days;
-        
-        this.current_job = job;
-        this.last_work_day = currentDay;
-        this.coins += wage;
-        this.days_worked++;
-        
-        moneySound.play();
-        
-        this.talking = {
-            name: 'Job Board',
-            dialouges: [{
-                phrase: `Great! You worked as a ${job} today and earned ${wage} coins. Total days worked: ${this.days_worked}`,
-                replies: [{
-                    phrase: "Thanks! I'll be back tomorrow.",
-                    dialouge_num: -1,
-                    quest: -1
-                }],
-                hand_num: -1,
-                amount: 0
-            }]
-        };
-    }
-    */
-
     interactCall() {
         
             if (millis() - this.lastinteractMili > 100) {
@@ -625,8 +551,8 @@ class Player extends MoveableEntity {
         const lookingAt = this.looking(currentLevel_x, currentLevel_y);
         if(lookingAt != undefined && lookingAt != 0 && this.talking == 0){
             // Handle Job Board specifically
-            if(lookingAt.name == 'Job Board' && lookingAt.jobs_available){
-                // this.handleJobBoard();
+            if(lookingAt.name == 'Job Board'){
+                showCooperativeExchange();
                 return;
             }
             if((lookingAt.class == 'NPC' || lookingAt.class == 'Shop' || lookingAt.class == 'Chest' || lookingAt.class == 'Robot' || lookingAt.class == 'AirBallon')){
@@ -1490,16 +1416,6 @@ function takeInput() {
                         player.talking.dialouges[player.talking.current_dialouge].new_replies = -1;
                     }
                     if(selectedReply.dialouge_num == -1){
-                        // Handle job selection
-                        if(selectedReply.jobIndex !== undefined && player.talking.name === 'Job Board'){
-                            // Add bounds checking
-                            const jobBoard = player.looking(currentLevel_x, currentLevel_y);
-                            if(jobBoard && jobBoard.jobs_available && selectedReply.jobIndex >= 0 && selectedReply.jobIndex < jobBoard.jobs_available.length){
-                                player.acceptJob(selectedReply.jobIndex);
-                            }
-                            return;
-                        }
-                        
                         player.talking.move_bool = true;
                         player.talking.current_dialouge = 0;
                         player.oldlooking_name = player.talking.name;

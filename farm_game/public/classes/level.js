@@ -83,11 +83,6 @@ class Level {
                     if (this.map[i][j].name == 'satilite') {
                         append(this.lights, new Light(this.map[i][j].pos.x, this.map[i][j].pos.y, (tileSize * 1)+5, 255, 255, 0));
                     }
-                    if (this.map[i][j].name == 'bridge'){
-                        if(this.fore[i+2] && this.fore[i+2][j] != undefined && this.fore[i+2][j].type != 1 && this.fore[i+2][j].type != 4 && this.fore[i+2][j].type != 5 && this.fore[i+2][j].type != 6){
-                            this.fore[i+2][j].dim = 100;
-                        }
-                    }
                     if (this.map[i][j].name == 'LightBug'){
                         let light = new Light(this.map[i][j].pos.x, this.map[i][j].pos.y, (tileSize * 1)-5, 150, 255, 0);
                         append(this.lights, light);
@@ -346,22 +341,24 @@ class Level {
             this.lightingBuffer = createGraphics(canvasWidth, canvasHeight);
         }
         
-        // Get camera offset (0 if camera disabled)
+        // Get camera offset and zoom (identity if camera disabled). The buffer is composited
+        // 1:1 in screen space, so lights must be transformed world -> screen themselves.
         const camX = (typeof camera !== 'undefined' && camera.enabled) ? camera.x : 0;
         const camY = (typeof camera !== 'undefined' && camera.enabled) ? camera.y : 0;
-        
+        const zoom = (typeof camera !== 'undefined' && camera.enabled) ? camera.zoom : 1;
+
         // Draw to the buffer
         this.lightingBuffer.clear();
         this.lightingBuffer.noStroke();
-        
+
         // Fill with darkness
         this.lightingBuffer.fill(0, 0, 0, time);
         this.lightingBuffer.rect(0, 0, canvasWidth, canvasHeight);
-        
+
         // Use erase mode to cut holes for lights
         this.lightingBuffer.erase(255, 255);
         for (let i = 0; i < this.lights.length; i++) {
-            this.lights[i].renderToBuffer(this.lightingBuffer, camX, camY);
+            this.lights[i].renderToBuffer(this.lightingBuffer, camX, camY, zoom);
         }
         this.lightingBuffer.noErase();
         
@@ -532,15 +529,17 @@ class Light {
         this.b = b;
     }
 
-    renderToBuffer(buffer, camX = 0, camY = 0) {
-        // Draw light circle to cut hole in darkness (in erase mode)
-        // Offset by camera position so lights appear in correct screen position
-        const centerX = this.pos.x - camX + (tileSize / 2);
-        const centerY = this.pos.y - camY + (tileSize / 2);
-        const maxRadius = this.size / 2;
+    renderToBuffer(buffer, camX = 0, camY = 0, zoom = 1) {
+        // Draw light circle to cut hole in darkness (in erase mode).
+        // Transform world -> screen exactly like the camera does: (world - cam) * zoom.
+        // The half-tile centering offset is part of the world position, so it must be
+        // scaled too — otherwise lights drift by (tileSize/2)*(zoom-1) on mobile.
+        const centerX = (this.pos.x + (tileSize / 2) - camX) * zoom;
+        const centerY = (this.pos.y + (tileSize / 2) - camY) * zoom;
+        const maxRadius = (this.size / 2) * zoom;
         const steps = 15;
-        
-        // Only render if light is visible in viewport
+
+        // Only render if light is visible in viewport (uses zoomed center/radius)
         if (centerX < -maxRadius || centerX > canvasWidth + maxRadius ||
             centerY < -maxRadius || centerY > canvasHeight + maxRadius) {
             return;
