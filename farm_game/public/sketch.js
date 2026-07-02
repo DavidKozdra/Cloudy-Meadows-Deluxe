@@ -2060,6 +2060,97 @@ function draw() {
     }
 }
 
+// Time Watch HUD: a self-contained, scale-aware panel with a 9-segment speed
+// gauge. Everything derives from tileSize so it never clips regardless of the
+// logical canvas size, and control hints adapt to the bound keys / input mode.
+function drawTimeWatchHUD() {
+    const TIME_WATCH_LABELS = ['x16 ◀◀', 'x8 ◀◀', 'x4 ◀◀', 'x2 ◀◀', 'NORMAL', '▶▶ x2', '▶▶ x4', '▶▶ x8', '▶▶ x16'];
+    const SEGMENTS = TIME_WATCH_LABELS.length; // 9
+    const idx = timeSpeedIndex;
+
+    // Color theme by direction.
+    let accent;
+    if (timeSpeed < 0) accent = [100, 180, 255];       // rewind: blue
+    else if (timeSpeed > 1) accent = [255, 200, 50];   // fast-forward: gold
+    else accent = [210, 210, 210];                     // normal: grey
+
+    // Panel geometry scaled off tileSize, clamped to fit narrow canvases.
+    // Gauge sizing first, then shrink segments if they can't fit the canvas so
+    // the backdrop panel always encloses the gauge on very narrow screens.
+    const segGap = 3;
+    const maxGaugeW = canvasWidth - tileSize * 1.4; // leave room for panel padding
+    let segW = constrain(tileSize * 0.6, 14, 26);
+    if (SEGMENTS * segW + (SEGMENTS - 1) * segGap > maxGaugeW) {
+        segW = max(6, (maxGaugeW - (SEGMENTS - 1) * segGap) / SEGMENTS);
+    }
+    const gaugeW = SEGMENTS * segW + (SEGMENTS - 1) * segGap;
+    const padX = tileSize * 0.5;
+    const panelW = min(gaugeW + padX * 2, canvasWidth - tileSize * 0.4);
+    const panelH = tileSize * 1.9;
+    const panelX = (canvasWidth - panelW) / 2;
+    const panelY = tileSize * 0.3;
+    const cx = canvasWidth / 2;
+
+    push();
+    rectMode(CORNER);
+    textAlign(CENTER, CENTER);
+    noStroke();
+
+    // Background panel with accent border.
+    fill(18, 20, 28, 220);
+    rect(panelX, panelY, panelW, panelH, 8);
+    stroke(accent[0], accent[1], accent[2], 200);
+    strokeWeight(2);
+    noFill();
+    rect(panelX + 1, panelY + 1, panelW - 2, panelH - 2, 8);
+    noStroke();
+
+    // Title + current speed label.
+    textFont(player_2);
+    textSize(constrain(tileSize * 0.34, 9, 13));
+    fill(255, 255, 255, 170);
+    text('TIME WATCH', cx, panelY + panelH * 0.22);
+    textSize(constrain(tileSize * 0.48, 13, 20));
+    fill(accent[0], accent[1], accent[2]);
+    text(TIME_WATCH_LABELS[idx], cx, panelY + panelH * 0.46);
+
+    // 9-segment gauge. Center segment is the "normal" anchor.
+    const gaugeY = panelY + panelH * 0.68;
+    const gaugeH = constrain(tileSize * 0.34, 8, 14);
+    const startX = cx - gaugeW / 2;
+    rectMode(CORNER);
+    for (let i = 0; i < SEGMENTS; i++) {
+        const sx = startX + i * (segW + segGap);
+        const active = i === idx;
+        const isCenter = i === 4;
+        if (active) {
+            fill(accent[0], accent[1], accent[2]);
+        } else if (isCenter) {
+            fill(255, 255, 255, 90); // always mark the neutral point
+        } else if (i < 4) {
+            fill(100, 180, 255, 55);  // rewind side, dim
+        } else {
+            fill(255, 200, 50, 55);   // fast-forward side, dim
+        }
+        rect(sx, gaugeY, segW, gaugeH, 2);
+    }
+
+    // Control hints: real bound keys on desktop, touch wording on mobile.
+    textSize(constrain(tileSize * 0.3, 8, 12));
+    fill(255, 255, 255, 150);
+    let hint;
+    if (isMobile) {
+        hint = 'tap  ◀ slower   faster ▶';
+    } else {
+        const slowKey = String.fromCharCode(eat_button);
+        const fastKey = String.fromCharCode(interact_button);
+        hint = '[' + slowKey + '] slower    [' + fastKey + '] faster';
+    }
+    text(hint, cx, panelY + panelH + tileSize * 0.28);
+
+    pop();
+}
+
 //Christian's function to make UI more readible, positioning + math stuff
 function render_ui() {
     //calendar with day-of-week color
@@ -2099,23 +2190,7 @@ function render_ui() {
 
     // Time Watch HUD indicator
     if (player.inv[player.hand] != 0 && player.inv[player.hand].name === 'Time Watch') {
-        push();
-        textFont(player_2);
-        textAlign(CENTER, CENTER);
-        stroke(0);
-        strokeWeight(3);
-        textSize(16);
-        const TIME_WATCH_LABELS = ['<< x16', '<< x8', '<< x4', '<< x2', 'Normal', 'x2 >>', 'x4 >>', 'x8 >>', 'x16 >>'];
-        const label = TIME_WATCH_LABELS[timeSpeedIndex];
-        if (timeSpeed < 0) {
-            fill(100, 180, 255);
-        } else if (timeSpeed > 1) {
-            fill(255, 200, 50);
-        } else {
-            fill(200, 200, 200);
-        }
-        text('Time Watch: ' + label + '  [Q] slower  [E] faster', canvasWidth / 2, 18);
-        pop();
+        drawTimeWatchHUD();
     }
 
     if(player.inv_warn_anim > 0){

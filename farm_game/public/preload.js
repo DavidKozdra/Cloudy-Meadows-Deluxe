@@ -21,6 +21,7 @@ function preload() {
     bed_item_img = loadImage('images/tiles/Bed.png');
     wall_item_img = loadImage('images/tiles/Wood.png');
     axe_img = loadImage('images/items/Axe.png');
+    stop_watch_img = loadImage('images/items/stop_watch.png');
 
     //Tile
     grass_tile_img = loadImage('images/tiles/Grass.png');
@@ -779,7 +780,8 @@ function preload() {
     /*164*/sarah_tile_imgs,
     /*165*/thomas_tile_imgs,
     /*166*/victoria_tile_imgs,
-    /*167*/elena_tile_imgs
+    /*167*/elena_tile_imgs,
+    /*168*/stop_watch_img
     ];
     
     // Beach tiles and Kiah properly defined in array above

@@ -4991,6 +4991,10 @@ function showQuests(){
         header.innerHTML = '<h2>All Quests</h2>';
         headerWrapper.appendChild(header);
         
+        const closeInstruction = document.createElement('div');
+        closeInstruction.className = 'quests-close-instruction';
+        header.appendChild(closeInstruction);
+        
         const closeButton = document.createElement('button');
         closeButton.className = 'quests-close-btn';
         closeButton.textContent = '×';
@@ -5041,10 +5045,6 @@ function showQuests(){
             }
         });
         paginationContainer.appendChild(nextButton);
-        
-        const closeInstruction = document.createElement('div');
-        closeInstruction.className = 'quests-close-instruction';
-        questsContainer.appendChild(closeInstruction);
         
         // Disable canvas pointer events to prevent click interception
         const canvas = document.querySelector('canvas');
