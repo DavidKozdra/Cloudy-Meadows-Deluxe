@@ -72,6 +72,11 @@ class Level {
                         this.map[i][j] = 0;
                         console.error('Tile doesnt exist');
                     }
+                    if (!this.map[i][j]) {
+                        console.error('Tile could not be constructed at', j, i);
+                        this.map[i][j] = 0;
+                        continue;
+                    }
                     // Ensure sprinklers always have a base tile for rendering (covers legacy saves)
                     if (this.map[i][j] && this.map[i][j].name === 'sprinkler' && !this.map[i][j].under_tile) {
                         this.map[i][j].under_tile = new_tile_from_num(3, j * tileSize, i * tileSize); // plot
@@ -384,7 +389,7 @@ class Level {
         }
     }
 
-    update(x, y) {
+    update(x, y, worldUpdateTick) {
         // Iterate through all tiles in this level and update them
         for (let i = 0; i < this.map.length; i++) {
             for (let j = 0; j < this.map[i].length; j++) {
@@ -394,19 +399,24 @@ class Level {
                     if (tile.class === 'Plant') {
                         tile.grow(x, y);
                     }
-                    if (tile.class === 'NPC') {
+                    if (tile.class === 'NPC' && tile.lastWorldUpdateTick !== worldUpdateTick) {
+                        tile.lastWorldUpdateTick = worldUpdateTick;
                         tile.move(x, y);
                     }
-                    if (tile.class === 'Robot') {
+                    if (tile.class === 'Robot' && tile.lastWorldUpdateTick !== worldUpdateTick) {
+                        tile.lastWorldUpdateTick = worldUpdateTick;
                         tile.move(x, y);
                     }
-                    if (tile.class === 'FarmRobot') {
+                    if (tile.class === 'FarmRobot' && tile.lastWorldUpdateTick !== worldUpdateTick) {
+                        tile.lastWorldUpdateTick = worldUpdateTick;
                         tile.move(x, y);
                     }
-                    if (tile.class === 'FreeMoveEntity'){
+                    if (tile.class === 'FreeMoveEntity' && tile.lastWorldUpdateTick !== worldUpdateTick){
+                        tile.lastWorldUpdateTick = worldUpdateTick;
                         tile.randomMove(x, y);
                     }
-                    if (tile.class === 'LightMoveEntity'){
+                    if (tile.class === 'LightMoveEntity' && tile.lastWorldUpdateTick !== worldUpdateTick){
+                        tile.lastWorldUpdateTick = worldUpdateTick;
                         tile.randomMove(x, y);
                     }
                     if (tile.name === 'flower') {

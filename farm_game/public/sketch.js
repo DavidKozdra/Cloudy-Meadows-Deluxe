@@ -367,6 +367,12 @@ var mobileInventoryState = {
     containerRef: null   // Reference to the actual container object
 };
 
+function playerCanEditContainer(container) {
+    if (!container || container === 0) return false;
+    if (container.class === 'Backpack') return true;
+    return container.playerOwned === true;
+}
+
 function setupMobileInventoryUI() {
     const overlay = document.getElementById('mobile-inventory-overlay');
     const closeBtn = document.getElementById('mobile-inv-close');
@@ -470,10 +476,11 @@ function updateMobileInventoryUI() {
     
     const container = mobileInventoryState.containerRef;
     const containerType = mobileInventoryState.containerType;
+    const readOnly = (containerType === 'Robot' || containerType === 'Chest') && !playerCanEditContainer(container);
     
     // Update title
     if (titleEl) {
-        titleEl.textContent = container ? container.name : 'Inventory';
+        titleEl.textContent = container ? container.name + (readOnly ? ' (View only)' : '') : 'Inventory';
     }
     
     // Clear existing grids
@@ -527,6 +534,7 @@ function updateMobileInventoryUI() {
                     if (boomBtn) {
                         boomBtn.onclick = () => {
                             if (confirm('Are you sure? Booming the chest will REMOVE EVERYTHING inside it!')) {
+                                if (!playerCanEditContainer(container)) return;
                                 if (checkForSpace(player, item_name_to_num('Chest'))) {
                                     addItem(player, item_name_to_num('Chest'), 1);
                                     levels[currentLevel_y][currentLevel_x].map[container.pos.y / tileSize][container.pos.x / tileSize] = container.under_tile;
@@ -565,9 +573,9 @@ function updateMobileInventoryUI() {
         const robotControls = document.createElement('div');
         robotControls.id = 'mobile-inv-robot-controls';
         robotControls.innerHTML = `
-            <button class="mobile-inv-robot-btn ${temp_move_bool ? 'active' : ''}" id="mobile-robot-play">▶ Play</button>
-            <button class="mobile-inv-robot-btn ${!temp_move_bool ? 'active' : ''}" id="mobile-robot-pause">⏸ Pause</button>
-            <button class="mobile-inv-robot-btn destroy" id="mobile-robot-destroy">🗑 Destroy</button>
+            <button class="mobile-inv-robot-btn ${temp_move_bool ? 'active' : ''}" id="mobile-robot-play" ${readOnly ? 'disabled' : ''}>▶ Play</button>
+            <button class="mobile-inv-robot-btn ${!temp_move_bool ? 'active' : ''}" id="mobile-robot-pause" ${readOnly ? 'disabled' : ''}>⏸ Pause</button>
+            <button class="mobile-inv-robot-btn destroy" id="mobile-robot-destroy" ${readOnly ? 'disabled' : ''}>🗑 Destroy</button>
         `;
         containerSection.appendChild(robotControls);
         
@@ -579,18 +587,21 @@ function updateMobileInventoryUI() {
             
             if (playBtn) {
                 playBtn.onclick = () => {
+                    if (!playerCanEditContainer(container)) return;
                     temp_move_bool = true;
                     updateMobileInventoryUI();
                 };
             }
             if (pauseBtn) {
                 pauseBtn.onclick = () => {
+                    if (!playerCanEditContainer(container)) return;
                     temp_move_bool = false;
                     updateMobileInventoryUI();
                 };
             }
             if (destroyBtn) {
                 destroyBtn.onclick = () => {
+                    if (!playerCanEditContainer(container)) return;
                     if (confirm('Are you sure? Booming the robot will REMOVE ALL its inventory and it cannot be recovered!')) {
                         if (checkForSpace(player, item_name_to_num(container.name))) {
                             addItem(player, item_name_to_num(container.name), 1);
@@ -738,6 +749,11 @@ function handleMobileSlotTap(source, row, col, flatIndex) {
     const container = mobileInventoryState.containerRef;
     const containerType = mobileInventoryState.containerType;
     const selected = mobileInventoryState.selectedSlot;
+    const readOnly = (containerType === 'Robot' || containerType === 'Chest') && !playerCanEditContainer(container);
+    if (readOnly && (source !== 'player' || (selected && selected.source !== 'player'))) {
+        updateMobileSelectedInfo('This container belongs to someone else');
+        return;
+    }
     
     // Get the item in this slot
     let tappedItem = 0;
@@ -880,8 +896,9 @@ function handleMobileSlotTap(source, row, col, flatIndex) {
     else if (srcSource === 'player' && source === 'instructions') {
         const playerIdx = srcFlatIndex !== null ? srcFlatIndex : (srcRow * 4 + srcCol);
         
-        // Only command items can go to instructions
-        if (srcItem.class === 'Command') {
+        // Commands and ordinary items are both valid. Ordinary items act as
+        // selectors for the preceding interact/chest command.
+        if (srcItem.class !== 'Backpack') {
             if (tappedItem === 0) {
                 container.instructions[col] = new_item_from_num(item_name_to_num(srcItem.name), 1);
                 srcItem.amount -= 1;
@@ -1006,7 +1023,7 @@ function mobileTransferAll() {
     const container = mobileInventoryState.containerRef;
     const containerType = mobileInventoryState.containerType;
     
-    if (!container) return;
+    if (!container || ((containerType === 'Robot' || containerType === 'Chest') && !playerCanEditContainer(container))) return;
     
     // Transfer all from player to container
     for (let i = 0; i < player.inv.length; i++) {
@@ -1059,6 +1076,10 @@ function mobileSplitStack() {
     
     const container = mobileInventoryState.containerRef;
     const containerType = mobileInventoryState.containerType;
+    if (selected.source !== 'player' && (containerType === 'Robot' || containerType === 'Chest') && !playerCanEditContainer(container)) {
+        updateMobileSelectedInfo('This container belongs to someone else');
+        return;
+    }
     
     let item = null;
     let setItem = null;
@@ -1172,6 +1193,7 @@ var controlHighlight;
 var creditsOn = false;
 var current_reply = 0;
 var temp_move_bool = true;
+var worldUpdateTick = 0;
 var questCloseButton;
 var animatedGifs = []; // Track all animated GIF images
 var clear_anim = false;
@@ -1853,11 +1875,26 @@ function draw() {
             } else {
                 animatedGifs.forEach(gif => gif.play());
             }
-            // Update all levels so plants grow offscreen
-            for(let y = 0; y < levels.length; y++){
-                for(let x = 0; x < levels[y].length; x++){
-                    if(levels[y][x]){
-                        levels[y][x].update(x, y);
+            // Update all levels so plants grow offscreen. A shared tick prevents
+            // an entity that moved later in the row/level scan from being updated
+            // more than once during the same rendered frame.
+            //
+            // The Time Watch clock speed scales the whole world simulation, not
+            // just the calendar: fast-forward runs the update loop multiple times
+            // per frame so crops/NPCs/robots advance in step with the day clock,
+            // and rewind (timeSpeed < 0) runs zero forward steps so nothing keeps
+            // growing while time runs backwards. Each step gets its own tick so
+            // per-tick guards (worldUpdateTick) still fire once per step.
+            const worldSteps = (typeof timeSpeed !== 'undefined' && timeSpeed > 0)
+                ? Math.max(1, Math.round(timeSpeed))
+                : (typeof timeSpeed !== 'undefined' && timeSpeed < 0 ? 0 : 1);
+            for (let step = 0; step < worldSteps; step++) {
+                worldUpdateTick += 1;
+                for(let y = 0; y < levels.length; y++){
+                    for(let x = 0; x < levels[y].length; x++){
+                        if(levels[y][x]){
+                            levels[y][x].update(x, y, worldUpdateTick);
+                        }
                     }
                 }
             }
@@ -1948,6 +1985,13 @@ function draw() {
                             dayOfWeek = days % 5;
                             time = 200;
                             timephase = 1;
+                            // Crossed a day boundary backwards: revert the world
+                            // to the snapshot for the day we landed on so crops,
+                            // entities and shops match the rewound clock. Player
+                            // state is intentionally left untouched.
+                            if (typeof restoreDaySnapshot === 'function' && hasDaySnapshot(days)) {
+                                restoreDaySnapshot(days);
+                            }
                         } else {
                             time = 0;
                             timephase = 0;
@@ -1970,7 +2014,7 @@ function draw() {
                     generateDailyWeather();
                     
                     if(days >= 88 && level36.map[7][8].name != 'Scientist'){
-                        level36.map[7][8] = new_tile_from_num(124, 8*tileSize, 7*tileSize);
+                        level36.map[7][8] = new_tile_from_num(123, 8*tileSize, 7*tileSize);
                     }
                     if(days >= 100 && level5.map[9][2].name != 'Mr.C'){
                         level5.map[9][2] = new_tile_from_num(98, 2*tileSize, 9*tileSize);
@@ -2023,6 +2067,13 @@ function draw() {
                         }
                     }
                     
+                    // Snapshot the fresh world for Time Watch rewind. Represents
+                    // "start of day <days>"; rewinding across a day boundary
+                    // restores the day we land on. Skip while actively rewinding
+                    // so we don't overwrite history with a rewound state.
+                    if (typeof captureDaySnapshot === 'function' && timeSpeed >= 0) {
+                        captureDaySnapshot(days);
+                    }
                     saveAll();
                     newDayChime.play();
                 }
@@ -2263,7 +2314,7 @@ function render_ui() {
                 player.talking.bag_render();
             }
             else if(player.talking.class == 'Robot'){
-                player.talking.move_bool = false;
+                if (playerCanEditContainer(player.talking)) player.talking.move_bool = false;
                 player.talking.render_pc();
             }
         }
@@ -2583,7 +2634,7 @@ function mouseReleased() {
         if(mouseButton == LEFT){
             if(!player.show_quests){
                 if(keyIsDown(special_key) || virtualInput.special){ //16 == shift
-                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
+                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Backpack' || (player.talking.class == 'Chest' && playerCanEditContainer(player.talking)))){
                         const inv = UI_BOUNDS.inventoryBar;
                         console.log(inv);
                         if(mouseY >= inv.top && mouseY <= inv.bottom){
@@ -2627,7 +2678,7 @@ function mouseReleased() {
                             }
                         }
                     }
-                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
+                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot' && playerCanEditContainer(player.talking)){
                         const inv = UI_BOUNDS.inventoryBar;
                         if(mouseY >= inv.top && mouseY <= inv.bottom){
                             if(mouseX >= inv.left && mouseX <= inv.right){
@@ -2673,7 +2724,7 @@ function mouseReleased() {
                             }
                         }
                     }
-                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
+                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Backpack' || (player.talking.class == 'Chest' && playerCanEditContainer(player.talking)))){
                         const chest = UI_BOUNDS.chestGrid;
                         if(mouseY >= chest.top && mouseY <= chest.bottom){
                             if(mouseX >= chest.left && mouseX <= chest.right){
@@ -2703,7 +2754,7 @@ function mouseReleased() {
                             }
                         }
                     }
-                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
+                    if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot' && playerCanEditContainer(player.talking)){
                         const instructions = UI_BOUNDS.robotInstructions;
                         if(mouseY >= instructions.top && mouseY <= instructions.getBottom(player.talking.instructions.length)){
                             if(mouseX >= instructions.left && mouseX <= instructions.right){
@@ -2724,9 +2775,15 @@ function mouseReleased() {
                                     player.talking.instructions[currentX] = 0;
                                 }
                                 else{
-                                    let temp = mouse_item;
-                                    mouse_item = player.talking.instructions[currentX];
-                                    player.talking.instructions[currentX] = temp;
+                                    const previous = player.talking.instructions[currentX];
+                                    player.talking.instructions[currentX] = new_item_from_num(item_name_to_num(mouse_item.name), 1);
+                                    mouse_item.amount -= 1;
+                                    if (mouse_item.amount <= 0) mouse_item = 0;
+                                    if (previous && previous !== 0) {
+                                        if (mouse_item === 0) mouse_item = previous;
+                                        else if (mouse_item.name === previous.name) mouse_item.amount += 1;
+                                        else if (checkForSpace(player, item_name_to_num(previous.name))) addItem(player, item_name_to_num(previous.name), 1);
+                                    }
                                 }
                             }
                         }
@@ -2775,7 +2832,7 @@ function mouseReleased() {
                     }
                 }
             }
-            if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Chest' || player.talking.class == 'Backpack' )){
+            if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && (player.talking.class == 'Backpack' || (player.talking.class == 'Chest' && playerCanEditContainer(player.talking)))){
                 const chest = UI_BOUNDS.chestGrid;
                 if(mouseY >= chest.top && mouseY <= chest.bottom){
                     if(mouseX >= chest.left && mouseX <= chest.right){
@@ -2799,7 +2856,7 @@ function mouseReleased() {
                     }
                 }
             }
-            if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot'){
+            if(player.looking(currentLevel_x, currentLevel_y) != undefined && player.talking != 0 && player.looking(currentLevel_x, currentLevel_y).class == 'Robot' && playerCanEditContainer(player.talking)){
                 const storage = UI_BOUNDS.robotStorage;
                 if(mouseY >= storage.top && mouseY <= storage.bottom){
                     if(mouseX >= storage.left && mouseX <= storage.right){

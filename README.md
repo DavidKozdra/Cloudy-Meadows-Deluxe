@@ -29,3 +29,19 @@ We worked with:
 
 More on this project 
 https://magentaautumn.itch.io/cloudy-meadows-deluxe/devlog/1322034/cloudy-deluxe-v1
+
+## Development
+
+Run the dependency-free validation and regression suite with:
+
+```sh
+npm test
+```
+
+Install the repository pre-commit hook with:
+
+```sh
+npm run hooks:install
+```
+
+`npm install` also installs the hook through the `prepare` script.

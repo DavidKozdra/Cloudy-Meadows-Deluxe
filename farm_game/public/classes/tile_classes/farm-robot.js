@@ -1,6 +1,6 @@
 class FarmRobot extends GridMoveEntity {
     constructor(name, png, x, y, instructions, moving_timer) {
-        super(name, png, x, y, [], 0, 2, 1, instructions, moving_timer);
+        super(name, png, x, y, [0, 0, 0, 0], 0, 2, 1, instructions, moving_timer);
         this.class = 'FarmRobot';
         this.collide = true;
         this.task_label = '';
@@ -20,18 +20,20 @@ class FarmRobot extends GridMoveEntity {
         textFont(player_2);
         textSize(7);
         textAlign(CENTER);
-        text('FARM BOT', this.pos.x + tileSize / 2, this.pos.y - 2);
+        const stored = this.inv.reduce((sum, item) => sum + (item && item !== 0 ? item.amount : 0), 0);
+        text('FARM BOT' + (stored ? ' [' + stored + ']' : ''), this.pos.x + tileSize / 2, this.pos.y - 2);
         textAlign(LEFT);
         pop();
     }
 
     move(x, y) {
         this.moving_timer -= 1;
-        if (player.touching.name == 'bed') {
+        if (player && player.touching && player.touching.name == 'bed') {
             this.moving_timer -= 2;
         }
-        if (this.moving_timer <= 0) {
+        if (this.moving_timer <= 0 && this.move_bool && this.instructions.length) {
             const cmd = this.instructions[this.current_instruction];
+            let completed = false;
             if (cmd == 'up') {
                 this.facing = 0;
                 if (this.pos.y - tileSize >= 0) {
@@ -42,6 +44,7 @@ class FarmRobot extends GridMoveEntity {
                         temp.under_tile = levels[y][x].map[(this.pos.y / tileSize) - 1][this.pos.x / tileSize];
                         levels[y][x].map[(this.pos.y / tileSize) - 1][this.pos.x / tileSize] = temp;
                         this.pos.y -= tileSize;
+                        completed = true;
                     }
                 }
             } else if (cmd == 'down') {
@@ -54,6 +57,7 @@ class FarmRobot extends GridMoveEntity {
                         temp.under_tile = levels[y][x].map[(this.pos.y / tileSize) + 1][this.pos.x / tileSize];
                         levels[y][x].map[(this.pos.y / tileSize) + 1][this.pos.x / tileSize] = temp;
                         this.pos.y += tileSize;
+                        completed = true;
                     }
                 }
             } else if (cmd == 'left') {
@@ -66,6 +70,7 @@ class FarmRobot extends GridMoveEntity {
                         temp.under_tile = levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) - 1];
                         levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) - 1] = temp;
                         this.pos.x -= tileSize;
+                        completed = true;
                     }
                 }
             } else if (cmd == 'right') {
@@ -78,24 +83,32 @@ class FarmRobot extends GridMoveEntity {
                         temp.under_tile = levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) + 1];
                         levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) + 1] = temp;
                         this.pos.x += tileSize;
+                        completed = true;
                     }
                 }
             } else if (cmd == 'harvest') {
                 // Harvest any ripe plant in front
                 const look = this.looking(x, y);
-                if (look && look.class == 'Plant' && look.age == all_imgs[look.png].length - 2) {
-                    levels[y][x].map[look.pos.y / tileSize][look.pos.x / tileSize] = new_tile_from_num(3, look.pos.x, look.pos.y);
+                if (look && look.class == 'Plant' && look.age == all_imgs[look.png].length - 2 && checkForSpace(this, look.eat_num)) {
+                    const cropTileNum = tile_name_to_num(look.name);
+                    const baseYield = typeof look.getHarvestYield === 'function' ? look.getHarvestYield() : 1;
+                    addItem(this, look.eat_num, baseYield + levels[y][x].ladybugs);
+                    // Specialized showcase harvesters include an integrated seed
+                    // hopper, so harvested beds are immediately replanted.
+                    levels[y][x].map[look.pos.y / tileSize][look.pos.x / tileSize] = new_tile_from_num(cropTileNum, look.pos.x, look.pos.y);
                     if (typeof PlantingSound !== 'undefined') PlantingSound.play();
+                    completed = true;
                 }
             } else if (cmd == 'water') {
                 // Water the plot in front
                 const look = this.looking(x, y);
                 if (look && look.class == 'Plant') {
-                    look.waterneed = 0;
+                    look.wateredDay = days;
+                    completed = true;
                 }
             }
 
-            this.current_instruction = (this.current_instruction + 1) % this.instructions.length;
+            if (completed) this.current_instruction = (this.current_instruction + 1) % this.instructions.length;
             this.moving_timer = this.max_moving_timer;
         }
     }
@@ -111,5 +124,11 @@ class FarmRobot extends GridMoveEntity {
         this.instructions = obj.instructions;
         this.current_instruction = obj.current_instruction;
         this.move_bool = obj.move_bool;
+        if (typeof obj.playerOwned === 'boolean') this.playerOwned = obj.playerOwned;
+        for(let i = 0; i < (obj.inv || []).length; i++){
+            this.inv[i] = obj.inv[i] && obj.inv[i] !== 0
+                ? new_item_from_num(item_name_to_num(obj.inv[i].name), obj.inv[i].amount)
+                : 0;
+        }
     }
 }

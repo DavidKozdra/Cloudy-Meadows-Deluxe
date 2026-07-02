@@ -673,9 +673,11 @@ class Player extends MoveableEntity {
                         if (this.touching != 0) {
                             levels[currentLevel_y][currentLevel_x].map[(player.looking(currentLevel_x, currentLevel_y).pos.y / tileSize)][player.looking(currentLevel_x, currentLevel_y).pos.x / tileSize] = new_tile_from_num(this.inv[this.hand].tile_num, this.looking(currentLevel_x, currentLevel_y).pos.x, this.looking(currentLevel_x, currentLevel_y).pos.y);
                         }
-                        this.looking(x, y).under_tile = temp;
+                        const placedEntity = this.looking(x, y);
+                        placedEntity.under_tile = temp;
+                        placedEntity.playerOwned = true;
                         if(this.inv[this.hand].name != 'Chest'){
-                            this.looking(x, y).move_bool = false;
+                            placedEntity.move_bool = false;
                         }
                     }
                     else{
@@ -1184,6 +1186,9 @@ function takeInput() {
                             mouse_item = 0;
                         }
                         else{
+                            if (player.talking.class === 'Chest' && !playerCanEditContainer(player.talking)) {
+                                return;
+                            }
                             let dropped = false;
                             for (let i = 0; i < player.talking.inv.length; i++) {
                                 for(let j = 0; j < player.talking.inv[i].length; j++){

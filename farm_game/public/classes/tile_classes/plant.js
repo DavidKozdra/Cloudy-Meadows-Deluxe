@@ -9,6 +9,7 @@ class Plant extends Tile {
         this.deathAttempts = 3;
         this.growTimer = 0;
         this.growthTime = growthTime;
+        this.wateredDay = -1;
         this.class = 'Plant';
 
     }
@@ -104,7 +105,7 @@ class Plant extends Tile {
             water_found += this.waterneeded; // Rain satisfies all water needs
         }
         
-        this.watermet = (water_found >= this.waterneeded);
+        this.watermet = (water_found >= this.waterneeded) || this.wateredDay === days;
         this.waterChecked = true; // Mark that we've checked water at least once
         
         // Only grow when it's time to grow
@@ -151,6 +152,7 @@ class Plant extends Tile {
         this.watermet = obj.watermet;
         this.deathAttempts = obj.deathAttempts;
         this.growTimer = obj.growTimer;
+        this.wateredDay = typeof obj.wateredDay === 'number' ? obj.wateredDay : -1;
     }
 
     getHarvestYield() {

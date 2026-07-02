@@ -8,6 +8,10 @@ class Entity extends Tile {
             }
         }
         this.hand = hand;
+        // Map-authored containers/entities belong to the world. Player placement
+        // explicitly flips this flag so inventory and programming UIs can enforce
+        // ownership without relying on the entity name or current level.
+        this.playerOwned = false;
         if(under_tile_num == 0){
             this.under_tile = 0
         }
@@ -47,6 +51,9 @@ class Entity extends Tile {
     load(obj){
         this.age = obj.age;
         this.hand = obj.hand;
+        if (typeof obj.playerOwned === 'boolean') {
+            this.playerOwned = obj.playerOwned;
+        }
         this.under_tile = new_tile_from_num(tile_name_to_num(obj.under_tile.name), obj.under_tile.pos.x, obj.under_tile.pos.y);
         this.under_tile.load(obj.under_tile);
         for(let i = 0; i < obj.inv.length; i++){

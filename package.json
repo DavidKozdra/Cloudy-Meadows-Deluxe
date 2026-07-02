@@ -1,0 +1,15 @@
+{
+  "name": "cloudy-meadows-deluxe",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Validation and regression suite for Cloudy Meadows Deluxe",
+  "scripts": {
+    "test": "node scripts/test-project.js",
+    "test:automation": "node farm_game/tests/automation.test.js",
+    "hooks:install": "node scripts/install-hooks.js",
+    "prepare": "node scripts/install-hooks.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

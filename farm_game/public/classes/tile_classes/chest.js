@@ -14,7 +14,8 @@ class Chest extends Entity{
             return; // Don't render p5 UI on mobile
         }
         
-        robotBoomButton.show();
+        if (this.playerOwned) robotBoomButton.show();
+        else robotBoomButton.hide();
         robotBoomButton.style('background-color','rgb(187, 132, 75)');
         robotBoomButton.style('color','rgb(255, 0, 0)');
         robotBoomButton.position((canvasWidth/4) + (canvasWidth/2) + 10, (canvasHeight/4) - 35);
@@ -29,6 +30,7 @@ class Chest extends Entity{
         stroke(0);
         strokeWeight(4);
         text(this.name, (canvasWidth / 4) + 10, (canvasHeight/4) + 10);
+        if (!this.playerOwned) text('VIEW ONLY', (canvasWidth / 4) + 130, (canvasHeight/4) + 10);
         textSize(13);
         strokeWeight(2);
         text( String.fromCharCode(eat_button) + ' to leave', ((2*canvasWidth) / 4) + 45, (canvasHeight/4) + 10);
@@ -49,6 +51,9 @@ class Chest extends Entity{
     load(obj){
         this.age = obj.age;
         this.hand = obj.hand;
+        if (typeof obj.playerOwned === 'boolean') {
+            this.playerOwned = obj.playerOwned;
+        }
         this.under_tile = new_tile_from_num(tile_name_to_num(obj.under_tile.name), obj.under_tile.pos.x, obj.under_tile.pos.y);
         this.under_tile.load(obj.under_tile);
         for(let i = 0; i < obj.inv.length; i++){

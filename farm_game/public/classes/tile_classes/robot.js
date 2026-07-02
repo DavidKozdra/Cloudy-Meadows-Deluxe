@@ -8,6 +8,7 @@ class Robot extends GridMoveEntity{
         this.max_fuel_timer = this.fuel_timer;
         this.day_pause = false;
         this.day_paused = 0;
+        this.status = 'idle';
     }
 
     capasity(){
@@ -49,9 +50,15 @@ class Robot extends GridMoveEntity{
             return; // Don't render p5 UI on mobile
         }
         
-        robotPlayButton.show();
-        robotPauseButton.show();
-        robotBoomButton.show();
+        if (this.playerOwned) {
+            robotPlayButton.show();
+            robotPauseButton.show();
+            robotBoomButton.show();
+        } else {
+            robotPlayButton.hide();
+            robotPauseButton.hide();
+            robotBoomButton.hide();
+        }
         robotBoomButton.style('background-color','rgb(50, 50, 50)');
         robotBoomButton.style('color','rgb(255, 0, 0)');
         robotBoomButton.position(canvasWidth - (canvasWidth/8) - 50, canvasHeight/8 + (canvasHeight - (canvasWidth/3) - 17) - 50);
@@ -84,6 +91,7 @@ class Robot extends GridMoveEntity{
         stroke(0);
         strokeWeight(4);
         text(this.name, (canvasWidth/16)+10, (canvasHeight/8)+10);
+        if (!this.playerOwned) text('VIEW ONLY', (canvasWidth/16)+105, (canvasHeight/8)+10);
         text('Inst->', (canvasWidth/16)+10, (canvasHeight/8)+30);
         text('Fuel', (canvasWidth/16)+25, (canvasHeight/8)+65);
         fill(255);
@@ -125,208 +133,210 @@ class Robot extends GridMoveEntity{
         pop()
     }
 
+    advanceInstruction(count = 1) {
+        if (!this.instructions.length) return;
+        this.current_instruction = (this.current_instruction + count) % this.instructions.length;
+    }
+
+    getSelector() {
+        if (!this.instructions.length) return null;
+        if (this.current_instruction + 1 >= this.instructions.length) return null;
+        const next = this.instructions[this.current_instruction + 1];
+        return next && next !== 0 && next.command === undefined ? next : null;
+    }
+
+    selectInventoryItem(name) {
+        if (!name) return this.inv[this.hand] && this.inv[this.hand] !== 0;
+        const index = this.inv.findIndex(item => item && item !== 0 && item.name === name);
+        if (index < 0) return false;
+        this.hand = index;
+        return true;
+    }
+
+    canUseChest(chest) {
+        return chest && chest.class === 'Chest' && chest.playerOwned === this.playerOwned;
+    }
+
+    tryMove(direction, x, y) {
+        const vectors = { up: [0, -1, 0], right: [1, 0, 1], down: [0, 1, 2], left: [-1, 0, 3] };
+        const vector = vectors[direction];
+        if (!vector) return false;
+        this.facing = vector[2];
+
+        const sourceLevel = levels[y] && levels[y][x];
+        if (!sourceLevel || !sourceLevel.map) return false;
+        const row = this.pos.y / tileSize;
+        const col = this.pos.x / tileSize;
+        let targetLevelX = x;
+        let targetLevelY = y;
+        let targetRow = row + vector[1];
+        let targetCol = col + vector[0];
+
+        if (targetRow < 0) {
+            targetLevelY -= 1;
+            const targetLevel = levels[targetLevelY] && levels[targetLevelY][targetLevelX];
+            if (!targetLevel || !targetLevel.map) return false;
+            targetRow = targetLevel.map.length - 1;
+        } else if (targetRow >= sourceLevel.map.length) {
+            targetLevelY += 1;
+            targetRow = 0;
+        }
+        if (targetCol < 0) {
+            targetLevelX -= 1;
+            const targetLevel = levels[targetLevelY] && levels[targetLevelY][targetLevelX];
+            if (!targetLevel || !targetLevel.map) return false;
+            targetCol = targetLevel.map[0].length - 1;
+        } else if (targetCol >= sourceLevel.map[0].length) {
+            targetLevelX += 1;
+            targetCol = 0;
+        }
+
+        const targetLevel = levels[targetLevelY] && levels[targetLevelY][targetLevelX];
+        const destination = targetLevel && targetLevel.map && targetLevel.map[targetRow] && targetLevel.map[targetRow][targetCol];
+        if (!destination || destination.collide === true) return false;
+
+        sourceLevel.map[row][col] = this.under_tile;
+        this.under_tile = destination;
+        targetLevel.map[targetRow][targetCol] = this;
+        this.pos.x = targetCol * tileSize;
+        this.pos.y = targetRow * tileSize;
+        return true;
+    }
+
+    canInteract(x, y, selector) {
+        const held = this.inv[this.hand];
+        const under = this.under_tile;
+        const ahead = this.looking(x, y);
+        if (selector && !this.selectInventoryItem(selector.name)) return false;
+        const selected = this.inv[this.hand];
+        if (under && under.class === 'Plant') {
+            return under.age === all_imgs[under.png].length - 2 || (selected && selected.name === 'Shovel');
+        }
+        if (ahead && ahead.name === 'cart_s') return !!(selected && selected.price);
+        if (!selected || selected === 0) return false;
+        if (under.name === 'plot') return selected.class === 'Seed';
+        if (under.name === 'grass') return selected.name === 'Hoe';
+        if (under.name === 'sprinkler') return selected.name === 'Shovel';
+        if (under.name === 'compost_bucket') return selected.name === 'Junk' || selected.class === 'Seed';
+        if (under.name === 'Veggie_Press') return selected.class === 'Eat';
+        if (under.name === 'grinder') return selected.class === 'Eat' && !!selected.seed_num;
+        if (under.name === 'junk') return true;
+        if (selected.class === 'Placeable') return true;
+        return false;
+    }
+
+    transferToChest(chest, itemName) {
+        if (!this.canUseChest(chest) || !this.selectInventoryItem(itemName)) return false;
+        const item = this.inv[this.hand];
+        for (const row of chest.inv) {
+            const stack = row.find(slot => slot && slot !== 0 && slot.name === item.name);
+            if (stack) {
+                stack.amount += item.amount;
+                this.inv[this.hand] = 0;
+                return true;
+            }
+        }
+        for (const row of chest.inv) {
+            const empty = row.indexOf(0);
+            if (empty >= 0) {
+                row[empty] = new_item_from_num(item_name_to_num(item.name), item.amount);
+                this.inv[this.hand] = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    transferFromChest(chest, itemName) {
+        if (!this.canUseChest(chest) || !itemName) return false;
+        const itemNum = item_name_to_num(itemName);
+        if (!checkForSpace(this, itemNum)) return false;
+        for (const row of chest.inv) {
+            const index = row.findIndex(slot => slot && slot !== 0 && slot.name === itemName);
+            if (index >= 0) {
+                addItem(this, itemNum, row[index].amount);
+                row[index] = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    recharge() {
+        if (this.fuel_timer > 0 || this.fuel >= this.max_fuel) return;
+        let fueled = false;
+        if (this.name === 'Robot1') {
+            const oilIndex = this.inv.findIndex(item => item && item !== 0 && item.name === 'Veggie Oil');
+            if (oilIndex >= 0) {
+                this.inv[oilIndex].amount -= 1;
+                if (this.inv[oilIndex].amount <= 0) this.inv[oilIndex] = 0;
+                fueled = true;
+            }
+        } else if (this.name === 'Robot2') {
+            fueled = !!(this.under_tile && this.under_tile.name === 'sprinkler');
+        } else if (this.name === 'Robot3') {
+            fueled = time <= 100;
+        }
+        if (fueled) {
+            this.fuel = Math.min(this.max_fuel, this.fuel + 10);
+            this.fuel_timer = this.max_fuel_timer;
+        }
+    }
+
     move(x, y) {
-        this.moving_timer -= 1;
-        this.fuel_timer -= 1;
-        if(player.touching.name == 'bed'){
-            this.moving_timer -= 2;
-            this.fuel_timer -= 2;
-        }
-        if(this.fuel_timer <= 0 && this.fuel < this.max_fuel - 10){ //change 10 when adding efficentcy
-            let fueled = false;
-            if(this.name == 'Robot1'){
-                for (let i = 0; i < this.inv.length; i++){
-                    if(this.inv[i] != 0 && this.inv[i].name == 'Veggie Oil' && this.fuel < this.max_fuel - 10){
-                        this.fuel += 10;
-                        fueled = true;
-                        this.inv[i].amount -= 1;
-                        if(this.inv[i].amount == 0){
-                            this.inv[i] = 0;
-                        }
-                    }
-                }
-            }
-            else if(this.name == 'Robot2'){
-                if(this.under_tile.name == 'sprinkler'){
-                    this.fuel += 10;
-                    fueled = true;
-                }
-            }
-            else if(this.name == 'Robot3'){
-                if(time <= 100){
-                    this.fuel += 10;
-                    fueled = true;
-                }
-            }
-            if (fueled){
-                this.fuel_timer = this.max_fuel_timer;
-            }
-        }
-        if(this.day_pause == true && days > this.day_paused){
+        const bedBoost = player && player.touching && player.touching.name === 'bed' ? 3 : 1;
+        this.moving_timer -= bedBoost;
+        this.fuel_timer -= bedBoost;
+        this.recharge();
+
+        if (this.day_pause && days > this.day_paused) {
             this.move_bool = true;
             this.day_pause = false;
         }
-        if (this.moving_timer <= 0 && this.move_bool && this.fuel > 0) {
-            if(currentLevel_x == x && currentLevel_y == y){
-                robot_talkingSound.play();
-            }
-            if(this.instructions[this.current_instruction] == 0 || this.instructions[this.current_instruction].command == undefined){
-                //if we need special stuff
-            }
-            else if (this.instructions[this.current_instruction].command == 'up') {
-                this.facing = 0;
-                this.collide = true;
-                if (this.pos.y - tileSize < 0) {
-                    if (!levels[y-1] || !levels[y-1][x] || typeof levels[y-1][x] !== 'object') { /* no level above, stay */ }
-                    else {
-                        let temp = this;
-                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                        temp.under_tile = levels[y-1][x].map[18][this.pos.x / tileSize];
-                        levels[y-1][x].map[18][this.pos.x / tileSize] = temp;
-                        this.pos.y = canvasHeight - tileSize;
-                    }
-                }
-                else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y][x].map[(this.pos.y / tileSize) - 1][this.pos.x / tileSize];
-                    levels[y][x].map[(this.pos.y / tileSize) - 1][this.pos.x / tileSize] = temp;
-                    this.pos.y -= tileSize;
-                }
-            }
-            else if (this.instructions[this.current_instruction].command == 'right') {
-                this.facing = 1;
-                this.collide = true;
-                if (this.pos.x + tileSize >= canvasWidth) {
-                    if (!levels[y][x+1] || typeof levels[y][x+1] !== 'object') { /* no level to the right, stay */ }
-                    else {
-                        let temp = this;
-                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                        temp.under_tile = levels[y][x+1].map[this.pos.y / tileSize][0];
-                        levels[y][x+1].map[this.pos.y / tileSize][0] = temp;
-                        this.pos.x = 0;
-                    }
-                }
-                else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) + 1];
-                    levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) + 1] = temp;
-                    this.pos.x += tileSize;
-                }
-            }
-            else if (this.instructions[this.current_instruction].command == 'down') {
-                this.facing = 2;
-                this.collide = true;
-                if (this.pos.y + tileSize >= canvasHeight) {
-                    if (!levels[y+1] || !levels[y+1][x] || typeof levels[y+1][x] !== 'object') { /* no level below, stay */ }
-                    else {
-                        let temp = this;
-                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                        temp.under_tile = levels[y+1][x].map[0][this.pos.x / tileSize];
-                        levels[y+1][x].map[0][this.pos.x / tileSize] = temp;
-                        this.pos.y = 0;
-                    }
-                }
-                else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y][x].map[(this.pos.y / tileSize) + 1][this.pos.x / tileSize];
-                    levels[y][x].map[(this.pos.y / tileSize) + 1][this.pos.x / tileSize] = temp;
-                    this.pos.y += tileSize;
-                }
-            }
-            else if (this.instructions[this.current_instruction].command == 'left') {
-                this.facing = 3;
-                this.collide = true;
-                if (this.pos.x - tileSize < 0) {
-                    if (!levels[y][x-1] || typeof levels[y][x-1] !== 'object') { /* no level to the left, stay */ }
-                    else {
-                        let temp = this;
-                        levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                        temp.under_tile = levels[y][x-1].map[this.pos.y / tileSize][22];
-                        levels[y][x-1].map[this.pos.y / tileSize][22] = temp;
-                        this.pos.x = canvasWidth - tileSize;
-                    }
-                }
-                else if (this.looking(x, y) != 0 && this.looking(x, y).collide != true) {
-                    let temp = this;
-                    levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
-                    temp.under_tile = levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) - 1];
-                    levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) - 1] = temp;
-                    this.pos.x -= tileSize;
-                }
-            }
-            else if (this.instructions[this.current_instruction].command == 'interact'){
-                for(let i = 0; i < this.inv.length; i++){
-                    if(this.instructions[this.current_instruction + 1].name == this.inv[i].name){
-                        this.hand = i;
-                    }
-                }
-                this.onInteract(x, y);
-            }
-            else if (this.instructions[this.current_instruction].command == 'restart'){
-                this.current_instruction = -1;
-            }
-            else if (this.instructions[this.current_instruction].command == 'add_to_chest'){
-                for(let i = 0; i < this.inv.length; i++){
-                    if(this.instructions[this.current_instruction + 1].name == this.inv[i].name){
-                        this.hand = i;
-                    }
-                }
-                if(this.looking(x, y).class == 'Chest'){
-                    for (let i = 0; i < this.looking(x, y).inv.length; i++) {
-                        for(let j = 0; j < this.looking(x, y).inv[i].length; j++){
-                            if (this.looking(x, y).inv[i][j] != 0) { // stack items
-                                if (this.looking(x, y).inv[i][j].name == this.inv[this.hand].name) {
-                                    this.looking(x, y).inv[i][j].amount += this.inv[this.hand].amount;
-                                    this.inv[this.hand] = 0;
-                                }
-                            }
-                        }
-                    }
-                    if(this.inv[this.hand] != 0){
-                        for (let i = 0; i < this.looking(x, y).inv.length; i++) {
-                            for(let j = 0; j < this.looking(x, y).inv[i].length; j++){
-                                if (this.inv[this.hand] != 0 && this.looking(x, y).inv[i][j] == 0) { // empty space
-                                    this.looking(x, y).inv[i][j] = new_item_from_num(item_name_to_num(this.inv[this.hand].name), this.inv[this.hand].amount);
-                                    this.inv[this.hand] = 0;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else if (this.instructions[this.current_instruction].command == 'add_from_chest'){
-                if(this.looking(x, y).class == 'Chest'){
-                    for (let i = 0; i < this.looking(x, y).inv.length; i++) {
-                        for(let j = 0; j < this.looking(x, y).inv[i].length; j++){
-                            if (this.looking(x, y).inv[i][j].name == this.instructions[this.current_instruction + 1].name) {
-                                if(checkForSpace(this, item_name_to_num(this.instructions[this.current_instruction + 1].name))){
-                                    addItem(this, item_name_to_num(this.looking(x, y).inv[i][j].name), this.looking(x, y).inv[i][j].amount)
-                                    this.looking(x, y).inv[i][j] = 0;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else if (this.instructions[this.current_instruction].command == '1day_pause'){
-                this.day_pause = true;
-                this.day_paused = days;
-                this.move_bool = false;
-            }
-            this.fuel-=1;
-            this.current_instruction += 1;
-            if (this.current_instruction >= this.instructions.length) {
-                this.current_instruction = 0;
-            }
-            this.anim += 1;
-            if (this.anim >= all_imgs[this.png][this.facing].length) {
-                this.anim = 0;
-            }
-            this.moving_timer = this.max_moving_timer;
+        if (this.moving_timer > 0 || !this.move_bool || this.fuel <= 0 || !this.instructions.length) return;
+
+        const instruction = this.instructions[this.current_instruction];
+        this.moving_timer = this.max_moving_timer;
+        if (!instruction || instruction === 0 || instruction.command === undefined) {
+            this.status = 'skipping empty slot';
+            this.advanceInstruction();
+            return;
         }
+
+        const command = instruction.command;
+        const selector = this.getSelector();
+        const selectorCount = selector ? 2 : 1;
+        let completed = false;
+        if (['up', 'right', 'down', 'left'].includes(command)) {
+            completed = this.tryMove(command, x, y);
+            this.status = completed ? 'moving' : 'blocked';
+        } else if (command === 'interact') {
+            completed = this.canInteract(x, y, selector);
+            if (completed) this.onInteract(x, y);
+            this.status = completed ? 'working' : 'waiting for valid target/item';
+        } else if (command === 'add_to_chest') {
+            completed = !!selector && this.transferToChest(this.looking(x, y), selector.name);
+            this.status = completed ? 'deposited items' : 'waiting for owned chest/item/space';
+        } else if (command === 'add_from_chest') {
+            completed = !!selector && this.transferFromChest(this.looking(x, y), selector.name);
+            this.status = completed ? 'collected items' : 'waiting for owned chest/item/space';
+        } else if (command === 'restart') {
+            this.current_instruction = 0;
+            completed = true;
+            this.status = 'restarting program';
+        } else if (command === '1day_pause') {
+            this.day_pause = true;
+            this.day_paused = days;
+            this.move_bool = false;
+            completed = true;
+            this.status = 'paused until tomorrow';
+        }
+
+        if (!completed) return;
+        this.fuel = Math.max(0, this.fuel - 1);
+        if (command !== 'restart') this.advanceInstruction(selectorCount);
+        if (currentLevel_x === x && currentLevel_y === y && typeof robot_talkingSound !== 'undefined') robot_talkingSound.play();
+        this.anim = (this.anim + 1) % all_imgs[this.png][this.facing].length;
     }
 
     load(obj){
@@ -340,6 +350,9 @@ class Robot extends GridMoveEntity{
         this.current_instruction = obj.current_instruction;
         this.move_bool = obj.move_bool;
         this.fuel = obj.fuel;
+        this.fuel_timer = typeof obj.fuel_timer === 'number' ? obj.fuel_timer : this.max_fuel_timer;
+        this.status = obj.status || 'idle';
+        if (typeof obj.playerOwned === 'boolean') this.playerOwned = obj.playerOwned;
         this.day_pause = obj.day_pause;
         this.day_paused = obj.day_paused;
         for(let i = 0; i < obj.instructions.length; i++){

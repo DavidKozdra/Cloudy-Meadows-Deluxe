@@ -998,6 +998,7 @@ function setup() {
     robotPlayButton.parent('game-container');
     robotPlayButton.position(((11*canvasWidth)/16) - 55, canvasHeight/8 - 5);
     robotPlayButton.mousePressed(() => {
+        if (!player || !playerCanEditContainer(player.talking)) return;
         temp_move_bool = true;
     });
     robotPlayButton.style("font-family","pixelFont");
@@ -1010,6 +1011,7 @@ function setup() {
     robotPauseButton.parent('game-container');
     robotPauseButton.position(((11*canvasWidth)/16) + 19, canvasHeight/8 - 5);
     robotPauseButton.mousePressed(() => {
+        if (!player || !playerCanEditContainer(player.talking)) return;
         temp_move_bool = false;
     });
     robotPauseButton.style("font-family","pixelFont");
@@ -1024,6 +1026,7 @@ function setup() {
     robotBoomButton.mousePressed(() => {
         // Handle chest destruction
         if (player.talking && player.talking.class === 'Chest') {
+            if (!playerCanEditContainer(player.talking)) return;
             if (confirm('Are you sure? Booming the chest will REMOVE EVERYTHING inside it!')) {
                 // Try to add the chest to player inventory
                 if(checkForSpace(player, item_name_to_num('Chest'))){
@@ -1040,6 +1043,7 @@ function setup() {
         
         // Handle robot destruction
         if (player.looking(currentLevel_x, currentLevel_y) && player.looking(currentLevel_x, currentLevel_y).class === 'Robot') {
+            if (!playerCanEditContainer(player.looking(currentLevel_x, currentLevel_y))) return;
             if (confirm('Are you sure? Booming the robot will REMOVE ALL its inventory and it cannot be recovered!')) {
                 if(checkForSpace(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name))){
                     addItem(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name), 1);
@@ -1439,7 +1443,7 @@ function newWorld(){
         [0, 0, 1, 6, 1, 1, 6, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0], 
         [0, 0, 1, 6, 6, 98, 6, 12, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0], 
         [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], 
-        [8, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 8, 8], 
+        [8, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 8],
         [0, 0, 1, 1, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0], 
         [0, 0, 1, 1, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0], 
         [0, 0, 1, 1, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0], 
@@ -2718,12 +2722,12 @@ function newWorld(){
     level29 = new Level('Auto Farms: 2', [
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
+        [59, 57, 57, 21, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
+        [59, 57, 21, 124, 57, 21, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
-        [59, 57, 57, 125, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
+        [59, 57, 57, 21, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
-        [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
-        [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
-        [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 126, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
+        [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 23, 125, 57, 23, 23, 23, 57, 57, 57, 57, 57, 57],
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57],

@@ -5722,6 +5722,16 @@ function loadAll(){
     applyAreaRules();
     applyItemPrices();
     removeDisabledItemsFromInventory();
+
+    // Discard any in-memory Time Watch snapshots from a previous world and seed
+    // a baseline for the loaded day, so the player can rewind back to the state
+    // the world loaded in at.
+    if (typeof clearTimeRewindSnapshots === 'function') {
+        clearTimeRewindSnapshots();
+        if (typeof captureDaySnapshot === 'function') {
+            captureDaySnapshot(days);
+        }
+    }
 }
 
 function loadLevel(level, lvlx = 0, lvly = 0){
@@ -5793,6 +5803,12 @@ function loadLevel(level, lvlx = 0, lvly = 0){
                         const savedPos = savedTile.pos || currentTile.pos;
                         level.map[i][j] = new_tile_from_num(tileNum, savedPos.x, savedPos.y);
                         level.map[i][j].load(savedTile);
+                        // Legacy saves predate ownership. If an entity replaced a
+                        // different authored tile, it was placed by the player.
+                        if ((level.map[i][j].class === 'Robot' || level.map[i][j].class === 'Chest') &&
+                            typeof savedTile.playerOwned !== 'boolean') {
+                            level.map[i][j].playerOwned = currentTile.name !== savedTile.name;
+                        }
                     } else {
                         // Tile name not found, skip loading and keep original
                         console.warn('Saved tile "' + savedTile.name + '" not found, keeping original tile');

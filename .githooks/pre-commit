@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -eu
+
+echo "Running Cloudy Meadows test suite..."
+npm test
+git diff --check --cached

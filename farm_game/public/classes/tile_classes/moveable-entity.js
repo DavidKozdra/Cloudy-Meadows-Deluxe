@@ -50,7 +50,10 @@ class MoveableEntity extends Entity {
         if (this.under_tile.class == 'Plant') {
             if(this.under_tile.age == all_imgs[this.under_tile.png].length - 2){
                 if(checkForSpace(this, this.under_tile.eat_num)){
-                    addItem(this, this.under_tile.eat_num, 1 + levels[y][x].ladybugs);
+                    const baseYield = typeof this.under_tile.getHarvestYield === 'function'
+                        ? this.under_tile.getHarvestYield()
+                        : 1;
+                    addItem(this, this.under_tile.eat_num, baseYield + levels[y][x].ladybugs);
                     this.under_tile = new_tile_from_num(3, this.under_tile.pos.x, this.under_tile.pos.y);
                 }
             }
@@ -62,6 +65,14 @@ class MoveableEntity extends Entity {
             if (this.inv[this.hand].price != 0 && this.inv[this.hand] != 0) {
                 addMoney(this.inv[this.hand].price);
                 moneySound.play();
+                // Automated sales count toward the player's active sell goal.
+                if (player && player.quests && player.current_quest !== undefined) {
+                    const quest = player.quests[player.current_quest];
+                    const goal = quest && quest.goals && quest.goals[quest.current_Goal];
+                    if (goal && goal.class === 'SellGoal' && goal.item_name === this.inv[this.hand].name) {
+                        goal.amount -= 1;
+                    }
+                }
                 // Track what was sold to all shops
                 for(let i = 0; i < levels.length; i++){
                     for(let j = 0; j < levels[i].length; j++){
@@ -90,11 +101,15 @@ class MoveableEntity extends Entity {
                     if(this.looking(x, y) != undefined && this.looking(x, y).collide == false){
                         let temp = this.looking(x, y);
                         if (this.under_tile != 0) {
-                            levels[currentLevel_y][currentLevel_x].map[(player.looking(currentLevel_x, currentLevel_y).pos.y / tileSize)][player.looking(currentLevel_x, currentLevel_y).pos.x / tileSize] = new_tile_from_num(this.inv[this.hand].tile_num, this.looking(currentLevel_x, currentLevel_y).pos.x, this.looking(currentLevel_x, currentLevel_y).pos.y);
+                            levels[y][x].map[(this.looking(x, y).pos.y / tileSize)][this.looking(x, y).pos.x / tileSize] = new_tile_from_num(this.inv[this.hand].tile_num, this.looking(x, y).pos.x, this.looking(x, y).pos.y);
                         }
-                        this.looking(x, y).under_tile = temp;
+                        const placedEntity = this.looking(x, y);
+                        placedEntity.under_tile = temp;
+                        // Robots may deploy infrastructure, but it belongs to the
+                        // same owner as the deploying robot.
+                        placedEntity.playerOwned = this.playerOwned === true;
                         if(this.inv[this.hand].name != 'Chest'){
-                            this.looking(x, y).move_bool = false;
+                            placedEntity.move_bool = false;
                         }
                     }
                     else{
@@ -149,12 +164,31 @@ class MoveableEntity extends Entity {
         }
         else if (this.under_tile.name == 'Veggie_Press') {
             if (this.inv[this.hand].class == 'Eat') {
-                if(checkForSpace(this, 31)){
+                let outputItem = 31;
+                let outputAmount = 1;
+                if (this.inv[this.hand].name == 'Hemp Flower') outputItem = 47;
+                else if (['Strawberries', 'Tomato', 'Watermelon'].includes(this.inv[this.hand].name)) outputItem = 48;
+                else if (this.inv[this.hand].name == 'Pumpkin') outputAmount = 2;
+                if(checkForSpace(this, outputItem)){
                     this.inv[this.hand].amount -= 1;
                     if (this.inv[this.hand].amount == 0) {
                         this.inv[this.hand] = 0;
                     }
-                    addItem(this, 31, 1);
+                    addItem(this, outputItem, outputAmount);
+                }
+            }
+        }
+        else if (this.under_tile.name == 'grinder') {
+            const held = this.inv[this.hand];
+            if (held && held != 0 && held.class == 'Eat' && held.seed_num) {
+                const itemDefinition = all_items[item_name_to_num(held.name)] || {};
+                const seedMin = (itemDefinition.seed_min || 1) + 1;
+                const seedMax = (itemDefinition.seed_max || 3) + 2;
+                if(checkForSpace(this, held.seed_num)){
+                    const seedAmount = floor(random(seedMin, seedMax + 1));
+                    held.amount -= 1;
+                    if (held.amount == 0) this.inv[this.hand] = 0;
+                    addItem(this, held.seed_num, seedAmount);
                 }
             }
         }
