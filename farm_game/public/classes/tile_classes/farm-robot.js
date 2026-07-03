@@ -3,7 +3,7 @@ class FarmRobot extends GridMoveEntity {
         super(name, png, x, y, [0, 0, 0, 0], 0, 2, 1, instructions, moving_timer);
         this.class = 'FarmRobot';
         this.collide = true;
-        this.task_label = '';
+        this.task_label = 'ONLINE';
     }
 
     render() {
@@ -21,7 +21,11 @@ class FarmRobot extends GridMoveEntity {
         textSize(7);
         textAlign(CENTER);
         const stored = this.inv.reduce((sum, item) => sum + (item && item !== 0 ? item.amount : 0), 0);
-        text('FARM BOT' + (stored ? ' [' + stored + ']' : ''), this.pos.x + tileSize / 2, this.pos.y - 2);
+        const botName = this.name.replace(/Bot$/, ' BOT').toUpperCase();
+        text(botName + (stored ? ' [' + stored + ']' : ''), this.pos.x + tileSize / 2, this.pos.y - 2);
+        fill(190, 255, 190);
+        textSize(5);
+        text(this.task_label, this.pos.x + tileSize / 2, this.pos.y - 9);
         textAlign(LEFT);
         pop();
     }
@@ -34,6 +38,7 @@ class FarmRobot extends GridMoveEntity {
         if (this.moving_timer <= 0 && this.move_bool && this.instructions.length) {
             const cmd = this.instructions[this.current_instruction];
             let completed = false;
+            let attempted = false;
             if (cmd == 'up') {
                 this.facing = 0;
                 if (this.pos.y - tileSize >= 0) {
@@ -45,6 +50,7 @@ class FarmRobot extends GridMoveEntity {
                         levels[y][x].map[(this.pos.y / tileSize) - 1][this.pos.x / tileSize] = temp;
                         this.pos.y -= tileSize;
                         completed = true;
+                        this.task_label = 'MOVING';
                     }
                 }
             } else if (cmd == 'down') {
@@ -58,6 +64,7 @@ class FarmRobot extends GridMoveEntity {
                         levels[y][x].map[(this.pos.y / tileSize) + 1][this.pos.x / tileSize] = temp;
                         this.pos.y += tileSize;
                         completed = true;
+                        this.task_label = 'MOVING';
                     }
                 }
             } else if (cmd == 'left') {
@@ -71,6 +78,7 @@ class FarmRobot extends GridMoveEntity {
                         levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) - 1] = temp;
                         this.pos.x -= tileSize;
                         completed = true;
+                        this.task_label = 'MOVING';
                     }
                 }
             } else if (cmd == 'right') {
@@ -84,10 +92,13 @@ class FarmRobot extends GridMoveEntity {
                         levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) + 1] = temp;
                         this.pos.x += tileSize;
                         completed = true;
+                        this.task_label = 'MOVING';
                     }
                 }
             } else if (cmd == 'harvest') {
-                // Harvest any ripe plant in front
+                // An action is a single attempt. Waiting on an unripe crop must
+                // not pin the instruction pointer and deadlock the patrol route.
+                attempted = true;
                 const look = this.looking(x, y);
                 if (look && look.class == 'Plant' && look.age == all_imgs[look.png].length - 2 && checkForSpace(this, look.eat_num)) {
                     const cropTileNum = tile_name_to_num(look.name);
@@ -98,17 +109,35 @@ class FarmRobot extends GridMoveEntity {
                     levels[y][x].map[look.pos.y / tileSize][look.pos.x / tileSize] = new_tile_from_num(cropTileNum, look.pos.x, look.pos.y);
                     if (typeof PlantingSound !== 'undefined') PlantingSound.play();
                     completed = true;
+                    this.task_label = 'HARVESTED';
+                } else if (look && look.class == 'Plant' && look.age != all_imgs[look.png].length - 2) {
+                    this.task_label = 'CROP GROWING';
+                } else if (look && look.class == 'Plant') {
+                    this.task_label = 'STORAGE FULL';
+                } else {
+                    this.task_label = 'SCANNING';
                 }
             } else if (cmd == 'water') {
-                // Water the plot in front
+                attempted = true;
                 const look = this.looking(x, y);
                 if (look && look.class == 'Plant') {
                     look.wateredDay = days;
                     completed = true;
+                    this.task_label = 'WATERED';
+                } else {
+                    this.task_label = 'SCANNING';
                 }
+            } else {
+                // A bad showcase program should remain observable instead of
+                // locking the bot forever on an unknown instruction.
+                attempted = true;
+                this.task_label = 'PROGRAM ERROR';
             }
 
-            if (completed) this.current_instruction = (this.current_instruction + 1) % this.instructions.length;
+            if (!completed && !attempted) this.task_label = 'ROUTE BLOCKED';
+            if (completed || attempted) {
+                this.current_instruction = (this.current_instruction + 1) % this.instructions.length;
+            }
             this.moving_timer = this.max_moving_timer;
         }
     }

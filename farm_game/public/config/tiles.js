@@ -148,8 +148,8 @@ const TILE_DEFINITIONS = [
     /*121*/ { name: 'towel', png: 161, collide: false, age: -1, class: 'Tile' },
     /*122*/ { name: 'Kiah', png: 162, inv: [0], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 100, class: 'NPC', quest_giver: false, random_move: false },
     /*123*/ { name: 'Scientist', png: 117, inv: [{num: 49, amount: 1}], hand: 0, facing: 2, under_tile_num: 1, instructions: [], moving_timer: 0, class: 'NPC', quest_giver: false, random_move: false },
-    /*124*/ { name: 'HarvestBot', png: 45, under_tile_num: 1, instructions: ['down','harvest','up','harvest','right','harvest','left','harvest'], moving_timer: 80, class: 'FarmRobot' },
-    /*125*/ { name: 'WaterBot', png: 46, under_tile_num: 1, instructions: ['right','water','right','water','right','water','left','left','left','water','water','water'], moving_timer: 100, class: 'FarmRobot' }
+    /*124*/ { name: 'HarvestBot', png: 45, under_tile_num: 1, instructions: ['down','harvest','up','harvest','right','harvest','left','harvest'], moving_timer: 30, class: 'FarmRobot' },
+    /*125*/ { name: 'WaterBot', png: 46, under_tile_num: 1, instructions: ['right','water','right','water','right','water','left','left','left','water','water','water'], moving_timer: 30, class: 'FarmRobot' }
 ];
 
 /*

@@ -1080,7 +1080,7 @@
           "quest": -1
         },
         {
-          "phrase": "What’s the pc for?",
+          "phrase": "How do item selectors work?",
           "dialouge_num": 7,
           "quest": -1
         },
@@ -1199,7 +1199,7 @@
       "amount": 0
     },
     {
-      "phrase": "The pc will program a few floppy disks into one golden floppy disk, all you gotta do is put a gold floppy in the pc and add what you want.",
+      "phrase": "Put a crop or seed directly after Interact, Add to Chest, or Add from Chest. That item becomes the selector, so the robot knows exactly what to use or move.",
       "replies": [
         {
           "phrase": "Wait one more thing",
@@ -1216,7 +1216,7 @@
       "amount": 0
     },
     {
-      "phrase": "The easiest way to learn how to program them would be to just go look at my robots, They range from simple hoeing, to complex farming systems.",
+      "phrase": "Go south to the Seed-to-Storage Lab and open the green SEED LOOP robot. Its locked program harvests Corn, grinds it into seed, replants one seed, banks the extras in a chest, then waits off the crop until it grows.",
       "replies": [
         {
           "phrase": "Wait one more thing",
@@ -3440,4 +3440,3 @@
   ]
 }
  
-

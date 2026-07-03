@@ -21,7 +21,8 @@ class Item {
 
 	render(x, y) {
 		push();
-		image(all_imgs[this.png], x, y);
+		// Draw at the fixed slot size so icons of any source resolution fill the slot
+		image(all_imgs[this.png], x, y, Item.SIZE, Item.SIZE);
 		fill(255);
 		let amountS = str(this.amount)
 		textSize(20 - ((amountS.length-1)*5));

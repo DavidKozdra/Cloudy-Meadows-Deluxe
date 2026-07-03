@@ -4930,22 +4930,34 @@ function showCreditsMenu(){
         content.className = 'credits-content';
         
         const credits = [
-            'Christian Rodriguez - Lead programmer of old system and engine',
-            'David Kozdra - Lazy Code, bad Art and sound',
-            'Patrick Mayer - Misc',
-            'Christian "Sealand" Rodriguez - Music',
-            'Ethan Davis - Dialogue and Testing',
-            'and thanks to our play testers'
+            { text: 'Christian Rodriguez - Lead programmer of old system and engine', image: 'christian.png' },
+            { text: 'David Kozdra - Lazy Code, bad Art and sound', image: 'David.png' },
+            { text: 'Patrick Mayer - Misc', image: 'patrick.png' },
+            { text: 'Christian "Sealand" Rodriguez - Music', image: 'sealand.png' },
+            { text: 'Ethan Davis - Dialogue and Testing', image: 'Ethan.png' },
+            { text: 'and thanks to our play testers' }
         ];
-        
-        credits.forEach((credit, idx) => {
+
+        credits.forEach((credit) => {
             const line = document.createElement('div');
             line.className = 'credits-line';
-            if (idx === 1) {
-                line.textContent = credit;
-            } else {
-                line.textContent = credit;
+
+            // Show a character portrait when a same-name image exists.
+            if (credit.image) {
+                const portrait = document.createElement('img');
+                portrait.className = 'credits-portrait';
+                portrait.src = 'images/npc/' + credit.image;
+                portrait.alt = '';
+                // Drop the image if it fails to load, keeping the line text-only.
+                portrait.addEventListener('error', () => portrait.remove());
+                line.appendChild(portrait);
             }
+
+            const label = document.createElement('span');
+            label.className = 'credits-line-text';
+            label.textContent = credit.text;
+            line.appendChild(label);
+
             content.appendChild(line);
         });
         creditsMenu.appendChild(content);

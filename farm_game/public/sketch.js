@@ -566,6 +566,7 @@ function updateMobileInventoryUI() {
                 <div class="mobile-inv-fuel-fill" style="width: ${(container.fuel / container.max_fuel) * 100}%"></div>
             </div>
             <span class="mobile-inv-fuel-label">${Math.round(container.fuel)}/${container.max_fuel}</span>
+            <span class="mobile-inv-robot-status">Status: ${container.status || 'idle'}</span>
         `;
         containerSection.appendChild(robotInfo);
         
@@ -2164,6 +2165,18 @@ function drawTimeWatchHUD() {
     textSize(constrain(tileSize * 0.48, 13, 20));
     fill(accent[0], accent[1], accent[2]);
     text(TIME_WATCH_LABELS[idx], cx, panelY + panelH * 0.46);
+    // Control hints: real bound keys on desktop, touch wording on mobile.
+    textSize(constrain(tileSize * 0.3, 8, 12));
+    fill(255, 255, 255, 150);
+    let hint;
+    if (isMobile) {
+        hint = 'tap  ◀ slower   faster ▶';
+    } else {
+        const slowKey = String.fromCharCode(eat_button);
+        const fastKey = String.fromCharCode(interact_button);
+        hint = '[' + slowKey + '] slower    [' + fastKey + '] faster';
+    }
+    text(hint, cx, panelY + panelH + tileSize);
 
     // 9-segment gauge. Center segment is the "normal" anchor.
     const gaugeY = panelY + panelH * 0.68;
@@ -2186,18 +2199,6 @@ function drawTimeWatchHUD() {
         rect(sx, gaugeY, segW, gaugeH, 2);
     }
 
-    // Control hints: real bound keys on desktop, touch wording on mobile.
-    textSize(constrain(tileSize * 0.3, 8, 12));
-    fill(255, 255, 255, 150);
-    let hint;
-    if (isMobile) {
-        hint = 'tap  ◀ slower   faster ▶';
-    } else {
-        const slowKey = String.fromCharCode(eat_button);
-        const fastKey = String.fromCharCode(interact_button);
-        hint = '[' + slowKey + '] slower    [' + fastKey + '] faster';
-    }
-    text(hint, cx, panelY + panelH + tileSize * 0.28);
 
     pop();
 }

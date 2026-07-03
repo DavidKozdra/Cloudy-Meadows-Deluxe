@@ -48,19 +48,29 @@ class TestItem {
 const itemNums = {
     Corn: 2,
     'Corn Seed': 3,
+    'Up Command': 19,
     'Veggie Oil': 31,
     'Right Command': 20,
+    'Down Command': 21,
+    'Left Command': 22,
     'Interact Command': 23,
-    'Add to Chest Command': 29
+    'Restart Command': 26,
+    'Add to Chest Command': 29,
+    '1 Day Pause Command': 34
 };
 global.item_name_to_num = name => itemNums[name];
 global.new_item_from_num = (num, amount) => {
     if (num === 2) return new TestItem('Corn', amount, { class: 'Eat', seed_num: 3, price: 6 });
     if (num === 3) return new TestItem('Corn Seed', amount, { class: 'Seed', plant_num: 21 });
     if (num === 31) return new TestItem('Veggie Oil', amount);
+    if (num === 19) return new TestItem('Up Command', amount, { class: 'Command', command: 'up' });
     if (num === 20) return new TestItem('Right Command', amount, { class: 'Command', command: 'right' });
+    if (num === 21) return new TestItem('Down Command', amount, { class: 'Command', command: 'down' });
+    if (num === 22) return new TestItem('Left Command', amount, { class: 'Command', command: 'left' });
     if (num === 23) return new TestItem('Interact Command', amount, { class: 'Command', command: 'interact' });
+    if (num === 26) return new TestItem('Restart Command', amount, { class: 'Command', command: 'restart' });
     if (num === 29) return new TestItem('Add to Chest Command', amount, { class: 'Command', command: 'add_to_chest' });
+    if (num === 34) return new TestItem('1 Day Pause Command', amount, { class: 'Command', command: '1day_pause' });
     return new TestItem('Unknown', amount);
 };
 global.checkForSpace = entity => entity.inv.some(item => item === 0) || entity.inv.some(Boolean);
@@ -174,6 +184,72 @@ function ready(robot) {
     assert.ok(robot.inv.some(item => item && item.name === 'Corn Seed' && item.amount >= 2));
 }
 
+// The shipped teaching loop uses real Robot semantics end to end: harvest a
+// crop, grind it into seed, replant one seed, and bank the surplus in a locked
+// world-owned chest before waiting off the crop while it matures.
+{
+    const previousWidth = canvasWidth;
+    const previousHeight = canvasHeight;
+    const startDay = days;
+    canvasWidth = 9 * tileSize;
+    canvasHeight = 3 * tileSize;
+    const map = Array.from({ length: 3 }, (_, row) => Array.from({ length: 9 }, (_, col) => ({
+        name: 'grass', pos: { x: col * tileSize, y: row * tileSize }, collide: false, class: 'Tile', render() {}
+    })));
+    const level = { map, ladybugs: 0 };
+    level.map[1][3] = new_tile_from_num(83, 3 * tileSize, tileSize);
+    level.map[1][5] = new_tile_from_num(3, 5 * tileSize, tileSize);
+    const chest = {
+        name: 'Chest', class: 'Chest', collide: true, playerOwned: false,
+        pos: { x: 7 * tileSize, y: tileSize }, inv: [[0, 0], [0, 0]]
+    };
+    level.map[1][7] = chest;
+    const instructions = [
+        command('Interact Command', 'interact'),
+        command('Right Command', 'right'), command('Right Command', 'right'),
+        command('Interact Command', 'interact'), new TestItem('Corn', 1, { class: 'Eat', seed_num: 3 }),
+        command('Right Command', 'right'), command('Right Command', 'right'),
+        command('Interact Command', 'interact'), new TestItem('Corn Seed', 1, { class: 'Seed', plant_num: 21 }),
+        command('Right Command', 'right'),
+        command('Add to Chest Command', 'add_to_chest'), new TestItem('Corn Seed', 1, { class: 'Seed', plant_num: 21 }),
+        command('Down Command', 'down'),
+        command('1 Day Pause Command', '1day_pause'), command('1 Day Pause Command', '1day_pause'),
+        command('1 Day Pause Command', '1day_pause'),
+        command('Up Command', 'up'), command('Left Command', 'left'), command('Restart Command', 'restart')
+    ];
+    const robot = new Robot('Robot3', 45, tileSize, tileSize, [0, 0, 0, 0, 0, 0, 0], 1, instructions, 1);
+    levels = [[level]];
+    placeRobot(robot, level, 1, 1);
+    robot.under_tile = new Plant('corn', 20, tileSize, tileSize, false, 2, 0, 10);
+    robot.under_tile.age = all_imgs[robot.under_tile.png].length - 2;
+
+    for (let step = 0; step < 11; step++) {
+        ready(robot);
+        robot.move(0, 0);
+    }
+    assert.equal(robot.current_instruction, 14);
+    assert.equal(robot.move_bool, false);
+    assert.ok(chest.inv.flat().some(item => item && item.name === 'Corn Seed'), 'surplus seed should reach chest');
+    // Each pause resumes on the next day and immediately schedules the next;
+    // the third wake continues the route back to the crop.
+    for (let day = 0; day < 3; day++) {
+        days += 1;
+        ready(robot);
+        robot.move(0, 0);
+    }
+    for (let step = 0; step < 2; step++) {
+        ready(robot);
+        robot.move(0, 0);
+    }
+    assert.equal(robot.current_instruction, 0);
+    assert.equal(robot.under_tile.class, 'Plant');
+    assert.equal(robot.under_tile.name, 'corn');
+    assert.equal(robot.under_tile.age, 0);
+    days = startDay;
+    canvasWidth = previousWidth;
+    canvasHeight = previousHeight;
+}
+
 // Showcase watering uses the plant's real daily water state.
 {
     const level = makeLevel();
@@ -203,6 +279,36 @@ function ready(robot) {
     assert.equal(level.map[2][1].age, 0);
 }
 
+// A showcase action is an attempt, not a wait condition: an unripe or missing
+// target must never deadlock the bot's patrol program.
+{
+    const level = makeLevel();
+    const bot = new FarmRobot('HarvestBot', 45, 32, 32, ['harvest', 'water'], 1);
+    const plant = new Plant('corn', 20, 32, 64, false, 2, 0, 2000);
+    levels = [[level]];
+    placeRobot(bot, level);
+    level.map[2][1] = plant;
+    bot.moving_timer = 0;
+    bot.move(0, 0);
+    assert.equal(bot.current_instruction, 1);
+    assert.equal(bot.task_label, 'CROP GROWING');
+    bot.moving_timer = 0;
+    bot.move(0, 0);
+    assert.equal(bot.current_instruction, 0);
+}
+
+// Invalid showcase instructions report an error and are skipped safely.
+{
+    const level = makeLevel();
+    const bot = new FarmRobot('DemoBot', 45, 32, 32, ['invalid', 'harvest'], 1);
+    levels = [[level]];
+    placeRobot(bot, level);
+    bot.moving_timer = 0;
+    bot.move(0, 0);
+    assert.equal(bot.current_instruction, 1);
+    assert.equal(bot.task_label, 'PROGRAM ERROR');
+}
+
 // A moving entity is updated once even if the level scan encounters its identity twice.
 {
     const level = Object.create(Level.prototype);
@@ -218,6 +324,8 @@ function ready(robot) {
     const preload = fs.readFileSync(path.join(publicDir, 'preload.js'), 'utf8');
     assert.match(preload, /21, 124/);
     assert.match(preload, /23, 125/);
+    assert.match(preload, /crop\.age = all_imgs\[crop\.png\]\.length - 2/,
+        'the live showcase should start with harvestable crops');
     const config = fs.readFileSync(path.join(publicDir, 'config/tiles.js'), 'utf8');
     vm.runInThisContext(config + '\nglobalThis.TEST_TILE_DEFINITIONS = TILE_DEFINITIONS;');
     canvasWidth = 23 * tileSize;

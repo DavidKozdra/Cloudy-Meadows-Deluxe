@@ -3267,6 +3267,21 @@ button {
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
 }
 
+.credits-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.credits-portrait {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
 /* Custom Difficulty Styles */
 .difficulty-card-custom {
     border-color: rgb(150, 100, 200);

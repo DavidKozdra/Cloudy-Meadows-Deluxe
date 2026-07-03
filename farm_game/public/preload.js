@@ -2761,7 +2761,18 @@ function newWorld(){
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
     );
-    level30 = new Level('Auto Farms: 3', [
+    // This district is a working automation exhibit, so it starts with crops
+    // in meaningful states instead of making visitors wait several minutes.
+    for (const [row, col] of [[2, 3], [3, 2], [3, 5], [5, 3]]) {
+        const crop = level29.map[row][col];
+        crop.age = all_imgs[crop.png].length - 2;
+    }
+    for (const col of [11, 14, 15, 16]) {
+        const crop = level29.map[7][col];
+        crop.age = 1;
+        crop.growTimer = crop.growthTime * 0.75;
+    }
+    level30 = new Level('Auto Farms: Seed-to-Storage Lab', [
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57], 
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57], 
         [59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57], 
@@ -2803,6 +2814,39 @@ function newWorld(){
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
     );
+    // Inspectable, read-only automation built from the same Robot commands the
+    // player uses: harvest -> grind crop into seed -> replant -> bank surplus.
+    // The bot waits off the crop while it matures because covered plants cannot grow.
+    for (let col = 2; col <= 10; col++) {
+        level30.map[5][col] = new_tile_from_num(76, col * tileSize, 5 * tileSize);
+    }
+    level30.map[5][5] = new_tile_from_num(83, 5 * tileSize, 5 * tileSize);
+    level30.map[5][7] = new_tile_from_num(3, 7 * tileSize, 5 * tileSize);
+    level30.map[5][9] = new_tile_from_num(40, 9 * tileSize, 5 * tileSize);
+    level30.map[5][9].under_tile = new_tile_from_num(76, 9 * tileSize, 5 * tileSize);
+
+    const seedLoopBot = new_tile_from_num(42, 3 * tileSize, 5 * tileSize);
+    seedLoopBot.under_tile = new_tile_from_num(21, 3 * tileSize, 5 * tileSize);
+    seedLoopBot.under_tile.age = all_imgs[seedLoopBot.under_tile.png].length - 2;
+    seedLoopBot.instructions = [
+        new_item_from_num(23, 1),                    // harvest ripe crop
+        new_item_from_num(20, 1), new_item_from_num(20, 1),
+        new_item_from_num(23, 1), new_item_from_num(2, 1),  // grind Corn
+        new_item_from_num(20, 1), new_item_from_num(20, 1),
+        new_item_from_num(23, 1), new_item_from_num(3, 1),  // plant Corn Seed
+        new_item_from_num(20, 1),
+        new_item_from_num(29, 1), new_item_from_num(3, 1),  // bank surplus seed
+        new_item_from_num(21, 1),                           // step off the crop
+        // Three boundaries guarantee corn can mature even when planted just
+        // before the first day change.
+        new_item_from_num(34, 1), new_item_from_num(34, 1), new_item_from_num(34, 1),
+        new_item_from_num(19, 1), new_item_from_num(22, 1),
+        new_item_from_num(26, 1)
+    ];
+    seedLoopBot.moving_timer = 30;
+    seedLoopBot.max_moving_timer = 30;
+    seedLoopBot.demo_label = 'SEED LOOP';
+    level30.map[5][3] = seedLoopBot;
     level31 = new Level('Auto Farms: 4', [
         [58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58], 
         [57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57], 

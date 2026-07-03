@@ -36,6 +36,16 @@ class Robot extends GridMoveEntity{
         }
         image(all_imgs[this.png][this.facing][0], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2)); //[this.anim]
 
+        if (this.demo_label) {
+            noStroke();
+            fill(50, 220, 80);
+            textFont(player_2);
+            textSize(6);
+            textAlign(CENTER);
+            text(this.demo_label, this.pos.x + tileSize / 2, this.pos.y - 3);
+            textAlign(LEFT);
+        }
+
         pop();
 
  
@@ -94,6 +104,9 @@ class Robot extends GridMoveEntity{
         if (!this.playerOwned) text('VIEW ONLY', (canvasWidth/16)+105, (canvasHeight/8)+10);
         text('Inst->', (canvasWidth/16)+10, (canvasHeight/8)+30);
         text('Fuel', (canvasWidth/16)+25, (canvasHeight/8)+65);
+        textSize(10);
+        text('Status: ' + this.status, (canvasWidth/16)+105, (canvasHeight/8)+30);
+        textSize(15);
         fill(255);
         text('Inv', (canvasWidth/16)+10, canvasHeight/8 + (canvasHeight - (canvasWidth/3) - 32))
         let y = 0;
