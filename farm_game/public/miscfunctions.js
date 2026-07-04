@@ -337,6 +337,79 @@ function ensureKiahInLegacyDowntownSave() {
     return true;
 }
 
+// Diversify the Downtown market for saves made when all 12 stalls were the same
+// "Building Supplies" cart. Only the known grid slots are touched, and only when
+// they still hold an unmodified Building Supplies shop, so anything a player
+// placed or altered is left alone. Layout mirrors the map authored in preload.js.
+function ensureDowntownMarketVariety() {
+    if (!levels || !levels.length) {
+        return;
+    }
+    let downtown = null;
+    for (let y = 0; y < levels.length && !downtown; y++) {
+        for (let x = 0; x < levels[y].length; x++) {
+            if (levels[y][x] && levels[y][x].name === 'The Big City : Downtown') {
+                downtown = levels[y][x];
+                break;
+            }
+        }
+    }
+    if (!downtown || !downtown.map) {
+        return;
+    }
+
+    // { col: intendedTileNum } per stall row. 100 = Building Supplies (kept for flavor).
+    const layout = {
+        5:  { 2: 43, 7: 16, 12: 84, 17: 17 },   // Fruits, Vegetables, Tile Shop, Ladybugs & Flowers
+        9:  { 2: 19, 7: 44, 12: 56, 17: 100 },  // Veggie Seeds, Fruit Seeds, Chef, Building Supplies
+        15: { 2: 100, 7: 43, 12: 16, 17: 84 },  // Building Supplies, Fruits, Vegetables, Tile Shop
+    };
+
+    for (const rowStr of Object.keys(layout)) {
+        const row = Number(rowStr);
+        for (const colStr of Object.keys(layout[row])) {
+            const col = Number(colStr);
+            const wantNum = layout[row][col];
+            const tile = downtown.map[row] && downtown.map[row][col];
+            // Only replace a plain, unmodified Building Supplies cart.
+            if (tile && tile.class === 'Shop' && tile.name === 'Building Supplies' && wantNum !== 100) {
+                downtown.map[row][col] = new_tile_from_num(wantNum, col * tileSize, row * tileSize);
+            }
+        }
+    }
+}
+
+// Backfill walking loops onto NPCs saved before they were given patrol paths.
+// Saves store each NPC's instructions array, so a Downtown/city NPC that was
+// saved with an empty path stays frozen even after the tile config gains a loop.
+// Restore the config path only when the save has none, so we never stomp an
+// NPC mid-route (e.g. Rick, Mr.C) or override a live save's progress.
+function ensureNPCWalkingPaths() {
+    if (!levels || !levels.length) {
+        return;
+    }
+    for (let y = 0; y < levels.length; y++) {
+        if (!levels[y]) continue;
+        for (let x = 0; x < levels[y].length; x++) {
+            const level = levels[y][x];
+            if (!level || !level.map) continue;
+            for (let my = 0; my < level.map.length; my++) {
+                for (let mx = 0; mx < level.map[my].length; mx++) {
+                    const tile = level.map[my][mx];
+                    if (!tile || tile.class !== 'NPC') continue;
+                    if (tile.instructions && tile.instructions.length) continue;
+                    const tileNum = tile_name_to_num(tile.name);
+                    const def = tileNum ? all_tiles[tileNum - 1] : null;
+                    if (def && def.instructions && def.instructions.length) {
+                        tile.instructions = def.instructions.slice();
+                        tile.current_instruction = 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Backfill the Cooperative Exchange into saves made before the Harbor board was interactive.
 function ensureCooperativeExchangeBoard() {
     if (!levels || !levels.length) return false;
@@ -5727,6 +5800,8 @@ function loadAll(){
     }
     
     ensureKiahInLegacyDowntownSave();
+    ensureDowntownMarketVariety();
+    ensureNPCWalkingPaths();
     ensureCooperativeExchangeBoard();
 
     // Apply NPC/Area/Price/Critter rules AFTER all levels have loaded from storage
@@ -5789,6 +5864,14 @@ function loadLevel(level, lvlx = 0, lvly = 0){
         }
     }else{
         newLvl = localData.get(level.name)
+    }
+    // Big City districts are authored, non-editable levels. Older saves baked in an
+    // oversized (24-wide) map with duplicate carts and no lighting; overlaying that
+    // saved data would clobber the corrected 19x23 map, market variety, and lamps
+    // rebuilt fresh in preload(). Keep the pristine definition for these levels.
+    // (The Harbor Job Board is re-added afterward by ensureCooperativeExchangeBoard.)
+    if(level && typeof level.name === 'string' && level.name.indexOf('The Big City') === 0){
+        return;
     }
     if(newLvl != null){
         level.lights = [];
