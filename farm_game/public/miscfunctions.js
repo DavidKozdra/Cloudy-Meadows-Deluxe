@@ -5616,7 +5616,7 @@ function new_item_from_num(num, amount) {
             return new Item(all_items[num].name, amount, all_items[num].png, all_items[num].price);
         }
         else if (all_items[num].class == 'Tool') {
-            return new Tool(all_items[num].name, amount, all_items[num].png);
+            return new Tool(all_items[num].name, amount, all_items[num].png, all_items[num].price || 0);
         }
         else if (all_items[num].class == 'Eat') {
             return new Eat(

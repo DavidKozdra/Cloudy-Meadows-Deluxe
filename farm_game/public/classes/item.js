@@ -77,8 +77,8 @@ class Eat extends Item {
 }
 
 class Tool extends Item {
-	constructor(name, amount, png) {
-		super(name, amount, png, 0);
+	constructor(name, amount, png, price = 0) {
+		super(name, amount, png, price);
 		this.class = "Tool";
 	}
 }

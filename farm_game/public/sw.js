@@ -30,7 +30,7 @@ const APP_SHELL = [
   './pixelFont.ttf',
   './classes/Sound.js',
   './classes/Cloud.js',
-  './classes/item.js?v=10',
+  './classes/item.js?v=11',
   './classes/level.js?v=10',
   './classes/quest.js?v=8',
   './classes/dialouge.js?v=8',
