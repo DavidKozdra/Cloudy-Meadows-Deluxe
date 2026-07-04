@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v7';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -22,7 +22,7 @@ const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css',
+  './styles.css?v=2',
   './manifest.webmanifest',
   './localDataStorage-3.0.0.min.js',
   './pwa-register.js',
@@ -30,7 +30,7 @@ const APP_SHELL = [
   './pixelFont.ttf',
   './classes/Sound.js',
   './classes/Cloud.js',
-  './classes/item.js?v=8',
+  './classes/item.js?v=9',
   './classes/level.js?v=9',
   './classes/quest.js?v=8',
   './classes/dialouge.js?v=8',
@@ -54,7 +54,7 @@ const APP_SHELL = [
   './config/constants.js?v=8',
   './config/items.js?v=8',
   './config/tiles.js?v=9',
-  './miscfunctions.js?v=8',
+  './miscfunctions.js?v=9',
   './preload.js?v=10',
   './gamepad.js?v=8',
   './sketch.js?v=9',

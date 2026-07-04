@@ -3695,6 +3695,7 @@ function ensureConfigModal() {
         'Wall': 'images/tiles/Wood.png',
         'Axe': 'images/items/Axe.png',
         'Composter': 'images/tiles/Worm_Bucket.png',
+        'Time Watch': 'images/items/stop_watch.png',
         'Hemp Oil': 'images/items/veg_oil.png',
         'Fruit Juice': 'images/items/veg_oil.png'
     };
