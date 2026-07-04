@@ -797,8 +797,15 @@ button {
 
 .pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tab {
     flex: 1 1 132px;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 8px;
     min-width: 0;
     padding: 10px 12px;
+}
+
+.pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tab-icon {
+    width: 36px;
+    height: 36px;
 }
 
 .pause-inline-tutorial .tutorial-directory-compact .tutorial-directory-tab-label {
@@ -1562,10 +1569,10 @@ button {
 }
 
 .tutorial-directory-tab {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
     padding: 12px 14px;
     border: 2px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
@@ -1587,7 +1594,25 @@ button {
     box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
 }
 
+.tutorial-directory-tab-icon {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    filter: drop-shadow(2px 3px 2px rgba(0, 0, 0, 0.35));
+}
+
+.tutorial-directory-tab-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    min-width: 0;
+}
+
 .tutorial-directory-tab-label {
+    display: block;
     font-family: pixelFont, monospace;
     font-size: 15px;
     text-align: left;
@@ -2597,7 +2622,7 @@ button {
     }
 
     .tutorial-directory-tab {
-        flex: 0 0 160px;
+        flex: 0 0 180px;
     }
 
     .tutorial-directory-hero {
@@ -2742,6 +2767,7 @@ button {
     gap: 20px;
     overflow-y: auto;
     padding: 40px 20px;
+    scale:120%;
 }
 
 .credits-title {
@@ -3259,15 +3285,15 @@ button {
     background-color: rgba(187, 132, 75, 0.9);
     border: 5px solid rgb(149, 108, 65);
     border-radius: 4px;
-    padding: 30px;
+    padding: 35px;
     max-width: 600px;
     max-height: 400px;
     overflow-y: auto;
     color: rgb(255, 255, 255);
     font-family: pixelFont, monospace;
     font-size: .8rem;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
-    line-height: 1.8;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    line-height: 2;
 }
 
 .credits-back-button {
@@ -3282,11 +3308,31 @@ button {
     transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
 }
+.credits-back-button.active {
+    transform: scale(1.4);
+}
+
 
 .credits-line {
     display: flex;
     align-items: center;
     gap: 12px;
+    animation: fly-in-credits .5s ease-in both;
+    transform: scale(1);
+}
+
+@keyframes fly-in-credits {
+    0% {
+        transform: scale(1.1);
+    }
+    50% {
+
+        transform: scale(1.2);
+    }
+    100% {
+
+        transform: scale(1.1);
+    }
 }
 
 .credits-portrait {
@@ -4348,7 +4394,7 @@ button {
     .credits-menu {
         padding: 20px 10px;
     }
-    
+
     .credits-title {
         font-size: 20px;
     }

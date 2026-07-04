@@ -1,5 +1,5 @@
 class Player extends MoveableEntity {
-    constructor(name, png, x, y, inv = [{ num: 1, amount: 1 }, { num: 2, amount: 5 }, { num: 3, amount: 5}, 0, 0, 0, 0, 0]) {
+    constructor(name, png, x, y, inv = [{ num: 1, amount: 1 }, { num: 2, amount: 5 }, { num: 3, amount: 5}, { num: 50, amount: 1 }, 0, 0, 0, 0]) {
         super(name, png, x, y, inv, 0, 3, 0, 0);
         
         let mainQuestCoins = 10000;
@@ -490,44 +490,34 @@ class Player extends MoveableEntity {
 
     eat() {
         if (!this.dead && millis() - this.lasteatMili > 100) {
-            if (this.hunger < maxHunger) {  // player only eats when hungry
-                if(this.inv[this.hand].class == 'Eat' && this.inv[this.hand].amount == 1){
+            const food = this.inv[this.hand];
+            if (this.hunger < maxHunger && food && food.class == 'Eat' && food.amount > 0) {  // player only eats when hungry
+                const seed_obj_num = isValidItemNum(food.seed_num) ? food.seed_num : 0;
+                const canStoreByproduct = seed_obj_num === 0 || food.amount === 1 || checkForSpace(this, seed_obj_num);
+
+                if (canStoreByproduct) {
                     EatSound.play();
-                    this.hunger += this.inv[this.hand].hunger;
+                    this.hunger += food.hunger;
                     if (this.hunger > maxHunger) {
                         this.hunger = maxHunger;
                     }
-                    // Capture all needed values before zeroing the slot
                     this.hunger_counter = 0;
-                    this.hunger_timer = this.inv[this.hand].hunger_timer;
-                    this.lastFoodnum = item_name_to_num(this.inv[this.hand].name);
-                    let seed_obj_num = this.inv[this.hand].seed_num;
-                    let seed_min = this.inv[this.hand].seed_min || 1;
-                    let seed_max = this.inv[this.hand].seed_max || 3;
-                    this.inv[this.hand].amount -= 1;
-                    this.inv[this.hand] = 0;
-                    let seed_amount = floor(random(seed_min, seed_max + 1));
-                    addItem(this, seed_obj_num, seed_amount);
-                }
-                else if (this.inv[this.hand].class == 'Eat' && (checkForSpace(this, this.inv[this.hand].seed_num))) {
-                    EatSound.play();
-                    this.hunger += this.inv[this.hand].hunger;
-                    if (this.hunger > maxHunger) {
-                        this.hunger = maxHunger;
-                    }
-                    // Capture all needed values before potentially zeroing the slot
-                    this.hunger_counter = 0;
-                    this.hunger_timer = this.inv[this.hand].hunger_timer;
-                    this.lastFoodnum = item_name_to_num(this.inv[this.hand].name);
-                    let seed_obj_num = this.inv[this.hand].seed_num;
-                    let seed_min = this.inv[this.hand].seed_min || 1;
-                    let seed_max = this.inv[this.hand].seed_max || 3;
-                    this.inv[this.hand].amount -= 1;
-                    if (this.inv[this.hand].amount == 0) {
+                    this.hunger_timer = food.hunger_timer;
+                    this.lastFoodnum = item_name_to_num(food.name);
+                    const seed_min = Number.isFinite(food.seed_min) ? food.seed_min : 1;
+                    const seed_max = Number.isFinite(food.seed_max) ? food.seed_max : 3;
+
+                    food.amount -= 1;
+                    if (food.amount == 0) {
                         this.inv[this.hand] = 0;
                     }
-                    let seed_amount = floor(random(seed_min, seed_max + 1));
-                    addItem(this, seed_obj_num, seed_amount);
+
+                    if (seed_obj_num > 0) {
+                        const seed_amount = floor(random(seed_min, seed_max + 1));
+                        if (!addItem(this, seed_obj_num, seed_amount)) {
+                            console.warn('Food byproduct could not be stored for', food.name, 'item ID', seed_obj_num);
+                        }
+                    }
                 }
             }
         }
@@ -546,6 +536,16 @@ class Player extends MoveableEntity {
     onInteract(x, y) {
         if(this.inv[this.hand] != 0 && this.inv[this.hand].class == 'Backpack'){
             this.talking = this.inv[this.hand];
+            return;
+        }
+        // Flashlight: pressing interact while it's the held item toggles the beam
+        // on/off. It only lights anything at night (renderLights runs when time > 0),
+        // but the toggle state persists regardless so it's ready when night falls.
+        if(this.inv[this.hand] != 0 && this.inv[this.hand].name == 'Flashlight'){
+            flashlightOn = !flashlightOn;
+            if(typeof hit_sound !== 'undefined' && hit_sound && hit_sound.play){
+                hit_sound.play();
+            }
             return;
         }
         const lookingAt = this.looking(currentLevel_x, currentLevel_y);

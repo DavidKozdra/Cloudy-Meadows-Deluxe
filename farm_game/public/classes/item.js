@@ -65,12 +65,14 @@ class Seed extends Item {
 }
 
 class Eat extends Item {
-	constructor(name, amount, png, price, hunger, hunger_timer, seed_num) {
+	constructor(name, amount, png, price, hunger, hunger_timer, seed_num, seed_min, seed_max) {
 		super(name, amount, png, price);
 		this.class = "Eat";
 		this.hunger = hunger;
 		this.hunger_timer = hunger_timer;
 		this.seed_num = seed_num;
+		this.seed_min = seed_min;
+		this.seed_max = seed_max;
 	}
 }
 

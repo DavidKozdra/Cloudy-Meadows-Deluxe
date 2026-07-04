@@ -52,6 +52,7 @@ var lastTimeMili = 0;
 var timeSpeed = 1;
 var timeSpeedIndex = 4; // index into [-16,-8,-4,-2, 1, 2, 4, 8, 16], 4 = normal
 var lastTimeWatchMili = 0;
+var flashlightOn = false; // Flashlight beam toggle (held item, lights only at night)
 var lastHungerMili = 0;
 var days = 0;
 var title_screen = true;

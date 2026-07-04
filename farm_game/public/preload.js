@@ -22,6 +22,7 @@ function preload() {
     wall_item_img = loadImage('images/tiles/Wood.png');
     axe_img = loadImage('images/items/Axe.png');
     stop_watch_img = loadImage('images/items/stop_watch.png');
+    flash_light_img = loadImage('images/items/flashLight.png');
 
     //Tile
     grass_tile_img = loadImage('images/tiles/Grass.png');
@@ -324,10 +325,10 @@ function preload() {
     skipper_tile_imgs = [[skipper_tile_up_img], [skipper_tile_right_img], [skipper_tile_down_img], [skipper_tile_left_img]];
 
     //Kiah
-    kiah_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
-    kiah_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    kiah_tile_up_img = loadImage('images/npc/kiah-back.png');
+    kiah_tile_right_img = loadImage('images/npc/Kiah-right.png');
     kiah_tile_down_img = loadImage('images/npc/Kiah.png');
-    kiah_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    kiah_tile_left_img = loadImage('images/npc/Kiah-left.png');
     kiah_tile_imgs = [[kiah_tile_up_img], [kiah_tile_right_img], [kiah_tile_down_img], [kiah_tile_left_img]];
 
     //Sarah
@@ -781,7 +782,8 @@ function preload() {
     /*165*/thomas_tile_imgs,
     /*166*/victoria_tile_imgs,
     /*167*/elena_tile_imgs,
-    /*168*/stop_watch_img
+    /*168*/stop_watch_img,
+    /*169*/flash_light_img
     ];
     
     // Beach tiles and Kiah properly defined in array above
@@ -2592,7 +2594,7 @@ function newWorld(){
             [1,1,12,1,1,1,1,1,1,12,1,1,102,1,1,12,1,1,1,1,1,12,61],
             [1,1,1,1,1,1,1,1,1,1,1,39,1,1,1,1,1,1,1,1,1,1,61],
             [1,1,43,1,1,1,1,16,1,1,1,1,84,1,1,1,1,17,1,1,1,1,61],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,116,1,1,1,1,1,1,1,1,61],
+            [1,1,1,1,1,1,86,1,1,1,1,1,1,116,1,1,1,1,1,1,1,1,61],
             [1,1,1,1,1,25,1,1,1,1,1,1,1,1,1,1,1,1,1,25,1,1,61],
             [1,1,12,1,1,1,1,1,1,12,1,1,1,1,1,1,12,1,1,1,1,12,61],
             [1,1,19,1,1,1,1,44,1,1,1,1,56,1,1,1,1,100,1,1,1,1,61],

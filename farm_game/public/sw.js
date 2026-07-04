@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v10';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -30,21 +30,21 @@ const APP_SHELL = [
   './pixelFont.ttf',
   './classes/Sound.js',
   './classes/Cloud.js',
-  './classes/item.js?v=9',
-  './classes/level.js?v=9',
+  './classes/item.js?v=10',
+  './classes/level.js?v=10',
   './classes/quest.js?v=8',
   './classes/dialouge.js?v=8',
   './classes/tile_classes/tile.js?v=8',
   './classes/tile_classes/plant.js?v=8',
   './classes/tile_classes/entity.js?v=8',
   './classes/tile_classes/moveable-entity.js?v=8',
-  './classes/tile_classes/player.js?v=9',
+  './classes/tile_classes/player.js?v=11',
   './classes/tile_classes/grid-move-entity.js?v=8',
   './classes/tile_classes/free-move-entity.js?v=8',
   './classes/tile_classes/light-move-entity.js?v=8',
   './classes/tile_classes/pay-to-move-entity.js?v=8',
   './classes/tile_classes/npc.js?v=8',
-  './classes/tile_classes/shop.js?v=8',
+  './classes/tile_classes/shop.js?v=9',
   './classes/tile_classes/chest.js?v=8',
   './classes/tile_classes/robot.js?v=8',
   './classes/tile_classes/farm-robot.js?v=8',
@@ -52,12 +52,12 @@ const APP_SHELL = [
   './classes/cooperative-exchange.js?v=8',
   './classes/time-rewind.js?v=1',
   './config/constants.js?v=8',
-  './config/items.js?v=8',
-  './config/tiles.js?v=9',
-  './miscfunctions.js?v=9',
-  './preload.js?v=10',
+  './config/items.js?v=9',
+  './config/tiles.js?v=10',
+  './miscfunctions.js?v=11',
+  './preload.js?v=11',
   './gamepad.js?v=8',
-  './sketch.js?v=9',
+  './sketch.js?v=10',
   './images/pwa/icon-192.png',
   './images/pwa/icon-512.png',
   './images/pwa/icon-maskable-512.png',

@@ -365,6 +365,15 @@ class Level {
         for (let i = 0; i < this.lights.length; i++) {
             this.lights[i].renderToBuffer(this.lightingBuffer, camX, camY, zoom);
         }
+        // Flashlight: a transient light that follows the player when the Flashlight
+        // is the held item and toggled on. Kept out of this.lights so it never
+        // persists to saves or duplicates across frames.
+        if (typeof flashlightOn !== 'undefined' && flashlightOn &&
+            typeof player !== 'undefined' && player && player.inv &&
+            player.inv[player.hand] != 0 && player.inv[player.hand].name === 'Flashlight') {
+            const fl = new Light(player.pos.x, player.pos.y, tileSize * 5, 255, 255, 220);
+            fl.renderToBuffer(this.lightingBuffer, camX, camY, zoom);
+        }
         this.lightingBuffer.noErase();
         
         // Draw the lighting buffer to main canvas in screen space

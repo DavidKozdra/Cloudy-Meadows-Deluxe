@@ -33,7 +33,6 @@ class Shop extends Entity {
                 }
             }
         }
-        console.log('Shop', this.name, 'enabled indices:', indices, 'of', this.inv.length, 'total');
         return indices;
     }
 

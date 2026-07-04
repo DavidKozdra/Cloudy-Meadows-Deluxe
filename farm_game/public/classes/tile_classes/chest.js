@@ -23,17 +23,69 @@ class Chest extends Entity{
         stroke(149, 108, 65);
         strokeWeight(5);
         fill(187, 132, 75);
-        rect(canvasWidth/4, canvasHeight/4, canvasWidth/2, canvasHeight/2);
+        const panelLeft = canvasWidth / 4;
+        const panelTop = canvasHeight / 4;
+        const panelWidth = canvasWidth / 2;
+        rect(panelLeft, panelTop, panelWidth, canvasHeight/2);
         textFont(player_2);
-        textSize(15);
         fill(255);
         stroke(0);
-        strokeWeight(4);
-        text(this.name, (canvasWidth / 4) + 10, (canvasHeight/4) + 10);
-        if (!this.playerOwned) text('VIEW ONLY', (canvasWidth / 4) + 130, (canvasHeight/4) + 10);
+        const headerLeft = panelLeft + 10;
+        const headerRight = panelLeft + panelWidth - 10;
+        const headerWidth = headerRight - headerLeft;
+        const titleText = String(this.name || 'Chest');
+        const statusText = this.playerOwned ? '' : 'VIEW ONLY';
+        const leaveText = String.fromCharCode(eat_button) + ' to leave';
+        const headerGap = 14;
+
+        textSize(15);
+        const titleWidth = textWidth(titleText);
         textSize(13);
-        strokeWeight(2);
-        text( String.fromCharCode(eat_button) + ' to leave', ((2*canvasWidth) / 4) + 45, (canvasHeight/4) + 10);
+        const statusWidth = statusText ? textWidth(statusText) : 0;
+        const leaveWidth = textWidth(leaveText);
+        const requiredWidth = titleWidth + leaveWidth + headerGap +
+            (statusText ? statusWidth + headerGap : 0);
+
+        textAlign(LEFT, TOP);
+        if (requiredWidth <= headerWidth) {
+            strokeWeight(4);
+            textSize(15);
+            text(titleText, headerLeft, panelTop + 8);
+
+            if (statusText) {
+                textSize(13);
+                strokeWeight(2);
+                text(statusText, headerLeft + titleWidth + headerGap, panelTop + 9);
+            }
+
+            textAlign(RIGHT, TOP);
+            textSize(13);
+            strokeWeight(2);
+            text(leaveText, headerRight, panelTop + 9);
+        } else {
+            // Narrow canvases get two rows so every label remains readable.
+            const topRowGap = statusText ? 10 : 0;
+            const topRowWidth = titleWidth + statusWidth + topRowGap;
+            const scale = Math.min(1, headerWidth / Math.max(topRowWidth, 1));
+            const titleSize = Math.max(10, Math.floor(15 * scale));
+            const statusSize = Math.max(9, Math.floor(13 * scale));
+
+            strokeWeight(3);
+            textSize(titleSize);
+            text(titleText, headerLeft, panelTop + 5);
+
+            if (statusText) {
+                textAlign(RIGHT, TOP);
+                textSize(statusSize);
+                strokeWeight(2);
+                text(statusText, headerRight, panelTop + 6);
+            }
+
+            textAlign(RIGHT, TOP);
+            textSize(11);
+            strokeWeight(2);
+            text(leaveText, headerRight, panelTop + 23);
+        }
         stroke(255, 255, 0);
         strokeWeight(5);
         fill(149, 108, 65);

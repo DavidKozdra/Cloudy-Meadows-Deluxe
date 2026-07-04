@@ -1426,17 +1426,33 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
         button.className = 'tutorial-directory-tab';
         button.dataset.tabId = tabConfig.id;
 
+        if (tabConfig.image) {
+            const icon = document.createElement('img');
+            icon.className = 'tutorial-directory-tab-icon';
+            icon.src = tabConfig.image;
+            icon.alt = '';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.width = 44;
+            icon.height = 44;
+            button.appendChild(icon);
+        }
+
+        const text = document.createElement('span');
+        text.className = 'tutorial-directory-tab-text';
+
         const label = document.createElement('span');
         label.className = 'tutorial-directory-tab-label';
         label.textContent = tabConfig.label;
-        button.appendChild(label);
+        text.appendChild(label);
 
         if (tabConfig.navHint && !options.hideNavHints) {
             const hint = document.createElement('span');
             hint.className = 'tutorial-directory-tab-hint';
             hint.textContent = tabConfig.navHint;
-            button.appendChild(hint);
+            text.appendChild(hint);
         }
+
+        button.appendChild(text);
 
         button.addEventListener('click', () => {
             renderActiveTab(tabConfig.id);
@@ -1515,7 +1531,7 @@ function buildFullTutorialPrompt(options = {}) {
                 navHint: 'first quest',
                 eyebrow: 'First Objective',
                 title: 'Meet Mr.C and start the run',
-                description: 'If you skip the opening Mr.C conversation, the main story does not move and the game feels stalled.',
+                description: 'SAVE CLOUDY PLEASE WE WILL EVEN TAKE PENNIES',
                 image: 'images/npc/mrC.png',
                 alt: 'Mr.C',
                 chips: [
@@ -3770,7 +3786,8 @@ function ensureConfigModal() {
         'Composter': 'images/tiles/Worm_Bucket.png',
         'Time Watch': 'images/items/stop_watch.png',
         'Hemp Oil': 'images/items/veg_oil.png',
-        'Fruit Juice': 'images/items/veg_oil.png'
+        'Fruit Juice': 'images/items/veg_oil.png',
+        'Flashlight': 'images/items/flashLight.png'
     };
     
     itemDefs.forEach((item, idx) => {
@@ -5012,9 +5029,10 @@ function showCreditsMenu(){
             { text: 'and thanks to our play testers' }
         ];
 
-        credits.forEach((credit) => {
+        credits.forEach((credit, index) => {
             const line = document.createElement('div');
             line.className = 'credits-line';
+            line.style.setProperty('--credit-index', index);
 
             // Show a character portrait when a same-name image exists.
             if (credit.image) {
@@ -5047,6 +5065,13 @@ function showCreditsMenu(){
         creditsMenu.appendChild(backBtn);
     }
     creditsMenu.style.display = 'flex';
+
+    // Restart the staggered entrance whenever the credits are reopened.
+    const creditLines = creditsMenu.querySelectorAll('.credits-line');
+    creditLines.forEach(line => line.style.animation = 'none');
+    void creditsMenu.offsetWidth;
+    creditLines.forEach(line => line.style.removeProperty('animation'));
+
     updateCanvasPointerEvents();
 }
 
@@ -5422,47 +5447,65 @@ function clear_data_render() {
 }
 
 function addItem(to, item_obj_num, amount) {
+    if (!to || !Array.isArray(to.inv)) {
+        console.warn('Cannot add item: target has no inventory.');
+        return false;
+    }
+    if (!isValidItemNum(item_obj_num)) {
+        console.warn('Cannot add item: invalid item ID', item_obj_num);
+        return false;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+        console.warn('Cannot add item: invalid amount', amount, 'for item ID', item_obj_num);
+        return false;
+    }
+
+    const itemDefinition = all_items[item_obj_num];
     for (let i = 0; i < to.inv.length; i++) {
         if (to.inv[i] != 0) { // stack items
-            if (to.inv[i].name == all_items[item_obj_num].name) {
+            if (to.inv[i] && to.inv[i].name == itemDefinition.name) {
                 to.inv[i].amount += amount;
-                return;
+                return true;
             }
         }
     }
-    if (to.inv[to.hand] == 0) { // air
+    if (Number.isInteger(to.hand) && to.hand >= 0 && to.hand < to.inv.length && to.inv[to.hand] == 0) { // air
         to.inv[to.hand] = new_item_from_num(item_obj_num, amount);
-        return;
+        return true;
     }
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < Math.min(8, to.inv.length); i++) {
         if (to.inv[i] == 0) { // find space
             to.inv[i] = new_item_from_num(item_obj_num, amount);
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 function checkForSpace(to, item_obj_num){
-    var check = false;
+    let check = false;
     if(item_obj_num == 0){
-        check = true;
-        return check;
+        return true; // Item 0 means that no byproduct/item needs to be stored.
+    }
+    if (!to || !Array.isArray(to.inv) || !isValidItemNum(item_obj_num)) {
+        console.warn('Cannot check inventory space for invalid item ID', item_obj_num);
+        return false;
     }
     for (let i = 0; i < to.inv.length; i++) {
         if (to.inv[i] != 0) { // stack items
-            if (to.inv[i].name == all_items[item_obj_num].name) {
+            if (to.inv[i] && to.inv[i].name == all_items[item_obj_num].name) {
                 check = true;
                 return check;
             }
         }
     }
-    if (to.inv[to.hand] == 0) { // air in hand
+    if (Number.isInteger(to.hand) && to.hand >= 0 && to.hand < to.inv.length && to.inv[to.hand] == 0) { // air in hand
         check = true;
         return check;
     }
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < Math.min(8, to.inv.length); i++) {
         if (to.inv[i] == 0) { // find space
             check = true;
             return check;
@@ -5473,6 +5516,14 @@ function checkForSpace(to, item_obj_num){
         ErrorSound.play();
     }
     return check;
+}
+
+function isValidItemNum(num) {
+    return Number.isInteger(num) &&
+        num > 0 &&
+        typeof all_items !== 'undefined' &&
+        num < all_items.length &&
+        !!all_items[num];
 }
 
 function item_name_to_num(item_name) {
@@ -5560,7 +5611,7 @@ function new_tile_from_num(num, x, y) {
 }
 
 function new_item_from_num(num, amount) {
-    if (typeof all_items !== 'undefined' && num < all_items.length && all_items[num] && all_items[num] !== 0) {
+    if (isValidItemNum(num)) {
         if (all_items[num].class == 'Item') {
             return new Item(all_items[num].name, amount, all_items[num].png, all_items[num].price);
         }
@@ -5568,7 +5619,17 @@ function new_item_from_num(num, amount) {
             return new Tool(all_items[num].name, amount, all_items[num].png);
         }
         else if (all_items[num].class == 'Eat') {
-            return new Eat(all_items[num].name, amount, all_items[num].png, all_items[num].price, all_items[num].hunger, all_items[num].hunger_timer, all_items[num].seed_num);
+            return new Eat(
+                all_items[num].name,
+                amount,
+                all_items[num].png,
+                all_items[num].price,
+                all_items[num].hunger,
+                all_items[num].hunger_timer,
+                all_items[num].seed_num,
+                all_items[num].seed_min,
+                all_items[num].seed_max
+            );
         }
         else if (all_items[num].class == 'Seed') {
             return new Seed(all_items[num].name, amount, all_items[num].png, all_items[num].plant_num, all_items[num].price);
@@ -5584,8 +5645,9 @@ function new_item_from_num(num, amount) {
         }
     }
     else {
-        console.error('item created from ' + num + ' doesnt exist');
+        console.warn('Cannot create item: invalid item ID', num);
     }
+    return undefined;
 }
 
 function saveAll(){

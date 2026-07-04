@@ -21,6 +21,7 @@ class Dialouge {
             }
         }
         this.new_replies = -1;
+        this.replyScrollTop = 0;
         this.hand_num = hand_num;
         this.amount = amount;
         this.textWait = 1;
@@ -130,49 +131,79 @@ class Dialouge {
         if (current_reply > replies.length - 1) {
             current_reply = max(0, replies.length - 1);
         }
-        let current_y = 0;
-        let new_line = 0;
+        // Geometry of the reply list: it lives inside the dialogue box, starting a
+        // little below the top and stopping before the box bottom edge.
+        const LINE_H = 17;
+        const REPLY_TOP = canvasHeight - 115;
+        const REPLY_BOTTOM = canvasHeight - 10; // stay inside the 5px box stroke
+        const MAX_LINES = floor((REPLY_BOTTOM - REPLY_TOP) / LINE_H);
+        const REPLY_X = (canvasWidth / 2) - 10;
+        const REPLY_W = (canvasWidth / 2) - (canvasWidth / 20) - 10;
+        // How many wrapped text lines a reply occupies (label included).
+        const linesFor = (i) => {
+            const tellState = this.getTellGoalState(name, replies[i].phrase);
+            const label = (tellState.isTell && tellState.hasTodo) ? ' [quest]' : '';
+            const len = replies[i].phrase.length + label.length;
+            return len > 22 ? ceil(len / 22) : 1;
+        };
+
         if(replies.length === 0){
             fill(255);
-            text('- No replies available', (canvasWidth / 2) - 10, canvasHeight - 115 + current_y, (canvasWidth / 2) - (canvasWidth / 20) - 10);
+            text('- No replies available', REPLY_X, REPLY_TOP, REPLY_W);
         }
-        else if(current_reply < 1 || replies.length <= 5){
-            for (let i = 0; i < min(6-new_line, replies.length); i++){
+        else {
+            // Pick the first visible reply so the selected one stays on screen and
+            // the window never draws more than MAX_LINES of wrapped text.
+            let startIndex = min(current_reply, this.replyScrollTop || 0);
+            let lineBudget = MAX_LINES;
+            let lastFit = current_reply;
+            for (let i = startIndex; i < replies.length; i++){
+                const need = linesFor(i);
+                if (need > lineBudget) break;
+                lineBudget -= need;
+                lastFit = i;
+            }
+            // If the selected reply fell past the visible window, scroll down until
+            // it fits (accounting for its own possibly multi-line height).
+            while (current_reply > lastFit && startIndex < current_reply){
+                startIndex++;
+                lineBudget = MAX_LINES;
+                lastFit = startIndex - 1;
+                for (let i = startIndex; i < replies.length; i++){
+                    const need = linesFor(i);
+                    if (need > lineBudget) break;
+                    lineBudget -= need;
+                    lastFit = i;
+                }
+            }
+            this.replyScrollTop = startIndex;
+
+            let current_y = 0;
+            let lastVisible = startIndex - 1;
+            for (let i = startIndex; i < replies.length; i++){
+                const need = linesFor(i);
+                if (current_y + need * LINE_H > (REPLY_BOTTOM - REPLY_TOP)) break;
                 const tellState = this.getTellGoalState(name, replies[i].phrase);
                 const label = (tellState.isTell && tellState.hasTodo) ? ' [quest]' : '';
                 if(current_reply == i){
                     fill(255, 255, 0);
-                    text('>' + replies[i].phrase + label, (canvasWidth / 2) - 10, canvasHeight - 115 + current_y, (canvasWidth / 2) - (canvasWidth / 20) - 10);
+                    text('>' + replies[i].phrase + label, REPLY_X, REPLY_TOP + current_y, REPLY_W);
                 }
                 else{
                     fill(255);
-                    text('-' + replies[i].phrase + label, (canvasWidth / 2) - 10, canvasHeight - 115 + current_y, (canvasWidth / 2) - (canvasWidth / 20) - 10);
+                    text('-' + replies[i].phrase + label, REPLY_X, REPLY_TOP + current_y, REPLY_W);
                 }
-                current_y += (replies[i].phrase.length > 22 ? floor(replies[i].phrase.length/22)+1:1)*17;
-                new_line += (replies[i].phrase.length > 22 ? floor(replies[i].phrase.length/22):0)
+                current_y += need * LINE_H;
+                lastVisible = i;
             }
-        }
-        else{
-            for (let i = current_reply-1; i < min(current_reply + 6 - new_line, replies.length); i++){
-                const tellState = this.getTellGoalState(name, replies[i].phrase);
-                const label = (tellState.isTell && tellState.hasTodo) ? ' [quest]' : '';
-                if(current_reply == i){
-                    fill(255, 255, 0);
-                    text('>' + replies[i].phrase + label, (canvasWidth / 2) - 10, canvasHeight - 115 + current_y, (canvasWidth / 2) - (canvasWidth / 20) - 10);
-                }
-                else{
-                    fill(255);
-                    text('-' + replies[i].phrase + label, (canvasWidth / 2) - 10, canvasHeight - 115 + current_y, (canvasWidth / 2) - (canvasWidth / 20) - 10);
-                }
-                current_y += (replies[i].phrase.length > 22 ? ceil(replies[i].phrase.length/22):1)*17;
-                new_line += (replies[i].phrase.length > 22 ? ceil(replies[i].phrase.length/22):0);
+            // Down arrow: more replies exist below the visible window.
+            if(lastVisible < replies.length - 1){
+                image(done_dot, (canvasWidth / 20) + 632, (canvasHeight - 90) + (2 * 32) + 8);
             }
-        }
-        if(current_reply < replies.length - 5){
-            image(done_dot, (canvasWidth / 20) + 632, (canvasHeight - 90) + (2 * 32) + 8);
-        }
-        if(current_reply > 1 && replies.length > 6){
-            image(up_dot, (canvasWidth / 20) + 632, (canvasHeight - 120));
+            // Up arrow: replies are hidden above the visible window.
+            if(startIndex > 0){
+                image(up_dot, (canvasWidth / 20) + 632, (canvasHeight - 120));
+            }
         }
         pop()
     }

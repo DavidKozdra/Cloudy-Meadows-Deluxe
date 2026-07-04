@@ -62,7 +62,8 @@ const ITEM_DEFINITIONS = [
     /*46*/ { name: 'Composter', png: 148, price: 80, tile_num: 14, tile_need_num: 0, class: 'Placeable'},
     /*47*/ { name: 'Hemp Oil', png: 86, price: 30, class: 'Item'},
     /*48*/ { name: 'Fruit Juice', png: 86, price: 12, class: 'Item'},
-    /*49*/ { name: 'Time Watch', png: 168, price: 250, class: 'Item'}
+    /*49*/ { name: 'Time Watch', png: 168, price: 250, class: 'Item'},
+    /*50*/ { name: 'Flashlight', png: 169, price: 150, class: 'Tool'}
 ];
 
 /*
