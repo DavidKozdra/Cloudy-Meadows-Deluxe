@@ -580,6 +580,13 @@ class Player extends MoveableEntity {
             }
         }
         if (this.touching.class == 'Plant') {
+            // Auto Farms crops belong to the robots — the player may not harvest
+            // (or shovel) anything in that district; the bots reap those beds.
+            const currentLevelName = levels[y] && levels[y][x] ? levels[y][x].name : '';
+            const isAutoFarm = typeof currentLevelName === 'string' && currentLevelName.startsWith('Auto Farms');
+            if (isAutoFarm) {
+                return;
+            }
             if(this.touching.age == all_imgs[this.touching.png].length - 2){
                 if(checkForSpace(this, this.touching.eat_num)){
                     let baseYield = 1;
@@ -688,6 +695,9 @@ class Player extends MoveableEntity {
                     let old_tile = levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize];
                     let new_tile = new_tile_from_num(this.inv[this.hand].tile_num, this.touching.pos.x, this.touching.pos.y);
                     new_tile.under_tile = old_tile;
+                    if(new_tile.name === 'grinder'){
+                        new_tile.playerOwned = true;
+                    }
                     if(new_tile.name === 'sprinkler' && old_tile){
                         new_tile.last_under_png = old_tile.png; // remember base for render fallback
                         new_tile.last_under_variant = old_tile.variant; // remember variant too
@@ -848,6 +858,9 @@ class Player extends MoveableEntity {
             }
         }
         else if (this.touching.name == 'grinder'){
+            if(this.touching.playerOwned !== true){
+                return;
+            }
             if (this.inv[this.hand].class == 'Eat'){
                 if(this.inv[this.hand].seed_num != 0){
                     let amountToProcess = 1;

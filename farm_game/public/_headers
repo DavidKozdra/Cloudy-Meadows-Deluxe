@@ -1,0 +1,11 @@
+# Never let the edge or the browser cache the service worker or the app shell
+# entry points, so new deploys are picked up immediately instead of serving a
+# stale version until CACHE_VERSION in sw.js is bumped.
+/sw.js
+  Cache-Control: no-cache
+
+/index.html
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Cache-Control: no-cache

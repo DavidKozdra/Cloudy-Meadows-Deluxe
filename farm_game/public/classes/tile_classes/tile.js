@@ -5,6 +5,7 @@ class Tile {
         this.pos = createVector(x, y);
         this.collide = collide;
         this.age = age;
+        this.playerOwned = false;
         // Remember what the sprinkler should render underneath if no under_tile object is present (helps after save/load or bad placement)
         this.last_under_png = undefined;
         this.last_under_variant = 0;
@@ -92,6 +93,9 @@ class Tile {
     load(obj){
         this.age = obj.age;
         this.variant = obj.variant;
+        if(typeof obj.playerOwned === 'boolean'){
+            this.playerOwned = obj.playerOwned;
+        }
         if(obj.under_tile && obj.under_tile !== 0){
             this.under_tile = new_tile_from_num(tile_name_to_num(obj.under_tile.name), obj.under_tile.pos.x, obj.under_tile.pos.y);
             if(this.name === 'sprinkler'){

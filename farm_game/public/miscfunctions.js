@@ -5905,6 +5905,13 @@ function loadLevel(level, lvlx = 0, lvly = 0){
                             typeof savedTile.playerOwned !== 'boolean') {
                             level.map[i][j].playerOwned = currentTile.name !== savedTile.name;
                         }
+                        // Grinders used the Tile class before tile ownership was
+                        // persisted. A grinder replacing an authored tile was
+                        // placed by the player; an authored grinder was not.
+                        if (level.map[i][j].name === 'grinder' &&
+                            typeof savedTile.playerOwned !== 'boolean') {
+                            level.map[i][j].playerOwned = currentTile.name !== savedTile.name;
+                        }
                     } else {
                         // Tile name not found, skip loading and keep original
                         console.warn('Saved tile "' + savedTile.name + '" not found, keeping original tile');
