@@ -269,31 +269,31 @@ function preload() {
     chen_tile_imgs = [[chen_tile_up_img], [chen_tile_right_img], [chen_tile_down_img], [chen_tile_left_img]];
 
     //Priya Patel
-    priya_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
-    priya_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    priya_tile_up_img = loadImage('images/npc/priya_back.png');
+    priya_tile_right_img = loadImage('images/npc/priya_right.png');
     priya_tile_down_img = loadImage('images/npc/priya.png');
-    priya_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    priya_tile_left_img = loadImage('images/npc/priya_left.png');
     priya_tile_imgs = [[priya_tile_up_img], [priya_tile_right_img], [priya_tile_down_img], [priya_tile_left_img]];
 
     //Marcus Brown
-    marcus_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
-    marcus_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    marcus_tile_up_img = loadImage('images/npc/marcus_back.png');
+    marcus_tile_right_img = loadImage('images/npc/marcus_right.png');
     marcus_tile_down_img = loadImage('images/npc/marcus.png');
-    marcus_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    marcus_tile_left_img = loadImage('images/npc/marcus_left.png');
     marcus_tile_imgs = [[marcus_tile_up_img], [marcus_tile_right_img], [marcus_tile_down_img], [marcus_tile_left_img]];
 
     //Sophia Moore
-    sophia_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
-    sophia_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    sophia_tile_up_img = loadImage('images/npc/Sophia_back.png');
+    sophia_tile_right_img = loadImage('images/npc/Sophia_right.png');
     sophia_tile_down_img = loadImage('images/npc/Sophia.png');
-    sophia_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    sophia_tile_left_img = loadImage('images/npc/Sophia_left.png');
     sophia_tile_imgs = [[sophia_tile_up_img], [sophia_tile_right_img], [sophia_tile_down_img], [sophia_tile_left_img]];
 
     //Jordan Kim
-    jordan_tile_up_img = loadImage('images/npc/cowboy_rick_back.png');
-    jordan_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
+    jordan_tile_up_img = loadImage('images/npc/jordan_kim_back.png');
+    jordan_tile_right_img = loadImage('images/npc/jordan_kim_right.png');
     jordan_tile_down_img = loadImage('images/npc/Jordan_Kim.png');
-    jordan_tile_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    jordan_tile_left_img = loadImage('images/npc/jordan_kim_left.png');
     jordan_tile_imgs = [[jordan_tile_up_img], [jordan_tile_right_img], [jordan_tile_down_img], [jordan_tile_left_img]];
 
     //Coral
