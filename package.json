@@ -4,12 +4,13 @@
   "version": "1.0.0",
   "description": "Validation and regression suite for Cloudy Meadows Deluxe",
   "scripts": {
-    "test": "node scripts/test-project.js && node farm_game/tests/consumables.test.js",
-    "test:automation": "node farm_game/tests/automation.test.js",
+    "test": "npm run test:project && npm run test:unit",
+    "test:project": "node scripts/test-project.js",
+    "test:unit": "node --test \"farm_game/tests/**/*.test.js\"",
     "hooks:install": "node scripts/install-hooks.js",
     "prepare": "node scripts/install-hooks.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=21"
   }
 }

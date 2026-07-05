@@ -1,61 +1,34 @@
+'use strict';
+
+const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
 
-const publicDir = path.resolve(__dirname, '../public');
-const sources = [
-    'classes/tile_classes/tile.js',
-    'classes/tile_classes/entity.js',
-    'classes/tile_classes/moveable-entity.js',
-    'classes/tile_classes/grid-move-entity.js',
-    'classes/tile_classes/robot.js',
-    'classes/tile_classes/farm-robot.js',
-    'classes/tile_classes/plant.js',
-    'classes/level.js'
-].map(file => fs.readFileSync(path.join(publicDir, file), 'utf8')).join('\n');
+const { installBaseGlobals } = require('./support/mocks');
+const { loadClasses, readPublic } = require('./support/load');
 
-global.window = {};
-global.tileSize = 32;
-global.canvasWidth = 96;
-global.canvasHeight = 96;
-global.createVector = (x, y) => ({ x, y });
-global.random = (min, max) => max === undefined ? min / 2 : (min + max) / 2;
-global.round = Math.round;
-global.floor = Math.floor;
-global.append = (array, item) => array.push(item);
+// --- Environment ------------------------------------------------------------
+// Robot/automation behavior is exercised with lightweight, robot-tailored item
+// and tile factories rather than the full config, so command programs stay
+// readable inline. Shared p5/browser stubs come from the base mocks.
+installBaseGlobals();
 global.days = 4;
 global.time = 50;
 global.currentLevel_x = 0;
 global.currentLevel_y = 0;
 global.player = { touching: { name: 'grass' }, quests: [], current_quest: 0 };
-global.robot_talkingSound = { play() {} };
-global.PlantingSound = { play() {} };
-global.moneySound = { play() {} };
-global.hoe_sound = { play() {} };
-global.all_imgs = Array.from({ length: 200 }, () => [{}, {}, {}, {}]);
-global.all_imgs[20] = [{}, {}, {}, {}];
-global.all_imgs[22] = [{}, {}, {}, {}];
-global.all_imgs[45] = [[{}], [{}], [{}], [{}]];
-global.all_imgs[46] = [[{}], [{}], [{}], [{}]];
 global.all_items = [];
 global.all_items[2] = { name: 'Corn', seed_min: 1, seed_max: 2 };
 
 class TestItem {
-    constructor(name, amount, extra = {}) { Object.assign(this, { name, amount, class: 'Item', price: 0 }, extra); }
+    constructor(name, amount, extra = {}) {
+        Object.assign(this, { name, amount, class: 'Item', price: 0 }, extra);
+    }
 }
 
 const itemNums = {
-    Corn: 2,
-    'Corn Seed': 3,
-    'Up Command': 19,
-    'Veggie Oil': 31,
-    'Right Command': 20,
-    'Down Command': 21,
-    'Left Command': 22,
-    'Interact Command': 23,
-    'Restart Command': 26,
-    'Add to Chest Command': 29,
+    Corn: 2, 'Corn Seed': 3, 'Up Command': 19, 'Veggie Oil': 31,
+    'Right Command': 20, 'Down Command': 21, 'Left Command': 22,
+    'Interact Command': 23, 'Restart Command': 26, 'Add to Chest Command': 29,
     '1 Day Pause Command': 34
 };
 global.item_name_to_num = name => itemNums[name];
@@ -89,19 +62,32 @@ global.new_tile_from_num = (num, x, y) => {
     return { name: names[num] || 'grass', png: 0, pos: { x, y }, collide: false, class: 'Tile', load() {}, render() {} };
 };
 
-vm.runInThisContext(sources + '\nObject.assign(globalThis, { Tile, Entity, MoveableEntity, GridMoveEntity, Robot, FarmRobot, Plant, Level });');
+// Load the tile/entity/robot/plant/level classes under test.
+loadClasses([
+    'classes/tile_classes/tile.js',
+    'classes/tile_classes/entity.js',
+    'classes/tile_classes/moveable-entity.js',
+    'classes/tile_classes/grid-move-entity.js',
+    'classes/tile_classes/robot.js',
+    'classes/tile_classes/farm-robot.js',
+    'classes/tile_classes/plant.js',
+    'classes/level.js'
+], ['Tile', 'Entity', 'MoveableEntity', 'GridMoveEntity', 'Robot', 'FarmRobot', 'Plant', 'Level']);
 
+// The shipped tile registry, loaded once and shared by the config regressions
+// below (evaluating config/tiles.js twice would redeclare TILE_DEFINITIONS).
+loadClasses('config/tiles.js', ['TILE_DEFINITIONS']);
+const TEST_TILE_DEFINITIONS = TILE_DEFINITIONS;
+
+// --- Helpers ----------------------------------------------------------------
 function command(name, commandName) {
     return new TestItem(name, 1, { class: 'Command', command: commandName });
 }
 
 function makeLevel(fill = 'grass') {
     const map = Array.from({ length: 3 }, (_, row) => Array.from({ length: 3 }, (_, col) => ({
-        name: fill,
-        pos: { x: col * tileSize, y: row * tileSize },
-        collide: false,
-        class: 'Tile',
-        render() {}
+        name: fill, pos: { x: col * tileSize, y: row * tileSize },
+        collide: false, class: 'Tile', render() {}
     })));
     return { map, ladybugs: 0 };
 }
@@ -118,25 +104,25 @@ function ready(robot) {
     robot.fuel_timer = 999;
 }
 
-// Empty slots advance without consuming energy.
-{
+// --- Robot instruction execution -------------------------------------------
+
+test('empty program slots advance without consuming energy', () => {
     const robot = new Robot('Robot3', 45, 32, 32, [0, 0, 0, 0], 1, [0, 0], 1);
-    levels = [[makeLevel()]];
+    global.levels = [[makeLevel()]];
     placeRobot(robot, levels[0][0]);
     robot.fuel = 50;
     ready(robot);
     robot.move(0, 0);
     assert.equal(robot.fuel, 50);
     assert.equal(robot.current_instruction, 1);
-}
+});
 
-// A blocked move neither overwrites the destination nor advances/burns fuel.
-{
+test('a blocked move neither overwrites the destination nor advances/burns fuel', () => {
     const level = makeLevel();
     level.map[1][2].collide = true;
     level.map[1][2].name = 'wall';
     const robot = new Robot('Robot3', 45, 32, 32, [0, 0, 0, 0], 1, [command('Right Command', 'right')], 1);
-    levels = [[level]];
+    global.levels = [[level]];
     placeRobot(robot, level);
     robot.fuel = 50;
     ready(robot);
@@ -145,54 +131,48 @@ function ready(robot) {
     assert.equal(robot.current_instruction, 0);
     assert.equal(robot.fuel, 50);
     assert.equal(robot.status, 'blocked');
-}
+});
 
-// Missing selectors wait safely instead of using the stale hand.
-{
+test('missing selectors wait safely instead of using the stale hand', () => {
     const level = makeLevel();
     const robot = new Robot('Robot3', 45, 32, 32, [0, 0, 0, 0], 1,
         [command('Interact Command', 'interact'), new TestItem('Corn Seed', 1, { class: 'Seed' })], 1);
-    levels = [[level]];
+    global.levels = [[level]];
     placeRobot(robot, level);
     robot.fuel = 50;
     ready(robot);
     robot.move(0, 0);
     assert.equal(robot.fuel, 50);
     assert.equal(robot.current_instruction, 0);
-}
+});
 
-// Robots can only transfer through chests with matching ownership.
-{
+test('robots can only transfer through chests with matching ownership', () => {
     const robot = new Robot('Robot3', 45, 32, 32, [0, 0, 0, 0], 1, [], 1);
     robot.playerOwned = true;
     robot.inv[0] = new TestItem('Corn', 3, { class: 'Eat' });
     const chest = { class: 'Chest', playerOwned: false, inv: [[0, 0], [0, 0]] };
-    assert.equal(robot.transferToChest(chest, 'Corn'), false);
+    assert.equal(robot.transferToChest(chest, 'Corn'), false, 'world chest rejects player robot transfer');
     chest.playerOwned = true;
     assert.equal(robot.transferToChest(chest, 'Corn'), true);
     assert.equal(chest.inv[0][0].amount, 3);
-}
+});
 
-// Robot grinder interaction closes the crop-to-seed loop.
-{
+test('robot grinder interaction closes the crop-to-seed loop', () => {
     const robot = new Robot('Robot3', 45, 32, 32, [0, 0, 0, 0], 83, [], 1);
     robot.under_tile = new_tile_from_num(83, 32, 32);
     robot.inv[0] = new TestItem('Corn', 1, { class: 'Eat', seed_num: 3 });
     robot.hand = 0;
-    levels = [[makeLevel()]];
+    global.levels = [[makeLevel()]];
     robot.onInteract(0, 0);
     assert.ok(robot.inv.some(item => item && item.name === 'Corn Seed' && item.amount >= 2));
-}
+});
 
-// The shipped teaching loop uses real Robot semantics end to end: harvest a
-// crop, grind it into seed, replant one seed, and bank the surplus in a locked
-// world-owned chest before waiting off the crop while it matures.
-{
+test('the shipped teaching loop runs harvest→grind→replant→bank→wait end to end', () => {
     const previousWidth = canvasWidth;
     const previousHeight = canvasHeight;
     const startDay = days;
-    canvasWidth = 9 * tileSize;
-    canvasHeight = 3 * tileSize;
+    global.canvasWidth = 9 * tileSize;
+    global.canvasHeight = 3 * tileSize;
     const map = Array.from({ length: 3 }, (_, row) => Array.from({ length: 9 }, (_, col) => ({
         name: 'grass', pos: { x: col * tileSize, y: row * tileSize }, collide: false, class: 'Tile', render() {}
     })));
@@ -218,7 +198,7 @@ function ready(robot) {
         command('Up Command', 'up'), command('Left Command', 'left'), command('Restart Command', 'restart')
     ];
     const robot = new Robot('Robot3', 45, tileSize, tileSize, [0, 0, 0, 0, 0, 0, 0], 1, instructions, 1);
-    levels = [[level]];
+    global.levels = [[level]];
     placeRobot(robot, level, 1, 1);
     robot.under_tile = new Plant('corn', 20, tileSize, tileSize, false, 2, 0, 10);
     robot.under_tile.age = all_imgs[robot.under_tile.png].length - 2;
@@ -233,7 +213,7 @@ function ready(robot) {
     // Each pause resumes on the next day and immediately schedules the next;
     // the third wake continues the route back to the crop.
     for (let day = 0; day < 3; day++) {
-        days += 1;
+        global.days += 1;
         ready(robot);
         robot.move(0, 0);
     }
@@ -245,31 +225,31 @@ function ready(robot) {
     assert.equal(robot.under_tile.class, 'Plant');
     assert.equal(robot.under_tile.name, 'corn');
     assert.equal(robot.under_tile.age, 0);
-    days = startDay;
-    canvasWidth = previousWidth;
-    canvasHeight = previousHeight;
-}
+    global.days = startDay;
+    global.canvasWidth = previousWidth;
+    global.canvasHeight = previousHeight;
+});
 
-// Showcase watering uses the plant's real daily water state.
-{
+// --- FarmRobot showcase behavior -------------------------------------------
+
+test('showcase watering uses the plant\'s real daily water state', () => {
     const level = makeLevel();
     const bot = new FarmRobot('WaterBot', 46, 32, 32, ['water'], 1);
     const plant = new Plant('strawberry', 22, 32, 64, false, 7, 1, 10);
-    levels = [[level]];
+    global.levels = [[level]];
     placeRobot(bot, level);
     level.map[2][1] = plant;
     bot.moving_timer = 0;
     bot.move(0, 0);
     assert.equal(plant.wateredDay, days);
-}
+});
 
-// Showcase harvesting collects output and immediately replants the same crop.
-{
+test('showcase harvesting collects output and immediately replants the same crop', () => {
     const level = makeLevel();
     const bot = new FarmRobot('HarvestBot', 45, 32, 32, ['harvest'], 1);
     const plant = new Plant('corn', 20, 32, 64, false, 2, 0, 10);
     plant.age = all_imgs[plant.png].length - 2;
-    levels = [[level]];
+    global.levels = [[level]];
     placeRobot(bot, level);
     level.map[2][1] = plant;
     bot.moving_timer = 0;
@@ -277,15 +257,13 @@ function ready(robot) {
     assert.ok(bot.inv.some(item => item && item.name === 'Corn'));
     assert.equal(level.map[2][1].class, 'Plant');
     assert.equal(level.map[2][1].age, 0);
-}
+});
 
-// A showcase action is an attempt, not a wait condition: an unripe or missing
-// target must never deadlock the bot's patrol program.
-{
+test('a showcase action is an attempt, not a wait: an unripe target never deadlocks the patrol', () => {
     const level = makeLevel();
     const bot = new FarmRobot('HarvestBot', 45, 32, 32, ['harvest', 'water'], 1);
     const plant = new Plant('corn', 20, 32, 64, false, 2, 0, 2000);
-    levels = [[level]];
+    global.levels = [[level]];
     placeRobot(bot, level);
     level.map[2][1] = plant;
     bot.moving_timer = 0;
@@ -295,41 +273,40 @@ function ready(robot) {
     bot.moving_timer = 0;
     bot.move(0, 0);
     assert.equal(bot.current_instruction, 0);
-}
+});
 
-// Invalid showcase instructions report an error and are skipped safely.
-{
+test('invalid showcase instructions report an error and are skipped safely', () => {
     const level = makeLevel();
     const bot = new FarmRobot('DemoBot', 45, 32, 32, ['invalid', 'harvest'], 1);
-    levels = [[level]];
+    global.levels = [[level]];
     placeRobot(bot, level);
     bot.moving_timer = 0;
     bot.move(0, 0);
     assert.equal(bot.current_instruction, 1);
     assert.equal(bot.task_label, 'PROGRAM ERROR');
-}
+});
 
-// A moving entity is updated once even if the level scan encounters its identity twice.
-{
+// --- Level scanning ---------------------------------------------------------
+
+test('a moving entity is updated once even if the level scan sees its identity twice', () => {
     const level = Object.create(Level.prototype);
     let calls = 0;
     const robot = { class: 'Robot', move() { calls += 1; } };
     level.map = [[robot, robot]];
     level.update(0, 0, 99);
     assert.equal(calls, 1);
-}
+});
 
-// Run the shipped Auto Farms showcase routes against a full-size level.
-{
-    const preload = fs.readFileSync(path.join(publicDir, 'preload.js'), 'utf8');
+// --- Shipped showcase config regression ------------------------------------
+
+test('the shipped Auto Farms showcase routes run against a full-size level', () => {
+    const preload = readPublic('preload.js');
     assert.match(preload, /21, 124/);
     assert.match(preload, /23, 125/);
     assert.match(preload, /crop\.age = all_imgs\[crop\.png\]\.length - 2/,
         'the live showcase should start with harvestable crops');
-    const config = fs.readFileSync(path.join(publicDir, 'config/tiles.js'), 'utf8');
-    vm.runInThisContext(config + '\nglobalThis.TEST_TILE_DEFINITIONS = TILE_DEFINITIONS;');
-    canvasWidth = 23 * tileSize;
-    canvasHeight = 19 * tileSize;
+    global.canvasWidth = 23 * tileSize;
+    global.canvasHeight = 19 * tileSize;
     const harvestDefinition = TEST_TILE_DEFINITIONS[124 - 1];
     const waterDefinition = TEST_TILE_DEFINITIONS[125 - 1];
     assert.equal(TEST_TILE_DEFINITIONS.length, 125);
@@ -355,17 +332,17 @@ function ready(robot) {
     for (const col of [11, 14, 15, 16]) {
         level.map[7][col] = new Plant('strawberry', 22, col * tileSize, 7 * tileSize, false, 7, 1, 100);
     }
-    levels = [[level]];
+    global.levels = [[level]];
     for (let tick = 1; tick <= 150; tick++) level.update(0, 0, tick);
     assert.ok(harvestBot.inv.some(item => item && item.name === 'Corn'), 'showcase harvester should collect crops');
     assert.ok(level.map[7].some(tile => tile && tile.class === 'Plant' && tile.name === 'strawberry' && tile.age > 0),
         'showcase water bot should keep water-dependent crops growing');
-}
+});
 
-// Regression for startup world construction: every positive public tile ID
-// must produce an object when Level builds a map. This catches registry holes
-// such as the former empty ID 105 before newWorld() can crash on tile.name.
-{
+test('every positive public tile ID constructs an object during Level startup', () => {
+    // Regression: a registry hole (e.g. a former empty ID 105) crashes
+    // newWorld() on tile.name. Build a full-registry row through Level and
+    // confirm each ID produces a named tile.
     const previousAllTiles = global.all_tiles;
     const previousFactory = global.new_tile_from_num;
     global.all_tiles = TEST_TILE_DEFINITIONS;
@@ -373,15 +350,9 @@ function ready(robot) {
         const definition = all_tiles[id - 1];
         if (!definition) return undefined;
         return {
-            ...definition,
-            pos: { x, y },
-            class: definition.class,
-            collide: definition.collide === true,
-            age: definition.age ?? -1,
-            under_tile: 0,
-            render() {},
-            load() {},
-            getReadyForSave() {}
+            ...definition, pos: { x, y }, class: definition.class,
+            collide: definition.collide === true, age: definition.age ?? -1,
+            under_tile: 0, render() {}, load() {}, getReadyForSave() {}
         };
     };
     const ids = TEST_TILE_DEFINITIONS.map((_, index) => index + 1);
@@ -397,6 +368,4 @@ function ready(robot) {
     assert.equal(registryLevel.map[0][125 - 1].name, 'WaterBot');
     global.all_tiles = previousAllTiles;
     global.new_tile_from_num = previousFactory;
-}
-
-console.log('automation tests: passed');
+});

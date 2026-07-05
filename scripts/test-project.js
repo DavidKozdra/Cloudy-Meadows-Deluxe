@@ -192,10 +192,9 @@ check('dialogue data is valid and non-empty', () => {
     assert.ok(JSON.stringify(dialogue).length > 1000, 'dialogue data is unexpectedly empty');
 });
 
-check('automation behavior and startup regression suite', () => {
-    const result = spawnSync(process.execPath, [path.join(root, 'farm_game/tests/automation.test.js')], { cwd: root, encoding: 'utf8' });
-    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-});
+// Behavioral suites (automation, consumables, plant, chest, level, ...) run
+// under the node:test runner via `npm test`; this script only owns the static
+// asset/registry validation above.
 
 if (failures > 0) {
     console.error(`\n${failures} project test${failures === 1 ? '' : 's'} failed.`);
