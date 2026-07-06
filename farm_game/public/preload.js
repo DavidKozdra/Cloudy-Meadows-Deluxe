@@ -585,6 +585,7 @@ function preload() {
     robot_talkingSound = new Sound(['audio/Talk_Blips.wav'], 0.005);
     npc_talkingSound = new Sound(['audio/Talk_Blips (1).wav'], 0.01);
     shovelSound = new Sound(['audio/HoeSlam.wav', 'audio/ReHoeSlam.wav'], 0.5);
+    flashlightSound = new Sound(['audio/ReHoeSlam.wav'], 0.5);
 
     background_img = loadImage('images/Skyline.gif');
     dif_background_img = loadImage('images/dificulty_background.png');

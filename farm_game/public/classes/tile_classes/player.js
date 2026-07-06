@@ -543,8 +543,8 @@ class Player extends MoveableEntity {
         // but the toggle state persists regardless so it's ready when night falls.
         if(this.inv[this.hand] != 0 && this.inv[this.hand].name == 'Flashlight'){
             flashlightOn = !flashlightOn;
-            if(typeof hit_sound !== 'undefined' && hit_sound && hit_sound.play){
-                hit_sound.play();
+            if(typeof flashlightSound !== 'undefined' && flashlightSound && flashlightSound.play){
+                flashlightSound.play();
             }
             return;
         }
