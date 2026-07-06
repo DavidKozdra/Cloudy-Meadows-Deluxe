@@ -13,6 +13,38 @@ class NPC extends GridMoveEntity {
             this.dialouges[i] = new Dialouge(this.dialouges[i].phrase, this.dialouges[i].replies, this.dialouges[i].hand_num, this.dialouges[i].amount);
         }
         this.current_dialouge = 0;
+        // David can appear as any of several sprite variants; pick one to start.
+        // Stored as an index (a number) so the NPC stays JSON-serializable for saves.
+        // Re-rolled whenever he re-enters view (see render()).
+        if(this.name == 'David'){
+            this.davidVariant = randomDavidVariantIndex();
+            this.davidLastRenderFrame = -1;
+        }
+    }
+
+    // David shows a random sprite variant for every facing. The variant is stable
+    // while he's on screen and re-rolls each time he re-enters view, so he may look
+    // different every time you come across him (but never strobes frame-to-frame).
+    render() {
+        if(this.name == 'David'){
+            // A gap since the last frame he drew on means he just came back into view.
+            if(frameCount - this.davidLastRenderFrame > 1){
+                this.davidVariant = randomDavidVariantIndex();
+            }
+            this.davidLastRenderFrame = frameCount;
+            const variantImg = davidVariantImgFor(this.davidVariant);
+            if(variantImg){
+                push();
+                imageMode(CENTER);
+                if(this.under_tile != 0){
+                    this.under_tile.render();
+                }
+                image(variantImg, this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
+                pop();
+                return;
+            }
+        }
+        super.render();
     }
 
     // Allow NPCs flagged as random movers to wander like FreeMoveEntity while staying talkable

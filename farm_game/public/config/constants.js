@@ -64,6 +64,31 @@ const ANIMATION_SPEED = {
     MONEY: 2      // Money animation speed
 };
 
+// === DAVID RANDOM SPRITE VARIANTS ===
+// Whenever David is shown (in-game NPC in any facing, config sprite grid, credits)
+// any of these sprites may appear. Preloaded into david_variant_imgs (preload.js).
+const DAVID_VARIANTS = ['David.png', 'David2.png', 'David3.png', 'David4.png', 'David5.png'];
+
+// Pick a random David variant filename (e.g. for <img> src via 'images/npc/' + result).
+function randomDavidVariant() {
+    return DAVID_VARIANTS[Math.floor(Math.random() * DAVID_VARIANTS.length)];
+}
+
+// Pick a random David variant index (into DAVID_VARIANTS / david_variant_imgs).
+// Storing an index (a plain number) keeps NPCs JSON-serializable for saves, unlike
+// a p5.Image which has cyclic internals.
+function randomDavidVariantIndex() {
+    return Math.floor(Math.random() * DAVID_VARIANTS.length);
+}
+
+// Resolve a David variant index to its preloaded p5.Image, falling back to the base sprite.
+function davidVariantImgFor(index) {
+    if (typeof david_variant_imgs !== 'undefined' && david_variant_imgs[index]) {
+        return david_variant_imgs[index];
+    }
+    return typeof david_down_img !== 'undefined' ? david_down_img : undefined;
+}
+
 // === STORAGE ===
 const SAVE_KEY = 'cloudy_meadows_save';
 const SAVE_BACKUP_KEY = 'cloudy_meadows_save_backup';

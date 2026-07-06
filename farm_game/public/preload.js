@@ -241,6 +241,9 @@ function preload() {
     david_tile_right_img = loadImage('images/npc/cowboy_rick_right.png');
     david_down_img = loadImage('images/npc/David.png');
     david_left_img = loadImage('images/npc/cowboy_rick_left.png');
+    // Random-swap variants for David's sprite. Any of these may show whenever David
+    // is drawn (in-game NPC in any facing, config grid, credits). See DAVID_VARIANTS.
+    david_variant_imgs = DAVID_VARIANTS.map(src => loadImage('images/npc/' + src));
     david_tile_imgs = [[david_tile_up_img], [david_tile_right_img], [david_down_img], [david_left_img]];
 
     //Adam

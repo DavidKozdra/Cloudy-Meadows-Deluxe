@@ -3509,7 +3509,10 @@ function ensureConfigModal() {
         spriteImg.width = 32;
         spriteImg.height = 32;
         spriteImg.style.imageRendering = 'pixelated';
-        const imgPath = NPC_SPRITE_MAP[name] || 'images/npc/cowboy_rick.png';
+        // David shows a random sprite variant each time the config grid is built.
+        const imgPath = name === 'David'
+            ? 'images/npc/' + randomDavidVariant()
+            : (NPC_SPRITE_MAP[name] || 'images/npc/cowboy_rick.png');
         spriteImg.src = imgPath;
         spriteImg.alt = name;
         btn.appendChild(spriteImg);
@@ -5038,7 +5041,10 @@ function showCreditsMenu(){
             if (credit.image) {
                 const portrait = document.createElement('img');
                 portrait.className = 'credits-portrait';
-                portrait.src = 'images/npc/' + credit.image;
+                // David shows a random sprite variant, re-rolled each time credits open.
+                const isDavid = credit.image === 'David.png';
+                if (isDavid) portrait.dataset.davidPortrait = '1';
+                portrait.src = 'images/npc/' + (isDavid ? randomDavidVariant() : credit.image);
                 portrait.alt = '';
                 // Drop the image if it fails to load, keeping the line text-only.
                 portrait.addEventListener('error', () => portrait.remove());
@@ -5064,7 +5070,17 @@ function showCreditsMenu(){
         });
         creditsMenu.appendChild(backBtn);
     }
+    // showCreditsMenu() is called every frame while credits are open; only act on
+    // the open transition so David's portrait doesn't re-roll (strobe) every frame.
+    const justOpened = creditsMenu.style.display !== 'flex';
+    if (!justOpened) {
+        return;
+    }
     creditsMenu.style.display = 'flex';
+
+    // Re-roll David's random portrait variant each time the credits are opened.
+    const davidPortrait = creditsMenu.querySelector('[data-david-portrait]');
+    if (davidPortrait) davidPortrait.src = 'images/npc/' + randomDavidVariant();
 
     // Restart the staggered entrance whenever the credits are reopened.
     const creditLines = creditsMenu.querySelectorAll('.credits-line');
