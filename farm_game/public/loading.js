@@ -23,6 +23,11 @@
    * p5 signature: loadImage(path, successCallback, failureCallback).
    * preload() calls these with the path only, but pass through anything the
    * caller supplied rather than assuming that stays true.
+   *
+   * Injecting a successCallback is safe: p5 calls it and then decrements its
+   * own preload counter regardless, so setup() still waits for every asset.
+   * Injecting a failureCallback is not free — p5 logs the load error only when
+   * no failureCallback was given, so ours has to log in its place.
    */
   function track(name) {
     var original = window[name];
@@ -32,16 +37,21 @@
       queued++;
       var counted = false;
       // Count each asset exactly once, whichever way it settles.
-      function settle(cb) {
+      function settle(cb, isFailure) {
         return function (arg) {
           if (!counted) {
             counted = true;
             settled++;
           }
-          if (typeof cb === 'function') cb(arg);
+          if (typeof cb === 'function') {
+            cb(arg);
+          } else if (isFailure) {
+            // Stand in for the console.error p5 would have emitted.
+            console.error('Failed to load ' + path, arg);
+          }
         };
       }
-      return original.call(this, path, settle(success), settle(failure));
+      return original.call(this, path, settle(success, false), settle(failure, true));
     };
   }
 
