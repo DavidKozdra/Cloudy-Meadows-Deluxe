@@ -21,6 +21,10 @@
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/addons/p5.sound.min.js"></script>
 
+    <!-- Wraps p5's loadImage/loadFont to measure boot progress. Must come after
+         p5 (the functions must exist) and before preload.js (which uses them). -->
+    <script type="text/javascript" src="loading.js?v=1"></script>
+
     <link rel="icon" type="image/png" sizes="32x32" href="images/pwa/favicon-32.png">
     <link rel="icon" type="image/png" sizes="512x512" href="images/pwa/icon-512.png">
     <script type="text/javascript" src="localDataStorage-3.0.0.min.js"></script>
@@ -82,16 +86,115 @@
             /* transform: scale(1.5); - Removed: causes mouse coordinate mismatch */
             /* transform-origin: center center; */
         }
-        
-    
+
+        /* --- Boot loading screen ---------------------------------------
+           Inline (not in styles.css) so it paints on the first parse,
+           without waiting on a stylesheet, the p5 CDN or the web font. */
+        #boot-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 18px;
+            background: #7ec0ee;
+            /* System stack: pixelFont.ttf may not have arrived yet. */
+            font-family: 'Press Start 2P', monospace;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #boot-loader.boot-loader-done {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #boot-loader-logo {
+            width: min(70vw, 420px);
+            image-rendering: pixelated;
+        }
+
+        #boot-loader-deluxe {
+            color: #fff8c9;
+            font-size: clamp(12px, 3vw, 20px);
+            letter-spacing: 0.35em;
+            text-shadow: 2px 2px 0 #2a5d80;
+            /* letter-spacing pads the right edge; pull back so it reads centered. */
+            margin-left: 0.35em;
+        }
+
+        #boot-loader-track {
+            position: relative;
+            width: min(70vw, 420px);
+            height: 14px;
+            background: #2a5d80;
+            border: 3px solid #1b3f58;
+            box-shadow: 0 0 0 3px #7ec0ee;
+        }
+
+        #boot-loader-bar {
+            width: 0;
+            height: 100%;
+            background: #7ed957;
+            /* Width is stepped every frame by loading.js; no CSS transition,
+               or the eased value and the transition would fight each other. */
+        }
+
+        #boot-loader-farmer {
+            position: absolute;
+            /* Stand on top of the track, not inside it. */
+            bottom: 100%;
+            left: -16px;
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+            background-repeat: no-repeat;
+            background-size: 32px 32px;
+            background-image: url('images/player/Side_Move.png');
+            animation: boot-farmer-walk 0.4s steps(1, end) infinite;
+        }
+
+        @keyframes boot-farmer-walk {
+            50% { background-image: url('images/player/SideMove2.png'); }
+        }
+
+        #boot-loader-status {
+            display: flex;
+            justify-content: space-between;
+            width: min(70vw, 420px);
+            color: #1b3f58;
+            font-size: clamp(7px, 1.6vw, 10px);
+        }
+
+        /* Respect users who don't want the walk cycle looping at them. */
+        @media (prefers-reduced-motion: reduce) {
+            #boot-loader-farmer { animation: none; }
+        }
     </style>
     <link rel="stylesheet" href="styles.css?v=2">
 
  
 </head>
   <body>
+    <!-- Boot loading screen. Covers the ~390-sprite p5 preload(); driven by
+         loading.js and removed from the DOM on the first rendered frame. -->
+    <div id="boot-loader">
+      <img id="boot-loader-logo" src="images/ui/Title_Screen.gif" alt="Cloudy Meadows">
+      <div id="boot-loader-deluxe">DELUXE</div>
+      <div id="boot-loader-track">
+        <div id="boot-loader-bar"></div>
+        <div id="boot-loader-farmer"></div>
+      </div>
+      <div id="boot-loader-status">
+        <span id="boot-loader-label">Growing the meadows…</span>
+        <span id="boot-loader-pct">0%</span>
+      </div>
+    </div>
+
     <div id="game-container"></div>
-    
+
     <!-- Mobile Controls Overlay -->
     <div id="mobile-controls">
       <!-- Top Left Menu Buttons -->
@@ -161,4 +264,3 @@
     <div id="menuOverlay"></div>
   </body>
 </html>
-m

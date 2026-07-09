@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v10';
+const CACHE_VERSION = 'v11';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -26,8 +26,14 @@ const APP_SHELL = [
   './manifest.webmanifest',
   './localDataStorage-3.0.0.min.js',
   './pwa-register.js',
+  './loading.js?v=1',
   './dialouge_list.json',
   './pixelFont.ttf',
+  // The loading screen's own art. Unlike the other ~400 sprites it can't wait
+  // for the runtime cache, since it has to render before the game boots.
+  './images/ui/Title_Screen.gif',
+  './images/player/Side_Move.png',
+  './images/player/SideMove2.png',
   './classes/Sound.js',
   './classes/Cloud.js',
   './classes/item.js?v=11',
