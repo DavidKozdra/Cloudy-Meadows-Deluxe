@@ -259,7 +259,7 @@ class BeachMechanics {
         fill(255);
         textAlign(LEFT, CENTER);
         textSize(10);
-        text('Stamina', x, y - 5);
+        text(t('Stamina'), x, y - 5);
         pop();
     }
 
@@ -269,7 +269,7 @@ class BeachMechanics {
         fill(255, 255, 255, 200);
         textAlign(CENTER, CENTER);
         textSize(14);
-        text('Fishing...', canvasWidth / 2, 50);
+        text(t('Fishing...'), canvasWidth / 2, 50);
         
         // Progress bar
         const barWidth = 100;

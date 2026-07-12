@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
+echo "Syncing Cloudy Meadows i18n catalogs..."
+node scripts/sync-i18n.js --translate
+git add farm_game/public/i18n/*.json
+
 echo "Running Cloudy Meadows test suite..."
 npm test
 git diff --check --cached

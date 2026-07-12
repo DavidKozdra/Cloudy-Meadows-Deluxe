@@ -149,7 +149,7 @@ class Quest {
         
         // Display current goal as a DOM popup inside the container
         if(this.goals[this.current_Goal] != undefined){
-            const goalName = this.goals[this.current_Goal].name;
+            const goalName = tGoal(this.goals[this.current_Goal]);
             
             // Ensure popup container exists
             this.ensurePopupContainer();
@@ -235,7 +235,7 @@ class Quest {
         // Create quest title
         const titleDiv = document.createElement('div');
         titleDiv.className = 'quest-title';
-        titleDiv.textContent = this.name;
+        titleDiv.textContent = tQuestName(this.name);
         
         // Add completed indicator to title if quest is done
         if (this.done) {
@@ -290,25 +290,25 @@ class Quest {
         statusDiv.className = 'quest-status';
 
         if (this.failed) {
-            statusDiv.textContent = 'Failed';
+            statusDiv.textContent = t('Failed');
             statusDiv.style.color = 'rgb(255, 0, 0)';
         } else if (this.done) {
             // Quest completed
-            statusDiv.textContent = 'Completed';
+            statusDiv.textContent = t('Completed');
             statusDiv.style.color = 'rgb(50, 200, 50)';
             statusDiv.style.fontWeight = 'bold';
         } else if (this.goals[this.current_Goal] === undefined) {
             // Quest completed but with unclaimed rewards
             if (this.reward_item !== 0 || this.reward_coins !== 0) {
-                statusDiv.textContent = 'Rewards Ready';
+                statusDiv.textContent = t('Rewards Ready');
                 statusDiv.style.color = 'rgb(255, 255, 0)';
             } else {
-                statusDiv.textContent = 'Completed';
+                statusDiv.textContent = t('Completed');
                 statusDiv.style.color = 'rgb(50, 200, 50)';
             }
         } else {
             // Show active status
-            statusDiv.textContent = `${completedGoals}/${this.goals.length} goals`;
+            statusDiv.textContent = `${completedGoals}/${this.goals.length} ${t('goals')}`;
             statusDiv.style.color = 'rgb(255, 255, 255)';
         }
         
@@ -374,7 +374,7 @@ class Quest {
         contentDiv.style.justifyContent = 'center';
         
         const goalName = document.createElement('div');
-        goalName.textContent = goal.name;
+        goalName.textContent = tGoal(goal);
         goalName.style.fontWeight = 'bold';
         goalName.style.marginBottom = '6px';
         goalName.style.fontSize = '12px';
@@ -390,23 +390,23 @@ class Quest {
         detailsDiv.style.lineHeight = '1.4';
         
         if (goal.class === 'TalkingGoal') {
-            detailsDiv.textContent = `NPC: ${goal.npc_name}`;
+            detailsDiv.textContent = `${t('NPC')}: ${t(goal.npc_name)}`;
             if (goal.item_name) {
                 const itemLine = document.createElement('div');
-                itemLine.textContent = `Give: ${goal.amount}x ${goal.item_name}`;
+                itemLine.textContent = `${t('Give')}: ${goal.amount}x ${tItem(goal.item_name)}`;
                 itemLine.style.marginTop = '3px';
                 detailsDiv.appendChild(itemLine);
             }
             if (goal.required_location) {
                 const locationLine = document.createElement('div');
-                locationLine.textContent = `Requires visiting: ${goal.required_location}`;
+                locationLine.textContent = `${t('Requires visiting')}: ${t(goal.required_location)}`;
                 locationLine.style.marginTop = '3px';
                 detailsDiv.appendChild(locationLine);
             }
         } else if (goal.class === 'TellGoal') {
-            detailsDiv.textContent = `NPC: ${goal.npc_name}`;
+            detailsDiv.textContent = `${t('NPC')}: ${t(goal.npc_name)}`;
             const tellLine = document.createElement('div');
-            tellLine.textContent = `Tell them: "${goal.reply_phrase}"`;
+            tellLine.textContent = `${t('Tell them')}: "${t(goal.reply_phrase)}"`;
             tellLine.style.marginTop = '3px';
             detailsDiv.appendChild(tellLine);
         }
@@ -420,26 +420,26 @@ class Quest {
                 const rewardLine = document.createElement('div');
                 const parts = [];
                 if (hasRewardItem && this.reward_item.name) {
-                    parts.push(`${this.reward_item.amount}x ${this.reward_item.name}`);
+                    parts.push(`${this.reward_item.amount}x ${tItem(this.reward_item.name)}`);
                 }
                 if (hasRewardCoins) {
-                    parts.push(`${this.reward_coins} coins`);
+                    parts.push(`${this.reward_coins} ${t('coins')}`);
                 }
-                rewardLine.textContent = 'Gift after talking: ' + parts.join(' and ');
+                rewardLine.textContent = t('Gift after talking') + ': ' + parts.join(' ' + t('and') + ' ');
                 rewardLine.style.marginTop = '3px';
                 rewardLine.style.color = 'rgb(70, 120, 40)';
                 detailsDiv.appendChild(rewardLine);
             }
         } else if (goal.class === 'LocationGoal') {
-            detailsDiv.textContent = `Location: ${goal.level_name}`;
+            detailsDiv.textContent = `${t('Location')}: ${t(goal.level_name)}`;
         } else if (goal.class === 'SellGoal') {
-            detailsDiv.textContent = `Sell: ${goal.amount}x ${goal.item_name}`;
+            detailsDiv.textContent = `${t('Sell')}: ${goal.amount}x ${tItem(goal.item_name)}`;
         } else if (goal.class === 'HaveGoal') {
-            detailsDiv.textContent = `Collect: ${goal.amount}x ${goal.item_name}`;
+            detailsDiv.textContent = `${t('Collect')}: ${goal.amount}x ${tItem(goal.item_name)}`;
         } else if (goal.class === 'FundingGoal') {
-            detailsDiv.textContent = `Earn: ${goal.amount} coins`;
+            detailsDiv.textContent = `${t('Earn')}: ${goal.amount} ${t('coins')}`;
         } else if (goal.class === 'OneTileCheck') {
-            detailsDiv.textContent = `Tile: ${goal.tile_name}`;
+            detailsDiv.textContent = `${t('Tile')}: ${t(goal.tile_name)}`;
         }
         
         contentDiv.appendChild(detailsDiv);
@@ -451,13 +451,13 @@ class Quest {
         
         if (this.failed) {
             statusDiv.style.color = 'rgb(200, 50, 50)';
-            statusDiv.textContent = '✗ Failed';
+            statusDiv.textContent = '✗ ' + t('Failed');
         } else if (goal.done) {
             statusDiv.style.color = 'rgb(50, 150, 50)';
-            statusDiv.textContent = '✓ Complete';
+            statusDiv.textContent = '✓ ' + t('Complete');
         } else {
             statusDiv.style.color = 'rgb(180, 100, 0)';
-            statusDiv.textContent = '○ To Do ';
+            statusDiv.textContent = '○ ' + t('To Do');
         }
         contentDiv.appendChild(statusDiv);
         
@@ -668,7 +668,7 @@ class Quest {
         header.appendChild(headerImg);
         
         const headerText = document.createElement('span');
-        headerText.textContent = 'Rewards';
+        headerText.textContent = t('Rewards');
         headerText.style.fontSize = '14px';
         headerText.style.fontWeight = 'bold';
         headerText.style.color = 'rgb(139, 98, 55)';
@@ -683,9 +683,9 @@ class Quest {
         badge.style.backgroundColor = this.rewards_given ? 'rgba(80, 170, 80, 0.2)' : (hasConfiguredReward ? 'rgba(255, 200, 80, 0.25)' : 'rgba(180, 180, 180, 0.3)');
         badge.style.color = this.rewards_given ? 'rgb(50, 140, 50)' : (hasConfiguredReward ? 'rgb(150, 110, 30)' : 'rgb(110, 110, 110)');
         if (hasConfiguredReward) {
-            badge.textContent = this.rewards_given ? 'Collected' : 'Pending';
+            badge.textContent = this.rewards_given ? t('Collected') : t('Pending');
         } else {
-            badge.textContent = 'None';
+            badge.textContent = t('None');
         }
         header.appendChild(badge);
         
@@ -717,7 +717,7 @@ class Quest {
             mainReward.appendChild(cloudImg);
             
             const rewardText = document.createElement('span');
-            rewardText.textContent = 'Freedom from Capitalism';
+            rewardText.textContent = t('Freedom from Capitalism');
             rewardText.style.fontSize = '13px';
             rewardText.style.color = 'rgb(100, 70, 40)';
             rewardText.style.fontWeight = 'bold';
@@ -749,14 +749,14 @@ class Quest {
             itemReward.appendChild(itemImg);
             
             const itemText = document.createElement('span');
-            itemText.textContent = `${rewardItemInfo.amount || 1}x ${rewardItemInfo.name}`;
+            itemText.textContent = `${rewardItemInfo.amount || 1}x ${tItem(rewardItemInfo.name)}`;
             itemText.style.fontSize = '13px';
             itemText.style.color = 'rgb(100, 70, 40)';
             itemText.style.fontWeight = 'bold';
             itemReward.appendChild(itemText);
             
             const itemState = document.createElement('span');
-            itemState.textContent = this.rewards_given ? 'Collected' : 'Pending';
+            itemState.textContent = this.rewards_given ? t('Collected') : t('Pending');
             itemState.style.fontSize = '11px';
             itemState.style.color = this.rewards_given ? 'rgb(50, 140, 50)' : 'rgb(150, 110, 30)';
             itemState.style.marginLeft = 'auto';
@@ -784,14 +784,14 @@ class Quest {
             coinReward.appendChild(coinImg);
             
             const coinText = document.createElement('span');
-            coinText.textContent = `${rewardCoinsValue} coins`;
+            coinText.textContent = `${rewardCoinsValue} ${t('coins')}`;
             coinText.style.fontSize = '13px';
             coinText.style.color = 'rgb(100, 70, 40)';
             coinText.style.fontWeight = 'bold';
             coinReward.appendChild(coinText);
             
             const coinState = document.createElement('span');
-            coinState.textContent = this.rewards_given ? 'Collected' : 'Pending';
+            coinState.textContent = this.rewards_given ? t('Collected') : t('Pending');
             coinState.style.fontSize = '11px';
             coinState.style.color = this.rewards_given ? 'rgb(50, 140, 50)' : 'rgb(150, 110, 30)';
             coinState.style.marginLeft = 'auto';
@@ -803,7 +803,7 @@ class Quest {
         // If no rewards were added, show a message
         if (!hasRewards) {
             const noRewardsText = document.createElement('div');
-            noRewardsText.textContent = 'No rewards for this quest';
+            noRewardsText.textContent = t('No rewards for this quest');
             noRewardsText.style.fontSize = '12px';
             noRewardsText.style.color = 'rgb(120, 90, 60)';
             noRewardsText.style.fontStyle = 'italic';
@@ -811,7 +811,7 @@ class Quest {
             rewardsContainer.appendChild(noRewardsText);
         } else if (this.rewards_given) {
             const collectedNote = document.createElement('div');
-            collectedNote.textContent = 'You already received these when the quest completed.';
+            collectedNote.textContent = t('You already received these when the quest completed.');
             collectedNote.style.fontSize = '11px';
             collectedNote.style.color = 'rgb(90, 120, 70)';
             collectedNote.style.padding = '4px 6px';
@@ -1127,7 +1127,7 @@ class Goal {
         stroke(0);
         strokeWeight(4);
         textAlign(CENTER, CENTER);
-        text(this.name, x, y);
+        text(tGoal(this), x, y);
         pop()
     }
 
@@ -1395,8 +1395,6 @@ class OneTileCheck extends Goal{
         }
     }
 }
-
-
 
 
 

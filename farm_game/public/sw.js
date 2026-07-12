@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -25,6 +25,12 @@ const APP_SHELL = [
   './styles.css?v=2',
   './manifest.webmanifest',
   './localDataStorage-3.0.0.min.js',
+  './i18n.js?v=1',
+  './i18n/es.json',
+  './i18n/fr.json',
+  './i18n/de.json',
+  './i18n/pt.json',
+  './i18n/ja.json',
   './pwa-register.js',
   './loading.js?v=1',
   './dialouge_list.json',

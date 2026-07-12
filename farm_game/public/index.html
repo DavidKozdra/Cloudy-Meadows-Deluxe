@@ -28,6 +28,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="images/pwa/favicon-32.png">
     <link rel="icon" type="image/png" sizes="512x512" href="images/pwa/icon-512.png">
     <script type="text/javascript" src="localDataStorage-3.0.0.min.js"></script>
+    <script type="text/javascript" src="i18n.js?v=1"></script>
     
     <!-- Class definitions (must load before usage in preload.js) -->
     <script src="classes/Sound.js"></script>
@@ -181,14 +182,14 @@
     <!-- Boot loading screen. Covers the ~390-sprite p5 preload(); driven by
          loading.js and removed from the DOM on the first rendered frame. -->
     <div id="boot-loader">
-      <img id="boot-loader-logo" src="images/ui/Title_Screen.gif" alt="Cloudy Meadows">
-      <div id="boot-loader-deluxe">DELUXE</div>
+      <img id="boot-loader-logo" src="images/ui/Title_Screen.gif" alt="Cloudy Meadows" data-i18n-alt="Cloudy Meadows">
+      <div id="boot-loader-deluxe" data-i18n="DELUXE">DELUXE</div>
       <div id="boot-loader-track">
         <div id="boot-loader-bar"></div>
         <div id="boot-loader-farmer"></div>
       </div>
       <div id="boot-loader-status">
-        <span id="boot-loader-label">Growing the meadows…</span>
+        <span id="boot-loader-label" data-i18n="Growing the meadows…">Growing the meadows…</span>
         <span id="boot-loader-pct">0%</span>
       </div>
     </div>

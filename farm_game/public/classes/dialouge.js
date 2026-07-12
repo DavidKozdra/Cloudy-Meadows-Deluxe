@@ -7,6 +7,7 @@ const TELL_PHRASE_WHITELIST = [
 class Dialouge {
     constructor(phrase, replies = [], hand_num, amount){
         this.phrase = phrase;
+        this.sourcePhrase = Array.isArray(phrase) ? phrase.join('') : String(phrase || '');
         this.phrase2 = [];
         for(let i = 0; i < this.phrase.length; i++){
           this.phrase2[i] = this.phrase[i];
@@ -29,6 +30,10 @@ class Dialouge {
         this.text_i = -1;
         this.done = false;
         this.noise = true;
+    }
+
+    getDisplayPhraseChars(){
+        return t(this.sourcePhrase).split('');
     }
 
     // Determine whether a reply is tied to a TellGoal and its state
@@ -81,24 +86,25 @@ class Dialouge {
         fill(255);
         stroke(0);
         strokeWeight(4);
-        text(name, (canvasWidth / 20) + 10, canvasHeight - 140);
-        text('Replies:', (canvasWidth / 2) - 10, canvasHeight - 140);
+        text(t(name), (canvasWidth / 20) + 10, canvasHeight - 140);
+        text(t('Replies:'), (canvasWidth / 2) - 10, canvasHeight - 140);
         textSize(13);
         strokeWeight(2);
-        text((typeof Controls_Eat_button_key !== 'undefined' ? Controls_Eat_button_key.toUpperCase() : 'Q') + ' to leave', ((3*canvasWidth) / 4) + 10, canvasHeight - 140);
+        text((typeof Controls_Eat_button_key !== 'undefined' ? Controls_Eat_button_key.toUpperCase() : 'Q') + ' ' + t('to leave'), ((3*canvasWidth) / 4) + 10, canvasHeight - 140);
         if (this.done == false){
             this.textWait -= 1;
             if(this.textWait <= 0){
                 this.text_i += 1;
                 this.textWait = this.maxTextWait
             }
-            this.phrase[this.text_i] = this.phrase2[this.text_i];
+            const displayPhrase = this.getDisplayPhraseChars();
+            this.phrase[this.text_i] = displayPhrase[this.text_i];
             text(this.phrase.join(''), (canvasWidth / 20) + 10, canvasHeight - 115, (canvasWidth / 2) - (canvasWidth / 20) - 20);
             if(this.noise){
                 npc_talkingSound.play();
             }
             this.noise = !this.noise;
-            if (this.text_i == this.phrase2.length - 1){
+            if (this.text_i == displayPhrase.length - 1){
                 this.done = true;
                 if(this.hand_num != -1 && inv[this.hand_num] != 0 && inv[this.hand_num].amount > 0){
                     if (this.amount >= inv[this.hand_num].amount){
@@ -106,7 +112,7 @@ class Dialouge {
                             addItem(player, item_name_to_num(inv[this.hand_num].name), inv[this.hand_num].amount);
                             inv[this.hand_num].amount = 0;
                             this.new_phrase = [];
-                            let phrase = "Sorry I dont have any more " + inv[this.hand_num].name;
+                            let phrase = t("Sorry I dont have any more") + " " + tItem(inv[this.hand_num].name);
                             for(let i = 0; i < phrase.length; i++){
                                 this.new_phrase[i] = phrase[i];
                             }
@@ -124,7 +130,7 @@ class Dialouge {
             }
         }
         else{
-            text(this.phrase2.join(''), (canvasWidth / 20) + 10, canvasHeight - 115, (canvasWidth / 2) - (canvasWidth / 20) - 20);
+            text(t(this.sourcePhrase), (canvasWidth / 20) + 10, canvasHeight - 115, (canvasWidth / 2) - (canvasWidth / 20) - 20);
         }
         stroke(0);
         const replies = this.getActiveReplies(name);
@@ -142,14 +148,14 @@ class Dialouge {
         // How many wrapped text lines a reply occupies (label included).
         const linesFor = (i) => {
             const tellState = this.getTellGoalState(name, replies[i].phrase);
-            const label = (tellState.isTell && tellState.hasTodo) ? ' [quest]' : '';
-            const len = replies[i].phrase.length + label.length;
+            const label = (tellState.isTell && tellState.hasTodo) ? ' [' + t('quest') + ']' : '';
+            const len = t(replies[i].phrase).length + label.length;
             return len > 22 ? ceil(len / 22) : 1;
         };
 
         if(replies.length === 0){
             fill(255);
-            text('- No replies available', REPLY_X, REPLY_TOP, REPLY_W);
+            text('- ' + t('No replies available'), REPLY_X, REPLY_TOP, REPLY_W);
         }
         else {
             // Pick the first visible reply so the selected one stays on screen and
@@ -184,14 +190,15 @@ class Dialouge {
                 const need = linesFor(i);
                 if (current_y + need * LINE_H > (REPLY_BOTTOM - REPLY_TOP)) break;
                 const tellState = this.getTellGoalState(name, replies[i].phrase);
-                const label = (tellState.isTell && tellState.hasTodo) ? ' [quest]' : '';
+                const label = (tellState.isTell && tellState.hasTodo) ? ' [' + t('quest') + ']' : '';
+                const replyText = t(replies[i].phrase);
                 if(current_reply == i){
                     fill(255, 255, 0);
-                    text('>' + replies[i].phrase + label, REPLY_X, REPLY_TOP + current_y, REPLY_W);
+                    text('>' + replyText + label, REPLY_X, REPLY_TOP + current_y, REPLY_W);
                 }
                 else{
                     fill(255);
-                    text('-' + replies[i].phrase + label, REPLY_X, REPLY_TOP + current_y, REPLY_W);
+                    text('-' + replyText + label, REPLY_X, REPLY_TOP + current_y, REPLY_W);
                 }
                 current_y += need * LINE_H;
                 lastVisible = i;

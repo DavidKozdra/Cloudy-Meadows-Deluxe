@@ -7,6 +7,7 @@
     "test": "npm run test:project && npm run test:unit",
     "test:project": "node scripts/test-project.js",
     "test:unit": "node --test \"farm_game/tests/**/*.test.js\"",
+    "i18n:sync": "node scripts/sync-i18n.js",
     "hooks:install": "node scripts/install-hooks.js",
     "prepare": "node scripts/install-hooks.js"
   },

@@ -481,7 +481,7 @@ function updateMobileInventoryUI() {
     
     // Update title
     if (titleEl) {
-        titleEl.textContent = container ? container.name + (readOnly ? ' (View only)' : '') : 'Inventory';
+        titleEl.textContent = container ? t(container.name) + (readOnly ? ' (' + t('View only') + ')' : '') : t('Inventory');
     }
     
     // Clear existing grids
@@ -499,15 +499,15 @@ function updateMobileInventoryUI() {
     // Update instructions text
     if (instructionsEl) {
         if (containerType === 'Robot') {
-            instructionsEl.textContent = 'Tap to select, tap destination to move. Add commands to instruction slots.';
+            instructionsEl.textContent = t('Tap to select, tap destination to move. Add commands to instruction slots.');
         } else {
-            instructionsEl.textContent = 'Tap an item to select, tap destination to move';
+            instructionsEl.textContent = t('Tap an item to select, tap destination to move');
         }
     }
     
     // Build container inventory grid
     if (containerType === 'Chest' || containerType === 'Backpack') {
-        containerLabel.textContent = containerType === 'Chest' ? 'Chest Storage' : 'Backpack Storage';
+        containerLabel.textContent = containerType === 'Chest' ? t('Chest Storage') : t('Backpack Storage');
         containerGrid.style.gridTemplateColumns = 'repeat(4, 60px)';
         
         // Container has 2D array [row][col]
@@ -526,7 +526,7 @@ function updateMobileInventoryUI() {
                 chestActionsDiv.id = 'mobile-inv-chest-actions';
                 chestActionsDiv.style.marginTop = '10px';
                 chestActionsDiv.innerHTML = `
-                    <button class="mobile-inv-action-btn destroy" id="mobile-chest-boom">💥 Boom</button>
+                    <button class="mobile-inv-action-btn destroy" id="mobile-chest-boom">💥 ${t('Boom')}</button>
                 `;
                 containerSection.appendChild(chestActionsDiv);
                 
@@ -549,7 +549,7 @@ function updateMobileInventoryUI() {
         }
     } else if (containerType === 'Robot') {
         // Robot has different structure: inv is 1D, and instructions are separate
-        containerLabel.textContent = 'Robot Storage';
+        containerLabel.textContent = t('Robot Storage');
         containerGrid.style.gridTemplateColumns = `repeat(${Math.min(container.inv.length, 8)}, 60px)`;
         
         // Robot storage (1D)
@@ -575,9 +575,9 @@ function updateMobileInventoryUI() {
         const robotControls = document.createElement('div');
         robotControls.id = 'mobile-inv-robot-controls';
         robotControls.innerHTML = `
-            <button class="mobile-inv-robot-btn ${temp_move_bool ? 'active' : ''}" id="mobile-robot-play" ${readOnly ? 'disabled' : ''}>▶ Play</button>
-            <button class="mobile-inv-robot-btn ${!temp_move_bool ? 'active' : ''}" id="mobile-robot-pause" ${readOnly ? 'disabled' : ''}>⏸ Pause</button>
-            <button class="mobile-inv-robot-btn destroy" id="mobile-robot-destroy" ${readOnly ? 'disabled' : ''}>🗑 Destroy</button>
+            <button class="mobile-inv-robot-btn ${temp_move_bool ? 'active' : ''}" id="mobile-robot-play" ${readOnly ? 'disabled' : ''}>▶ ${t('Play')}</button>
+            <button class="mobile-inv-robot-btn ${!temp_move_bool ? 'active' : ''}" id="mobile-robot-pause" ${readOnly ? 'disabled' : ''}>⏸ ${t('Pause')}</button>
+            <button class="mobile-inv-robot-btn destroy" id="mobile-robot-destroy" ${readOnly ? 'disabled' : ''}>🗑 ${t('Destroy')}</button>
         `;
         containerSection.appendChild(robotControls);
         
@@ -753,7 +753,7 @@ function handleMobileSlotTap(source, row, col, flatIndex) {
     const selected = mobileInventoryState.selectedSlot;
     const readOnly = (containerType === 'Robot' || containerType === 'Chest') && !playerCanEditContainer(container);
     if (readOnly && (source !== 'player' || (selected && selected.source !== 'player'))) {
-        updateMobileSelectedInfo('This container belongs to someone else');
+        updateMobileSelectedInfo(t('This container belongs to someone else'));
         return;
     }
     
@@ -1101,7 +1101,7 @@ function mobileSplitStack() {
     }
     
     if (!item || item === 0 || item.amount <= 1) {
-        updateMobileSelectedInfo('Cannot split - need 2+ items');
+        updateMobileSelectedInfo(t('Cannot split - need 2+ items'));
         return;
     }
     
@@ -1126,7 +1126,7 @@ function mobileSplitStack() {
     }
     
     if (!placed) {
-        updateMobileSelectedInfo('No empty slot for split');
+        updateMobileSelectedInfo(t('No empty slot for split'));
         return;
     }
     
@@ -1167,7 +1167,7 @@ function updateMobileSelectedInfo(message = null) {
     }
     
     if (item && item !== 0) {
-        infoDiv.textContent = `Selected: ${item.name} x${item.amount}`;
+        infoDiv.textContent = `${t('Selected')}: ${tItem(item.name)} x${item.amount}`;
     } else {
         infoDiv.textContent = '';
     }
@@ -1733,7 +1733,7 @@ function triggerTravelTransition(callback, destination = 'Unknown') {
     const destinationText = overlay.querySelector('.travel-destination');
     
     if (destinationText) {
-        destinationText.textContent = `Traveling to ${destination}`;
+        destinationText.textContent = `${t('Traveling to')} ${t(destination)}`;
     }
 
     if (typeof shouldReduceMotion === 'function' && shouldReduceMotion()) {
@@ -1824,6 +1824,8 @@ function draw() {
         startButton.hide();
         optionsButton.hide();
         creditsButton.hide();
+        const languageControl = document.getElementById('main-menu-language-control');
+        if (languageControl) languageControl.style.display = 'none';
         
         // Enable camera for mobile devices
         camera.enabled = isMobile;
@@ -1949,16 +1951,16 @@ function draw() {
             fill(255, 0, 0, player.a);
             textAlign(CENTER, CENTER);
             textFont(player_2);
-            text('YOU DIED', canvasWidth/2, canvasHeight/4);
+            text(t('YOU DIED'), canvasWidth/2, canvasHeight/4);
             textSize(20);
             if(player.transphase == 0){
-                text('Respawn in 10', canvasWidth/2, (3*canvasHeight)/4);
+                text(t('Respawn in') + ' 10', canvasWidth/2, (3*canvasHeight)/4);
             }
             else if(player.transphase == 1){
-                text('Respawn in ' + floor((600-player.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
+                text(t('Respawn in') + ' ' + floor((600-player.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
             }
             else if(player.transphase == 2){
-                text('Respawn in 0', canvasWidth/2, (3*canvasHeight)/4);
+                text(t('Respawn in') + ' 0', canvasWidth/2, (3*canvasHeight)/4);
             }
             pop();
         }
@@ -2162,7 +2164,7 @@ function drawTimeWatchHUD() {
     textFont(player_2);
     textSize(constrain(tileSize * 0.34, 9, 13));
     fill(255, 255, 255, 170);
-    text('TIME WATCH', cx, panelY + panelH * 0.22);
+    text(t('TIME WATCH'), cx, panelY + panelH * 0.22);
     textSize(constrain(tileSize * 0.48, 13, 20));
     fill(accent[0], accent[1], accent[2]);
     text(TIME_WATCH_LABELS[idx], cx, panelY + panelH * 0.46);
@@ -2225,13 +2227,13 @@ function render_ui() {
     stroke(0);
     strokeWeight(2);
     textSize(13);
-    text('day', canvasWidth - 39, 30);
+    text(t('day'), canvasWidth - 39, 30);
     stroke(255);
     textSize(15);
     fill(0);
     text(days, canvasWidth - 40, 50);
     if(days == 69){
-        text("nice !", canvasWidth - 40, 60);
+        text(t("nice !"), canvasWidth - 40, 60);
     }
 
     pop();
@@ -2253,7 +2255,7 @@ function render_ui() {
         textFont(player_2);
         textSize(10);
         fill(255, 0, 0, player.inv_warn_anim);
-        text("Full", 67, canvasHeight - mod - 10)
+            text(t("Full"), 67, canvasHeight - mod - 10)
         tint(255, player.inv_warn_anim);
         image(inv_warn_img, 55, (canvasHeight - 64) - mod);
         pop()
@@ -2473,7 +2475,8 @@ function render_ui() {
                     stroke(100);
                     strokeWeight(1);
                     rectMode(CENTER);
-                    const itemNameLength = player.inv[i].name.length;
+                    const displayItemName = tItem(player.inv[i].name);
+                    const itemNameLength = displayItemName.length;
                     const boxWidth = itemNameLength * 15;
                     rect((9 * canvasWidth / 16), (canvasHeight - 80), boxWidth, 20);
                     
@@ -2483,7 +2486,7 @@ function render_ui() {
                     const itemNameSize = itemNameLength > 20 ? 9 : (itemNameLength > 15 ? 11 : 13);
                     textSize(itemNameSize);
                     textAlign(CENTER, CENTER);
-                    text(player.inv[i].name, (9 * canvasWidth / 16), (canvasHeight - 80));
+                    text(displayItemName, (9 * canvasWidth / 16), (canvasHeight - 80));
                     pop();
                 }
             }
@@ -2579,15 +2582,15 @@ function render_ui() {
             strokeWeight(4);
             fill(255, 160, 160, pulseAlpha);
             textSize(titleSize);
-            text('YOU ARE HUNGRY', 0, -cardH * 0.04);
+            text(t('YOU ARE HUNGRY'), 0, -cardH * 0.04);
             stroke(0, 0, 0, 160);
             strokeWeight(3);
             fill(255, 210, 120, pulseAlpha);
             textSize(msgSize);
-            text('Eat something soon!', 0, cardH * 0.32 - msgSize);
+            text(t('Eat something soon!'), 0, cardH * 0.32 - msgSize);
             let hintText = (typeof isMobile !== 'undefined' && isMobile)
                 ? 'Tap Eat to recover hunger'
-                : ('Press ' + (typeof Controls_Eat_button_key !== 'undefined' ? Controls_Eat_button_key.toUpperCase() : 'Q') + ' to eat');
+                : (t('Press') + ' ' + (typeof Controls_Eat_button_key !== 'undefined' ? Controls_Eat_button_key.toUpperCase() : 'Q') + ' ' + t('to eat'));
             noStroke();
             fill(255, 240, 160, pulseAlpha);
             textSize(msgSize * 0.7);

@@ -233,6 +233,8 @@ function start(){
         startButton.hide();
         optionsButton.hide();
         creditsButton.hide();
+        const languageControl = document.getElementById('main-menu-language-control');
+        if (languageControl) languageControl.style.display = 'none';
         resetControlsButton.hide();
         clearButton.hide();
         hideControls();
@@ -1156,7 +1158,7 @@ function createTutorialSection(sectionConfig) {
     if (sectionConfig.title) {
         const title = document.createElement('h3');
         title.className = 'tutorial-section-title';
-        title.textContent = sectionConfig.title;
+        title.textContent = t(sectionConfig.title);
         section.appendChild(title);
     }
 
@@ -1165,7 +1167,7 @@ function createTutorialSection(sectionConfig) {
         list.className = 'tutorial-list';
         sectionConfig.lines.forEach(lineText => {
             const item = document.createElement('li');
-            item.textContent = lineText;
+            item.textContent = t(lineText);
             list.appendChild(item);
         });
         section.appendChild(list);
@@ -1183,7 +1185,7 @@ function createTutorialSpotlightCard(spotlightConfig) {
     const portrait = document.createElement('img');
     portrait.className = 'tutorial-spotlight-portrait';
     portrait.src = spotlightConfig.image;
-    portrait.alt = spotlightConfig.alt || spotlightConfig.name || 'NPC';
+    portrait.alt = t(spotlightConfig.alt || spotlightConfig.name || 'NPC');
     portrait.width = 96;
     portrait.height = 96;
     portraitWrap.appendChild(portrait);
@@ -1195,19 +1197,19 @@ function createTutorialSpotlightCard(spotlightConfig) {
     if (spotlightConfig.eyebrow) {
         const eyebrow = document.createElement('div');
         eyebrow.className = 'tutorial-spotlight-eyebrow';
-        eyebrow.textContent = spotlightConfig.eyebrow;
+        eyebrow.textContent = t(spotlightConfig.eyebrow);
         content.appendChild(eyebrow);
     }
 
     const name = document.createElement('h3');
     name.className = 'tutorial-spotlight-name';
-    name.textContent = spotlightConfig.name;
+    name.textContent = t(spotlightConfig.name);
     content.appendChild(name);
 
     if (spotlightConfig.location) {
         const location = document.createElement('div');
         location.className = 'tutorial-spotlight-location';
-        location.textContent = spotlightConfig.location;
+        location.textContent = t(spotlightConfig.location);
         content.appendChild(location);
     }
 
@@ -1217,14 +1219,14 @@ function createTutorialSpotlightCard(spotlightConfig) {
     if (spotlightConfig.action) {
         const actionChip = document.createElement('div');
         actionChip.className = 'tutorial-spotlight-chip tutorial-spotlight-chip-action';
-        actionChip.textContent = spotlightConfig.action;
+        actionChip.textContent = t(spotlightConfig.action);
         chips.appendChild(actionChip);
     }
 
     if (spotlightConfig.detail) {
         const detailChip = document.createElement('div');
         detailChip.className = 'tutorial-spotlight-chip';
-        detailChip.textContent = spotlightConfig.detail;
+        detailChip.textContent = t(spotlightConfig.detail);
         chips.appendChild(detailChip);
     }
 
@@ -1252,7 +1254,7 @@ function createTutorialStepCards(stepConfigs) {
 
         const title = document.createElement('h3');
         title.className = 'tutorial-step-title';
-        title.textContent = stepConfig.title;
+        title.textContent = t(stepConfig.title);
         content.appendChild(title);
 
         if (stepConfig.lines && stepConfig.lines.length) {
@@ -1260,7 +1262,7 @@ function createTutorialStepCards(stepConfigs) {
             list.className = 'tutorial-list tutorial-list-compact';
             stepConfig.lines.forEach(lineText => {
                 const item = document.createElement('li');
-                item.textContent = lineText;
+                item.textContent = t(lineText);
                 list.appendChild(item);
             });
             content.appendChild(list);
@@ -1287,7 +1289,7 @@ function createTutorialAssetGrid(assetConfigs) {
         const image = document.createElement('img');
         image.className = 'tutorial-asset-image';
         image.src = assetConfig.image;
-        image.alt = assetConfig.alt || assetConfig.title || 'Tutorial asset';
+        image.alt = t(assetConfig.alt || assetConfig.title || 'Tutorial asset');
         image.width = assetConfig.width || 52;
         image.height = assetConfig.height || 52;
         media.appendChild(image);
@@ -1298,13 +1300,13 @@ function createTutorialAssetGrid(assetConfigs) {
 
         const title = document.createElement('h4');
         title.className = 'tutorial-asset-title';
-        title.textContent = assetConfig.title;
+        title.textContent = t(assetConfig.title);
         content.appendChild(title);
 
         if (assetConfig.description) {
             const description = document.createElement('p');
             description.className = 'tutorial-asset-description';
-            description.textContent = assetConfig.description;
+            description.textContent = t(assetConfig.description);
             content.appendChild(description);
         }
 
@@ -1325,19 +1327,19 @@ function createTutorialDirectoryHero(tabConfig) {
     if (tabConfig.eyebrow) {
         const eyebrow = document.createElement('div');
         eyebrow.className = 'tutorial-directory-eyebrow';
-        eyebrow.textContent = tabConfig.eyebrow;
+        eyebrow.textContent = t(tabConfig.eyebrow);
         copy.appendChild(eyebrow);
     }
 
     const title = document.createElement('h3');
     title.className = 'tutorial-directory-title';
-    title.textContent = tabConfig.title;
+    title.textContent = t(tabConfig.title);
     copy.appendChild(title);
 
     if (tabConfig.description) {
         const description = document.createElement('p');
         description.className = 'tutorial-directory-description';
-        description.textContent = tabConfig.description;
+        description.textContent = t(tabConfig.description);
         copy.appendChild(description);
     }
 
@@ -1347,7 +1349,7 @@ function createTutorialDirectoryHero(tabConfig) {
         tabConfig.chips.forEach(chipText => {
             const chip = document.createElement('span');
             chip.className = 'tutorial-directory-chip';
-            chip.textContent = chipText;
+            chip.textContent = t(chipText);
             chips.appendChild(chip);
         });
         copy.appendChild(chips);
@@ -1362,7 +1364,7 @@ function createTutorialDirectoryHero(tabConfig) {
         const image = document.createElement('img');
         image.className = 'tutorial-directory-hero-image';
         image.src = tabConfig.image;
-        image.alt = tabConfig.alt || tabConfig.title || 'Tutorial topic';
+        image.alt = t(tabConfig.alt || tabConfig.title || 'Tutorial topic');
         image.width = 140;
         image.height = 140;
         media.appendChild(image);
@@ -1442,13 +1444,13 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
 
         const label = document.createElement('span');
         label.className = 'tutorial-directory-tab-label';
-        label.textContent = tabConfig.label;
+        label.textContent = t(tabConfig.label);
         text.appendChild(label);
 
         if (tabConfig.navHint && !options.hideNavHints) {
             const hint = document.createElement('span');
             hint.className = 'tutorial-directory-tab-hint';
-            hint.textContent = tabConfig.navHint;
+            hint.textContent = t(tabConfig.navHint);
             text.appendChild(hint);
         }
 
@@ -1900,8 +1902,8 @@ function renderTutorialPrompt(prompt) {
     modal.className = 'tutorial-modal' +
         (prompt.theme === 'urgent' ? ' tutorial-modal-urgent' : '') +
         (prompt.layout === 'directory' ? ' tutorial-modal-directory' : '');
-    title.textContent = prompt.title;
-    intro.textContent = prompt.intro || '';
+    title.textContent = t(prompt.title);
+    intro.textContent = prompt.intro ? t(prompt.intro) : '';
     intro.style.display = prompt.intro ? 'block' : 'none';
     body.className = 'tutorial-body' + (prompt.layout === 'directory' ? ' tutorial-body-directory' : '');
     body.innerHTML = '';
@@ -1930,7 +1932,7 @@ function renderTutorialPrompt(prompt) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'tutorial-button' + (buttonConfig.variant === 'secondary' ? ' tutorial-button-secondary' : '');
-        btn.textContent = buttonConfig.label;
+        btn.textContent = t(buttonConfig.label);
         btn.addEventListener('click', () => {
             if (buttonConfig.action === 'open-quests') {
                 closeTutorialOverlay(() => {
@@ -2149,17 +2151,32 @@ function showMainMenu(){
         deluxeText.textContent = 'DELUXE';
         container.appendChild(deluxeText);
 
+        const languageWrap = document.createElement('div');
+        languageWrap.className = 'main-menu-language-control';
+        const languageLabel = document.createElement('label');
+        languageLabel.className = 'main-menu-language-label';
+        languageLabel.htmlFor = 'dom-main-menu-language-select';
+        languageLabel.textContent = '🌐 ' + t('Language');
+        languageLabel.setAttribute('data-i18n-prefix', '🌐 ');
+        languageLabel.setAttribute('data-i18n', 'Language');
+        const languageSelect = createLanguageSelect('language-select main-menu-language-select');
+        languageSelect.id = 'dom-main-menu-language-select';
+        languageWrap.appendChild(languageLabel);
+        languageWrap.appendChild(languageSelect);
+        container.appendChild(languageWrap);
+
         startBtn = document.createElement('button');
         startBtn.id = 'start-btn';
         startBtn.className = 'main-menu-button';
-        startBtn.textContent = 'Start'; // Default label in case save check fails early
+        startBtn.textContent = t('Start'); // Default label in case save check fails early
         startBtn.addEventListener('click', start);
         container.appendChild(startBtn);
 
         const optionsBtn = document.createElement('button');
         optionsBtn.id = 'options-btn';
         optionsBtn.className = 'main-menu-button';
-        optionsBtn.textContent = 'Options';
+        optionsBtn.textContent = t('Options');
+        optionsBtn.setAttribute('data-i18n', 'Options');
         optionsBtn.addEventListener('click', () => {
             paused = !paused;
             creditsOn = false;
@@ -2169,7 +2186,8 @@ function showMainMenu(){
         const creditsBtn = document.createElement('button');
         creditsBtn.id = 'credits-btn';
         creditsBtn.className = 'main-menu-button';
-        creditsBtn.textContent = 'Credits';
+        creditsBtn.textContent = t('Credits');
+        creditsBtn.setAttribute('data-i18n', 'Credits');
         creditsBtn.addEventListener('click', () => {
             creditsOn = !creditsOn;
             paused = false;
@@ -2179,7 +2197,7 @@ function showMainMenu(){
     // Refresh label every time in case save data was added or cleared
     const hasSavedGame = hasGameSave();
     if (startBtn) {
-        startBtn.textContent = hasSavedGame ? 'Continue' : 'Start';
+        startBtn.textContent = hasSavedGame ? t('Continue') : t('Start');
     } else {
         console.warn('Main menu start button missing');
     }
@@ -2926,6 +2944,29 @@ function createAccessibilitySettingsSection(contextId, sectionOptions = {}) {
     return section;
 }
 
+function createLanguageSettingsSection(contextId, sectionOptions = {}) {
+    const section = document.createElement('div');
+    section.className = (sectionOptions.compact ? 'pause-menu-section' : 'options-section') + ' language-settings-section';
+
+    const title = document.createElement(sectionOptions.compact ? 'div' : 'h3');
+    title.className = sectionOptions.compact ? 'pause-controls-title' : 'options-section-title';
+    title.textContent = t('Language');
+    title.setAttribute('data-i18n', 'Language');
+    section.appendChild(title);
+
+    const intro = document.createElement('p');
+    intro.className = sectionOptions.compact ? 'pause-menu-label' : 'options-section-description';
+    intro.textContent = t('Choose the language for dialogue, menus, quests, items, and HUD text.');
+    intro.setAttribute('data-i18n', 'Choose the language for dialogue, menus, quests, items, and HUD text.');
+    section.appendChild(intro);
+
+    const select = createLanguageSelect('language-select settings-language-select');
+    select.id = contextId + '-language-select';
+    section.appendChild(select);
+
+    return section;
+}
+
 function showOptions(){
     push()
     stroke(149, 108, 65);
@@ -3000,6 +3041,10 @@ function showTitleOptions(){
             tab.className = 'options-tab';
             tab.dataset.tab = tabId;
             tab.textContent = label;
+            if (tabId === 'language') {
+                tab.setAttribute('data-i18n-prefix', '🌐 ');
+                tab.setAttribute('data-i18n', 'Language');
+            }
             tab.id = 'title-options-tab-' + tabId;
             tab.setAttribute('role', 'tab');
             tab.setAttribute('aria-controls', 'title-options-panel-' + tabId);
@@ -3023,6 +3068,7 @@ function showTitleOptions(){
 
         const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
         const audioPanel = createOptionsPanel('audio', 'Audio');
+        const languagePanel = createOptionsPanel('language', '🌐 ' + t('Language'));
         const accessibilityPanel = createOptionsPanel('accessibility', 'Accessibility');
         const controlsPanel = !mobileOrSmallScreen ? createOptionsPanel('controls', 'Controls') : null;
         const dataPanel = createOptionsPanel('data', 'Data');
@@ -3079,6 +3125,7 @@ function showTitleOptions(){
         fxRow.appendChild(fxSlider);
         audioSection.appendChild(fxRow);
         audioPanel.appendChild(audioSection);
+        languagePanel.appendChild(createLanguageSettingsSection('title-options'));
         accessibilityPanel.appendChild(createAccessibilitySettingsSection('title'));
 
         if (controlsPanel) {
@@ -4832,6 +4879,10 @@ function ensurePauseMenuContainer() {
         tab.className = 'options-tab pause-tab';
         tab.dataset.tab = tabId;
         tab.textContent = label;
+        if (tabId === 'language') {
+            tab.setAttribute('data-i18n-prefix', '🌐 ');
+            tab.setAttribute('data-i18n', 'Language');
+        }
         tab.id = 'pause-tab-' + tabId;
         tab.setAttribute('role', 'tab');
         tab.setAttribute('aria-controls', 'pause-panel-' + tabId);
@@ -4855,6 +4906,7 @@ function ensurePauseMenuContainer() {
 
     const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
     const audioPanel = createPausePanel('audio', 'Audio');
+    const languagePanel = createPausePanel('language', '🌐 ' + t('Language'));
     const accessibilityPanel = createPausePanel('accessibility', 'Accessibility');
     const controlsPanel = !mobileOrSmallScreen ? createPausePanel('controls', 'Controls') : null;
     const helpPanel = !mobileOrSmallScreen ? createPausePanel('help', 'Help') : null;
@@ -4908,6 +4960,7 @@ function ensurePauseMenuContainer() {
     sliderSection.appendChild(fxRow);
 
     audioPanel.appendChild(sliderSection);
+    languagePanel.appendChild(createLanguageSettingsSection('pause', { compact: true }));
     accessibilityPanel.appendChild(createAccessibilitySettingsSection('pause', { compact: true }));
 
     if (controlsPanel) {

@@ -247,7 +247,7 @@ class Level {
         // Animate position based on y value
         levelPopup.style.transform = 'translateY(' + this.y + 'px)';
         
-        levelPopup.textContent = this.name;
+        levelPopup.textContent = t(this.name);
 
         }
         else{

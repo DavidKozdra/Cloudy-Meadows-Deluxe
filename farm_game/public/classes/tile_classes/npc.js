@@ -123,7 +123,7 @@ class NPC extends GridMoveEntity {
                 textSize(10);
                 fill(255,0,0);
                 textAlign(CENTER, CENTER);
-                text('You cannot afford to travel! (Cost: ' + travel_price + ')', canvasWidth / 4 ,  canvasHeight - 480, 320);
+                text(t('You cannot afford to travel!') + ' (' + t('Cost') + ': ' + travel_price + ')', canvasWidth / 4 ,  canvasHeight - 480, 320);
                 pop();
             }
             AirBallon.prototype.tp_render.call(this);

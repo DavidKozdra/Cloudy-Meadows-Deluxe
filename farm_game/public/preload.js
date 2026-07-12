@@ -1,6 +1,9 @@
 //! Make art for pumpkin shop, only include if month is October
 
 function preload() {
+    if (typeof i18nPreload === 'function') {
+        i18nPreload();
+    }
     musicplayer = new MusicPlayer(['audio/Main_theme.wav','audio/calm_dings.mp3','audio/empty_burst.mp3','audio/Main_theme.mp3','audio/Silence.wav','audio/Ambiance.wav', 'audio/Ambiance.wav', 'audio/Ambiance.wav', 'audio/Silence.wav'])
 
     //Items
@@ -964,7 +967,7 @@ function setup() {
     }
     
 
-    startButton = createButton('Start');
+    startButton = createButton(t('Start'));
     startButton.parent('game-container');
     startButton.position(canvasWidth/2-250/2, canvasHeight/2+120);
     startButton.mousePressed(start);
@@ -974,7 +977,7 @@ function setup() {
     startButton.style('cursor', 'pointer');
    
     
-    optionsButton = createButton('Options');
+    optionsButton = createButton(t('Options'));
     optionsButton.parent('game-container');
     optionsButton.position(canvasWidth/2-250/2, canvasHeight/2+160);
     optionsButton.mousePressed(() => {
@@ -987,7 +990,7 @@ function setup() {
     optionsButton.style("font-family","pixelFont");
     optionsButton.style('cursor', 'pointer');
 
-    creditsButton = createButton('Credits');
+    creditsButton = createButton(t('Credits'));
     creditsButton.parent('game-container');
     creditsButton.position(canvasWidth/2-250/2, canvasHeight/2+200);
     creditsButton.mousePressed(() => {
@@ -1000,7 +1003,31 @@ function setup() {
     creditsButton.style("font-family","pixelFont");
     creditsButton.style('cursor', 'pointer');
 
-    robotPlayButton = createButton('Play');
+    const languageControl = document.createElement('div');
+    languageControl.id = 'main-menu-language-control';
+    languageControl.className = 'main-menu-language-control p5-main-menu-language-control';
+    const languageLabel = document.createElement('label');
+    languageLabel.className = 'main-menu-language-label';
+    languageLabel.htmlFor = 'main-menu-language-select';
+    languageLabel.textContent = '🌐 ' + t('Language');
+    languageLabel.setAttribute('data-i18n-prefix', '🌐 ');
+    languageLabel.setAttribute('data-i18n', 'Language');
+    const languageSelect = createLanguageSelect('language-select main-menu-language-select');
+    languageSelect.id = 'main-menu-language-select';
+    languageControl.appendChild(languageLabel);
+    languageControl.appendChild(languageSelect);
+    document.getElementById('game-container').appendChild(languageControl);
+
+    window.addEventListener('languageChanged', () => {
+        startButton.html(t('Start'));
+        optionsButton.html(t('Options'));
+        creditsButton.html(t('Credits'));
+        robotPlayButton.html(t('Play'));
+        robotPauseButton.html(t('Pause'));
+        robotBoomButton.html(t('Boom'));
+    });
+
+    robotPlayButton = createButton(t('Play'));
     robotPlayButton.parent('game-container');
     robotPlayButton.position(((11*canvasWidth)/16) - 55, canvasHeight/8 - 5);
     robotPlayButton.mousePressed(() => {
@@ -1013,7 +1040,7 @@ function setup() {
     robotPlayButton.style('cursor', 'pointer');
     robotPlayButton.hide();
 
-    robotPauseButton = createButton('Pause');
+    robotPauseButton = createButton(t('Pause'));
     robotPauseButton.parent('game-container');
     robotPauseButton.position(((11*canvasWidth)/16) + 19, canvasHeight/8 - 5);
     robotPauseButton.mousePressed(() => {
@@ -1026,14 +1053,14 @@ function setup() {
     robotPauseButton.style('cursor', 'pointer');
     robotPauseButton.hide();
 
-    robotBoomButton = createButton('Boom');
+    robotBoomButton = createButton(t('Boom'));
     robotBoomButton.parent('game-container');
     robotBoomButton.position(((14*canvasWidth)/16) - 30, canvasHeight/8 - 5);
     robotBoomButton.mousePressed(() => {
         // Handle chest destruction
         if (player.talking && player.talking.class === 'Chest') {
             if (!playerCanEditContainer(player.talking)) return;
-            if (confirm('Are you sure? Booming the chest will REMOVE EVERYTHING inside it!')) {
+            if (confirm(t('Are you sure? Booming the chest will REMOVE EVERYTHING inside it!'))) {
                 // Try to add the chest to player inventory
                 if(checkForSpace(player, item_name_to_num('Chest'))){
                     addItem(player, item_name_to_num('Chest'), 1);
@@ -1050,7 +1077,7 @@ function setup() {
         // Handle robot destruction
         if (player.looking(currentLevel_x, currentLevel_y) && player.looking(currentLevel_x, currentLevel_y).class === 'Robot') {
             if (!playerCanEditContainer(player.looking(currentLevel_x, currentLevel_y))) return;
-            if (confirm('Are you sure? Booming the robot will REMOVE ALL its inventory and it cannot be recovered!')) {
+            if (confirm(t('Are you sure? Booming the robot will REMOVE ALL its inventory and it cannot be recovered!'))) {
                 if(checkForSpace(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name))){
                     addItem(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name), 1);
                     if (player.touching != 0) {

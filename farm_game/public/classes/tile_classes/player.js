@@ -1161,6 +1161,7 @@ function takeInput() {
                         player.talking.dialouges[i].phrase = [];
                         if(player.talking.dialouges[i].new_phrase != -1){
                             player.talking.dialouges[i].phrase2 = player.talking.dialouges[i].new_phrase;
+                            player.talking.dialouges[i].sourcePhrase = player.talking.dialouges[i].phrase2.join('');
                             player.talking.dialouges[i].new_phrase = -1;
                         }
                         if(player.talking.dialouges[i].new_replies != -1){
@@ -1422,6 +1423,7 @@ function takeInput() {
                     player.talking.dialouges[player.talking.current_dialouge].phrase = [];
                     if(player.talking.dialouges[player.talking.current_dialouge].new_phrase != -1){
                         player.talking.dialouges[player.talking.current_dialouge].phrase2 = player.talking.dialouges[player.talking.current_dialouge].new_phrase;
+                        player.talking.dialouges[player.talking.current_dialouge].sourcePhrase = player.talking.dialouges[player.talking.current_dialouge].phrase2.join('');
                         player.talking.dialouges[player.talking.current_dialouge].new_phrase = -1;
                     }
                     if(player.talking.dialouges[player.talking.current_dialouge].new_replies != -1){

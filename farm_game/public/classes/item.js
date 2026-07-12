@@ -42,14 +42,14 @@ class Item {
 		// Show tooltip on hover
 		if(Item.isMouseOver(x, y)){
 			fill(0);
-			const nameStr = str(this.name);
+			const nameStr = str(tItem(this.name));
 			const tooltipWidth = nameStr.length * (nameStr.length > 5 ? Item.TOOLTIP_CHAR_WIDTH_LONG : Item.TOOLTIP_CHAR_WIDTH_SHORT);
 			rectMode(CENTER)
 			rect(x + Item.HALF_SIZE, y - Item.TOOLTIP_OFFSET, tooltipWidth, Item.TOOLTIP_OFFSET);
 			textSize(8);
 			textFont(player_2);
 			fill(255);
-			text(this.name, x + Item.HALF_SIZE, y - Item.TOOLTIP_OFFSET);
+			text(tItem(this.name), x + Item.HALF_SIZE, y - Item.TOOLTIP_OFFSET);
 		}
 
 		pop();
@@ -137,10 +137,10 @@ class Backpack extends Item {
         fill(255);
         stroke(0);
         strokeWeight(4);
-        text(this.name, (canvasWidth / 4) + 10, (canvasHeight/4) + 10);
+        text(tItem(this.name), (canvasWidth / 4) + 10, (canvasHeight/4) + 10);
         textSize(13);
         strokeWeight(2);
-        text(String.fromCharCode(eat_button) +' to leave', ((2*canvasWidth) / 4) + 45, (canvasHeight/4) + 10);
+        text(String.fromCharCode(eat_button) + ' ' + t('to leave'), ((2*canvasWidth) / 4) + 45, (canvasHeight/4) + 10);
         stroke(255, 255, 0);
         strokeWeight(5);
         fill(149, 108, 65);

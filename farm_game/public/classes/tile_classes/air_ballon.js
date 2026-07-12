@@ -24,11 +24,11 @@ class AirBallon extends Entity {
         fill(255);
         stroke(0);
         strokeWeight(4);
-        text(this.name, (canvasWidth / 20) + 10, canvasHeight - 140);
+        text(t(this.name), (canvasWidth / 20) + 10, canvasHeight - 140);
         strokeWeight(2);
-        text(String.fromCharCode(eat_button) + ' to leave', ((3*canvasWidth) / 4)- 10, canvasHeight - 140);
+        text(String.fromCharCode(eat_button) + ' ' + t('to leave'), ((3*canvasWidth) / 4)- 10, canvasHeight - 140);
         textAlign(CENTER, TOP);
-        text('Where to?', (canvasWidth / 2), canvasHeight - 140);
+        text(t('Where to?'), (canvasWidth / 2), canvasHeight - 140);
         
         // Filter out current location and disabled areas from the list
         const currentLocationName = levels[currentLevel_y][currentLevel_x].name;
@@ -55,7 +55,7 @@ class AirBallon extends Entity {
             else{
                 fill(255);
             }
-            text(this.availablePlaces[i], (canvasWidth / 2), (canvasHeight - 110) + (i * 32) + 8);
+            text(t(this.availablePlaces[i]), (canvasWidth / 2), (canvasHeight - 110) + (i * 32) + 8);
         }
         pop()
     }

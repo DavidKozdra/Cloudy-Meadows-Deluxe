@@ -143,12 +143,12 @@ class Shop extends Entity {
         strokeWeight(4);
         
         // Show shop name
-        text(this.name, (canvasWidth / 20) + 10, canvasHeight - 140);
+        text(t(this.name), (canvasWidth / 20) + 10, canvasHeight - 140);
         
         textSize(13);
         strokeWeight(2);
-        text(String.fromCharCode(eat_button) + ' to leave', ((3*canvasWidth) / 4) + 10, canvasHeight - 140);
-        text('Item,                cost,   quantity in store', (canvasWidth / 20) + 42, canvasHeight - 115);
+        text(String.fromCharCode(eat_button) + ' ' + t('to leave'), ((3*canvasWidth) / 4) + 10, canvasHeight - 140);
+        text(t('Item,                cost,   quantity in store'), (canvasWidth / 20) + 42, canvasHeight - 115);
         
         // Get only enabled items
         const enabledIndices = this.getEnabledIndices();
@@ -158,7 +158,7 @@ class Shop extends Entity {
             // No items available (all disabled)
             fill(150);
             textSize(13);
-            text('No items available', (canvasWidth / 20) + 42, (canvasHeight - 100) + 8);
+            text(t('No items available'), (canvasWidth / 20) + 42, (canvasHeight - 100) + 8);
         } else if(current_reply < 1 || enabledCount <= 3){
             for(let vi = 0; vi < min(enabledCount, 3); vi++){
                 const i = enabledIndices[vi]; // Get actual inventory index
@@ -185,7 +185,7 @@ class Shop extends Entity {
                 let itemNameLength = this.inv[i].name.length;
                 let itemNameSize = itemNameLength > 20 ? 9 : (itemNameLength > 15 ? 11 : 13);
                 textSize(itemNameSize);
-                text(this.inv[i].name, (canvasWidth / 20) + 42, (canvasHeight - 100) + (vi * 32) + 8);
+                text(tItem(this.inv[i].name), (canvasWidth / 20) + 42, (canvasHeight - 100) + (vi * 32) + 8);
                 // Reset text size for price and amount
                 textSize(13);
                 text(buyPrice, (canvasWidth / 20) + 332, (canvasHeight - 100) + (vi * 32) + 8);
@@ -218,7 +218,7 @@ class Shop extends Entity {
                 let itemNameLength = this.inv[i].name.length;
                 let itemNameSize = itemNameLength > 20 ? 9 : (itemNameLength > 15 ? 11 : 13);
                 textSize(itemNameSize);
-                text(this.inv[i].name, (canvasWidth / 20) + 42, (canvasHeight - 100) + ((vi-(current_reply)+1) * 32) + 8);
+                text(tItem(this.inv[i].name), (canvasWidth / 20) + 42, (canvasHeight - 100) + ((vi-(current_reply)+1) * 32) + 8);
                 // Reset text size for price and amount
                 textSize(13);
                 text(buyPrice, (canvasWidth / 20) + 332, (canvasHeight - 100) + ((vi-(current_reply)+1) * 32) + 8);

@@ -35,7 +35,7 @@ class Chest extends Entity{
         const headerWidth = headerRight - headerLeft;
         const titleText = String(this.name || 'Chest');
         const statusText = this.playerOwned ? '' : 'VIEW ONLY';
-        const leaveText = String.fromCharCode(eat_button) + ' to leave';
+        const leaveText = String.fromCharCode(eat_button) + ' ' + t('to leave');
         const headerGap = 14;
 
         textSize(15);
@@ -50,12 +50,12 @@ class Chest extends Entity{
         if (requiredWidth <= headerWidth) {
             strokeWeight(4);
             textSize(15);
-            text(titleText, headerLeft, panelTop + 8);
+            text(t(titleText), headerLeft, panelTop + 8);
 
             if (statusText) {
                 textSize(13);
                 strokeWeight(2);
-                text(statusText, headerLeft + titleWidth + headerGap, panelTop + 9);
+                text(t(statusText), headerLeft + titleWidth + headerGap, panelTop + 9);
             }
 
             textAlign(RIGHT, TOP);
@@ -72,13 +72,13 @@ class Chest extends Entity{
 
             strokeWeight(3);
             textSize(titleSize);
-            text(titleText, headerLeft, panelTop + 5);
+            text(t(titleText), headerLeft, panelTop + 5);
 
             if (statusText) {
                 textAlign(RIGHT, TOP);
                 textSize(statusSize);
                 strokeWeight(2);
-                text(statusText, headerRight, panelTop + 6);
+                text(t(statusText), headerRight, panelTop + 6);
             }
 
             textAlign(RIGHT, TOP);
