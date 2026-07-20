@@ -118,7 +118,8 @@ class Player extends MoveableEntity {
         localData.set('player', this);
     }
 
-    render() {
+    render(renderVisuals = true) {
+        this.touching = this.tileTouching(currentLevel_x, currentLevel_y);
         if (this.hunger_counter >= 45) {
             this.hunger -= 1;
             this.hunger_counter = 0;
@@ -136,35 +137,14 @@ class Player extends MoveableEntity {
             }
         this.hunger_timer = (typeof all_items !== 'undefined' && all_items[this.lastFoodnum]) ? all_items[this.lastFoodnum].hunger_timer : 2000;
         }
-        push();
-        imageMode(CENTER);
-        noTint();
-        image(player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
-        if(this.looking(currentLevel_x, currentLevel_y) != undefined && this.looking(currentLevel_x, currentLevel_y) != 0 && this.talking == 0){
-            if(((this.looking(currentLevel_x, currentLevel_y).class == 'NPC' || this.looking(currentLevel_x, currentLevel_y).class == 'Shop' || this.looking(currentLevel_x, currentLevel_y).class == 'Chest' || this.looking(currentLevel_x, currentLevel_y).class == 'Robot' || this.looking(currentLevel_x, currentLevel_y).class == 'AirBallon' || this.looking(currentLevel_x, currentLevel_y).name == 'Job Board'))){
-                push()
-                fill(255)
-                stroke(0)
-                strokeWeight(2)
-                rectMode(CENTER)
-                image(chat_icon, this.looking(currentLevel_x, currentLevel_y).pos.x + (tileSize / 2), this.looking(currentLevel_x, currentLevel_y).pos.y - 8, 20 + ((Controls_Interact_button_key.length-1) * 12), 20 + ((Controls_Interact_button_key.length-1) * 5));
-                //rect(this.looking(currentLevel_x, currentLevel_y).pos.x + 16, this.looking(currentLevel_x, currentLevel_y).pos.y - 8, 13 + ((Controls_Interact_button_key.length-1) * 10), 13);
-                fill(0)
-                noStroke()
-                textSize(10)
-                textAlign(CENTER, CENTER);
-                text(Controls_Interact_button_key, this.looking(currentLevel_x, currentLevel_y).pos.x + 16, this.looking(currentLevel_x, currentLevel_y).pos.y - 9);
-                pop()
-            }
-        }
+        let tookHungerDamage = false;
         if (this.hunger <= 0 && millis() - lastHungerMili > 400 && !paused && !this.dead) {
             hit_sound.play();
             this.hp -= 10;
             if(this.hp < 0){
                 this.hp = 0;
             }
-            tint(255, 0, 0, 100);
-            image(player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
+            tookHungerDamage = true;
             lastHungerMili = millis();
         }
         else if (this.hunger >= maxHunger && millis() - lastHungerMili > 600 && !paused) {
@@ -174,7 +154,36 @@ class Player extends MoveableEntity {
             }
             lastHungerMili = millis();
         }
-        pop();
+
+        if (renderVisuals) {
+            push();
+            imageMode(CENTER);
+            noTint();
+            image(player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
+            const lookingAt = this.looking(currentLevel_x, currentLevel_y);
+            if(lookingAt != undefined && lookingAt != 0 && this.talking == 0){
+                if(((lookingAt.class == 'NPC' || lookingAt.class == 'Shop' || lookingAt.class == 'Chest' || lookingAt.class == 'Robot' || lookingAt.class == 'AirBallon' || lookingAt.name == 'Job Board'))){
+                push()
+                fill(255)
+                stroke(0)
+                strokeWeight(2)
+                rectMode(CENTER)
+                image(chat_icon, lookingAt.pos.x + (tileSize / 2), lookingAt.pos.y - 8, 20 + ((Controls_Interact_button_key.length-1) * 12), 20 + ((Controls_Interact_button_key.length-1) * 5));
+                //rect(this.looking(currentLevel_x, currentLevel_y).pos.x + 16, this.looking(currentLevel_x, currentLevel_y).pos.y - 8, 13 + ((Controls_Interact_button_key.length-1) * 10), 13);
+                fill(0)
+                noStroke()
+                textSize(10)
+                textAlign(CENTER, CENTER);
+                text(Controls_Interact_button_key, lookingAt.pos.x + 16, lookingAt.pos.y - 9);
+                pop()
+                }
+            }
+            if (tookHungerDamage) {
+                tint(255, 0, 0, 100);
+                image(player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
+            }
+            pop();
+        }
         if (this.hp <= 0) { // Player Death
             //turn player death screen on
             robotPlayButton.hide();
@@ -222,7 +231,9 @@ class Player extends MoveableEntity {
                         this.hp = 100;
                         this.transphase = 0;
                     }
-                    text('Respawn in 0', canvasWidth/2, (3*canvasHeight)/4);
+                    if (renderVisuals) {
+                        text('Respawn in 0', canvasWidth/2, (3*canvasHeight)/4);
+                    }
                 }
                 
             }

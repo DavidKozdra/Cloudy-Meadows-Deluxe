@@ -1942,6 +1942,10 @@ function draw() {
             camera.x = 0;
             camera.y = 0;
 
+            // Player.render() also owns survival/death progression. Run its
+            // state-only path in 3D without painting the top-down player sprite.
+            player.render(false);
+
             if (currentLvl && typeof currentLvl === 'object' && typeof render3DViewWebgl === 'function') {
                 render3DViewWebgl(player, currentLvl, currentLevel_x, currentLevel_y);
             }
@@ -2546,18 +2550,18 @@ function render_ui() {
             // Full-screen dim backdrop
             noStroke();
             rectMode(CORNER);
-            let t = time;
-            let pulse = abs(sin(t * 0.02));
+            let hungerAnimTime = time;
+            let pulse = abs(sin(hungerAnimTime * 0.02));
             let pulseAlpha = 160 + 95 * pulse;
             fill(0, 0, 0, 110 * (0.6 + 0.4 * pulse));
             rect(0, 0, canvasWidth, canvasHeight);
 
             // Panel layout
             let cx = canvasWidth / 2;
-            let cy = canvasHeight * 0.12 + sin(t * 0.01) * 12;
+            let cy = canvasHeight * 0.12 + sin(hungerAnimTime * 0.01) * 12;
             let cardW = Math.min(900, canvasWidth * 0.95);
             let cardH = Math.min(180, canvasHeight * 0.25);
-            let wobble = sin(t * 0.02) * 0.06;
+            let wobble = sin(hungerAnimTime * 0.02) * 0.06;
             let scaleAmount = 0.4 + 0.05 * pulse;
 
             // Card group

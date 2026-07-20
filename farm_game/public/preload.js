@@ -948,9 +948,7 @@ function setup() {
     // 0, 0) blits it onto the real 2D canvas — the same pattern
     // Level.renderLights() already uses for its darkness buffer.
     webgl3DBuffer = createGraphics(canvasWidth, canvasHeight, WEBGL);
-    // Keep WEBGL's default linear filtering. Nearest-neighbor sampling makes
-    // floor texels crawl and appear to break apart as the perspective camera
-    // moves, especially at shallow viewing angles.
+    webgl3DBuffer.noSmooth();
 
     // Setup fullscreen functionality
     setupFullscreen();

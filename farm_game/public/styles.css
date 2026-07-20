@@ -775,9 +775,9 @@ button {
     padding: 12px;
     padding-right: 4px;
     box-sizing: border-box;
-    background: rgba(34, 18, 8, 0.34);
-    border: 2px solid rgba(255, 238, 186, 0.12);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
 }
 
 .pause-inline-tutorial .tutorial-directory {
@@ -1533,11 +1533,11 @@ button {
     width: min(760px, 100%);
     max-height: min(88vh, 900px);
     overflow-y: auto;
-    background: linear-gradient(180deg, rgb(202, 149, 88) 0%, rgb(174, 118, 63) 100%);
+    background-color: rgb(187, 132, 75);
     border: 5px solid rgb(149, 108, 65);
-    border-radius: 8px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
-    padding: 22px;
+    border-radius: 4px;
+    box-shadow: none;
+    padding: 15px;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -1546,9 +1546,7 @@ button {
 .tutorial-modal-directory {
     width: min(1080px, 100%);
     max-height: min(92vh, 980px);
-    background:
-        radial-gradient(circle at top right, rgba(104, 160, 157, 0.28), transparent 30%),
-        linear-gradient(180deg, rgb(147, 104, 56) 0%, rgb(113, 72, 36) 100%);
+    background-color: rgb(187, 132, 75);
 }
 
 .tutorial-modal-urgent {
@@ -1582,7 +1580,7 @@ button {
     font-family: pixelFont, monospace;
     font-size: 13px;
     line-height: 1.6;
-    color: rgb(255, 245, 210);
+    color: rgb(255, 255, 255);
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
 }
 
@@ -1615,24 +1613,24 @@ button {
     gap: 10px;
     align-items: center;
     padding: 12px 14px;
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    background: rgba(31, 20, 10, 0.34);
-    color: rgb(255, 247, 224);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgb(255, 255, 255);
     cursor: pointer;
     transition: transform 0.08s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .tutorial-directory-tab:hover {
     transform: translateY(-1px);
-    background: rgba(55, 34, 16, 0.52);
-    border-color: rgba(255, 230, 160, 0.22);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(0, 0, 0, 0.5);
 }
 
 .tutorial-directory-tab.active {
-    background: linear-gradient(180deg, rgba(55, 110, 80, 0.94) 0%, rgba(36, 80, 57, 0.98) 100%);
-    border-color: rgba(226, 244, 184, 0.42);
-    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
+    box-shadow: none;
 }
 
 .tutorial-directory-tab-icon {
@@ -1662,7 +1660,7 @@ button {
 .tutorial-directory-tab-hint {
     font-family: pixelFont, monospace;
     font-size: 10px;
-    color: rgba(255, 247, 224, 0.72);
+    color: rgba(255, 255, 255, 0.72);
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
@@ -1680,11 +1678,10 @@ button {
     gap: 18px;
     align-items: center;
     padding: 18px;
-    background:
-        linear-gradient(135deg, rgba(44, 28, 15, 0.72) 0%, rgba(77, 49, 23, 0.84) 100%);
-    border: 2px solid rgba(255, 231, 152, 0.24);
-    border-radius: 14px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    box-shadow: none;
 }
 
 .tutorial-directory-hero-copy {
@@ -1697,7 +1694,7 @@ button {
 .tutorial-directory-eyebrow {
     font-family: pixelFont, monospace;
     font-size: 11px;
-    color: rgb(255, 226, 135);
+    color: rgb(255, 255, 255);
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -1715,7 +1712,7 @@ button {
     font-family: pixelFont, monospace;
     font-size: 12px;
     line-height: 1.7;
-    color: rgb(255, 245, 217);
+    color: rgb(255, 255, 255);
 }
 
 .tutorial-directory-chips {
@@ -1727,9 +1724,10 @@ button {
 .tutorial-directory-chip {
     font-family: pixelFont, monospace;
     font-size: 11px;
-    color: rgb(49, 30, 13);
-    background: rgb(255, 220, 112);
-    border-radius: 999px;
+    color: rgb(255, 255, 255);
+    background: rgba(149, 108, 65, 0.8);
+    border: 2px solid rgb(100, 70, 40);
+    border-radius: 3px;
     padding: 6px 10px;
 }
 
@@ -1738,9 +1736,9 @@ button {
     align-items: center;
     justify-content: center;
     min-height: 188px;
-    border-radius: 12px;
-    background: rgba(18, 10, 6, 0.56);
-    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(0, 0, 0, 0.5);
 }
 
 .tutorial-directory-hero-image {
@@ -1762,9 +1760,9 @@ button {
     gap: 12px;
     align-items: flex-start;
     padding: 14px;
-    background: rgba(27, 18, 11, 0.44);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
     min-height: 132px;
 }
 
@@ -1775,8 +1773,8 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .tutorial-asset-image {
@@ -1797,7 +1795,7 @@ button {
     margin: 0;
     font-family: pixelFont, monospace;
     font-size: 13px;
-    color: rgb(255, 249, 231);
+    color: rgb(255, 255, 255);
     overflow-wrap: anywhere;
 }
 
@@ -1806,7 +1804,7 @@ button {
     font-family: pixelFont, monospace;
     font-size: 11px;
     line-height: 1.6;
-    color: rgba(255, 245, 217, 0.9);
+    color: rgba(255, 255, 255, 0.9);
     overflow-wrap: anywhere;
 }
 
@@ -1821,10 +1819,10 @@ button {
     align-items: center;
     gap: 16px;
     padding: 16px;
-    background: linear-gradient(135deg, rgba(82, 47, 18, 0.82) 0%, rgba(129, 78, 29, 0.86) 100%);
-    border: 2px solid rgba(255, 226, 116, 0.45);
-    border-radius: 8px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    box-shadow: none;
 }
 
 .tutorial-spotlight-portrait-wrap {
@@ -1834,9 +1832,9 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(28, 16, 10, 0.75);
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
 }
 
 .tutorial-spotlight-portrait {
@@ -1856,7 +1854,7 @@ button {
 .tutorial-spotlight-eyebrow {
     font-family: pixelFont, monospace;
     font-size: 11px;
-    color: rgb(255, 230, 140);
+    color: rgb(255, 255, 255);
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
@@ -1872,7 +1870,7 @@ button {
 .tutorial-spotlight-location {
     font-family: pixelFont, monospace;
     font-size: 12px;
-    color: rgb(255, 243, 212);
+    color: rgb(255, 255, 255);
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -1885,17 +1883,17 @@ button {
 .tutorial-spotlight-chip {
     font-family: pixelFont, monospace;
     font-size: 11px;
-    color: rgb(255, 249, 227);
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
+    color: rgb(255, 255, 255);
+    background: rgba(149, 108, 65, 0.8);
+    border: 2px solid rgb(100, 70, 40);
+    border-radius: 3px;
     padding: 6px 10px;
 }
 
 .tutorial-spotlight-chip-action {
-    color: rgb(38, 28, 16);
-    background: rgb(255, 222, 107);
-    border-color: rgb(255, 242, 177);
+    color: rgb(255, 255, 255);
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
 }
 
 .tutorial-steps {
@@ -1909,14 +1907,14 @@ button {
     gap: 12px;
     align-items: flex-start;
     padding: 14px;
-    background: rgba(42, 16, 10, 0.72);
-    border: 2px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
 }
 
 .tutorial-step-highlight {
-    border-color: rgba(255, 214, 118, 0.78);
-    background: rgba(71, 28, 14, 0.88);
+    border-color: rgb(255, 255, 0);
+    background: rgba(255, 255, 0, 0.3);
 }
 
 .tutorial-step-number {
@@ -1928,9 +1926,10 @@ button {
     justify-content: center;
     font-family: pixelFont, monospace;
     font-size: 16px;
-    color: rgb(53, 28, 12);
-    background: rgb(255, 214, 118);
-    border-radius: 999px;
+    color: rgb(255, 255, 255);
+    background: rgba(149, 108, 65, 0.8);
+    border: 2px solid rgb(100, 70, 40);
+    border-radius: 3px;
 }
 
 .tutorial-step-content {
@@ -1941,7 +1940,7 @@ button {
     margin: 0 0 8px;
     font-family: pixelFont, monospace;
     font-size: 18px;
-    color: rgb(255, 248, 226);
+    color: rgb(255, 255, 255);
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -1952,15 +1951,15 @@ button {
 }
 
 .tutorial-section {
-    background: rgba(76, 47, 21, 0.28);
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
     padding: 14px;
 }
 
 .tutorial-section-highlight {
-    background: rgba(118, 77, 24, 0.52);
-    border-color: rgba(255, 234, 120, 0.5);
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
 }
 
 .tutorial-section-title {
@@ -1980,7 +1979,7 @@ button {
     font-family: pixelFont, monospace;
     font-size: 12px;
     line-height: 1.6;
-    color: rgb(255, 248, 225);
+    color: rgb(255, 255, 255);
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -2636,7 +2635,7 @@ button {
         padding: 12px;
     }
 
-    .tutorial-modal {
+.tutorial-modal {
         padding: 16px;
         gap: 10px;
     }
@@ -4206,7 +4205,7 @@ button {
     /* Main Menu - Very Small Screens */
     .main-menu {
         padding: 24px 16px;
-        gap: 14px;
+    gap: 15px;
         overflow-y: auto;
         justify-content: center;
     }

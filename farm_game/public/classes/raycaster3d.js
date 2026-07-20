@@ -4,6 +4,7 @@
 const WEBGL_WALL_HEIGHT_TILES = 1;
 const WEBGL_FOV_DEGREES = 66;
 const MOVE_SPEED_TILES_PER_SEC = 4;
+const PLAYER_COLLISION_RADIUS_TILES = 0.2;
 
 // Facing/yaw convention shared with the original renderer and Player:
 // facing 0=up, 1=right, 2=down, 3=left; yaw 0deg=+X and 90deg=+Z/south.
@@ -50,6 +51,19 @@ let webglRoomGeometryCache = {
 function isValidWebglTextureSource(sprite) {
     return !!sprite && Number.isFinite(sprite.width) && sprite.width > 0 &&
         Number.isFinite(sprite.height) && sprite.height > 0;
+}
+
+function bindWebglTexture(sprite) {
+    webgl3DBuffer.texture(sprite);
+
+    // p5 1.4.1's Graphics.noSmooth() does not update WEBGL texture samplers.
+    // Reassert nearest-neighbor after texture() creates or updates it; p5 may
+    // restore its default linear sampler while binding a source.
+    const renderer = webgl3DBuffer._renderer;
+    const texture = renderer.textures.find(candidate => candidate.src === sprite);
+    if (!texture || (texture.glMinFilter === renderer.GL.NEAREST &&
+        texture.glMagFilter === renderer.GL.NEAREST)) return;
+    texture.setInterpolation(NEAREST, NEAREST);
 }
 
 function getTileSprite(cell) {
@@ -263,7 +277,7 @@ function renderTriangleBatches(batches, useTextures, fallbackColor) {
     for (const batch of batches) {
         webgl3DBuffer.beginShape(TRIANGLES);
         if (useTextures && isValidWebglTextureSource(batch.sprite)) {
-            webgl3DBuffer.texture(batch.sprite);
+            bindWebglTexture(batch.sprite);
         } else {
             webgl3DBuffer.fill(...fallbackColor);
         }
@@ -363,7 +377,7 @@ function renderBillboardGeometry(billboards, cameraYawDeg) {
         // turn keeps that front face aimed back toward the camera.
         webgl3DBuffer.rotateY(-Math.PI / 2);
         webgl3DBuffer.rotateY(-cameraYawRad);
-        webgl3DBuffer.texture(billboard.sprite);
+        bindWebglTexture(billboard.sprite);
         webgl3DBuffer.plane(billboard.width, billboard.height);
         webgl3DBuffer.pop();
     }
@@ -408,14 +422,37 @@ function isPointBlocked(map, xTiles, yTiles) {
     return false;
 }
 
-function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles) {
+// Keeps a small first-person camera radius away from wall faces. Room edges
+// still use the center point so cross-room wrapping happens only after the
+// player actually leaves the map, not when the radius merely touches it.
+function testMovementPosition(map, xTiles, yTiles, radiusTiles) {
+    const center = isPointBlocked(map, xTiles, yTiles);
+    if (center !== false || radiusTiles <= 0) return center;
+
+    const offsets = [
+        [-radiusTiles, 0], [radiusTiles, 0],
+        [0, -radiusTiles], [0, radiusTiles],
+        [-radiusTiles, -radiusTiles], [radiusTiles, -radiusTiles],
+        [-radiusTiles, radiusTiles], [radiusTiles, radiusTiles]
+    ];
+    for (const [offsetX, offsetY] of offsets) {
+        // An offset crossing the room edge is not a collision; the center
+        // point above remains authoritative for level transitions.
+        if (isPointBlocked(map, xTiles + offsetX, yTiles + offsetY) === 'wall') {
+            return 'wall';
+        }
+    }
+    return false;
+}
+
+function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles, radiusTiles = 0) {
     let newX = xTiles;
     let newY = yTiles;
     let hitEdgeX = false;
     let hitEdgeY = false;
 
     if (deltaXTiles !== 0) {
-        const xTest = isPointBlocked(map, xTiles + deltaXTiles, yTiles);
+        const xTest = testMovementPosition(map, xTiles + deltaXTiles, yTiles, radiusTiles);
         if (xTest === 'edge') {
             hitEdgeX = true;
             newX = xTiles + deltaXTiles;
@@ -425,7 +462,7 @@ function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles) {
     }
 
     if (deltaYTiles !== 0) {
-        const yTest = isPointBlocked(map, newX, yTiles + deltaYTiles);
+        const yTest = testMovementPosition(map, newX, yTiles + deltaYTiles, radiusTiles);
         if (yTest === 'edge') {
             hitEdgeY = true;
             newY = yTiles + deltaYTiles;
@@ -488,9 +525,23 @@ function updatePlayer3DMovementWebgl(playerObj) {
 
     if (moveX === 0 && moveY === 0) return;
 
+    // Keyboard diagonals should not move sqrt(2) times faster.
+    const moveLength = Math.hypot(moveX, moveY);
+    if (moveLength > 1) {
+        moveX /= moveLength;
+        moveY /= moveLength;
+    }
+
     const originXTiles = (playerObj.pos.x + tileSize / 2) / tileSize;
     const originYTiles = (playerObj.pos.y + tileSize / 2) / tileSize;
-    const result = moveWithSliding(currentLvl.map, originXTiles, originYTiles, moveX * stepTiles, moveY * stepTiles);
+    const result = moveWithSliding(
+        currentLvl.map,
+        originXTiles,
+        originYTiles,
+        moveX * stepTiles,
+        moveY * stepTiles,
+        PLAYER_COLLISION_RADIUS_TILES
+    );
 
     let finalXTiles = result.x;
     let finalYTiles = result.y;

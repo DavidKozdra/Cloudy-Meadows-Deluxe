@@ -13,12 +13,14 @@ vm.runInNewContext(
         extractFunction(source, 'normalizeAngleDeg0to360'),
         extractFunction(source, 'nearestCardinalFacingFromYaw'),
         extractFunction(source, 'isPointBlocked'),
+        extractFunction(source, 'testMovementPosition'),
         extractFunction(source, 'moveWithSliding'),
         extractFunction(source, 'wrapPositionAcrossEdge'),
         extractFunction(source, 'updatePlayer3DMovementWebgl'),
         // nearestCardinalFacingFromYaw() reads these two top-level consts.
         'const YAW_TO_FACING = { 0: 1, 90: 2, 180: 3, 270: 0 };',
         'const MOVE_SPEED_TILES_PER_SEC = 4;',
+        'const PLAYER_COLLISION_RADIUS_TILES = 0.2;',
         'globalThis.normalizeAngleDeg0to360 = normalizeAngleDeg0to360;',
         'globalThis.nearestCardinalFacingFromYaw = nearestCardinalFacingFromYaw;',
         'globalThis.isPointBlocked = isPointBlocked;',
@@ -103,6 +105,15 @@ test('moveWithSliding stops fully in a corner when both axes are blocked', () =>
     const result = moveWithSliding(map, 3.9, 3.9, 0.5, 0.5);
     assert.equal(result.x, 3.9);
     assert.equal(result.y, 3.9);
+});
+
+test('moveWithSliding keeps the first-person camera radius away from a wall face', () => {
+    const map = corridorMap(5, 5);
+    const pointResult = moveWithSliding(map, 3.6, 2.5, 0.25, 0);
+    const radiusResult = moveWithSliding(map, 3.6, 2.5, 0.25, 0, 0.2);
+
+    assert.equal(pointResult.x, 3.85, 'point collision can approach the wall closely');
+    assert.equal(radiusResult.x, 3.6, 'camera radius rejects the same near-wall step');
 });
 
 test('moveWithSliding reports hitEdgeX/hitEdgeY when a point runs off the map', () => {
