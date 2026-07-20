@@ -2,41 +2,14 @@
 //
 // Most of this module is a pure rendering alternative to the game's default
 // top-down view: it reads the same `Level.map` grid and entity instances the
-// 2D renderer uses without mutating game state. The exception is the free-look
-// movement subsystem (updatePlayer3DMovement() and its helpers, below) — that
-// code intentionally DOES mutate player.pos/player.facing/currentLevel_x/
-// currentLevel_y/levels[][], as an additive path used only when desktop
-// mouse-look is active, deliberately kept separate from Player.move() (see
-// that function's own file for the grid-snapped 2D equivalent).
+// 2D renderer uses without mutating game state. Free-look movement now lives
+// in classes/raycaster3d.js with the replacement renderer.
 //
 // Facing/yaw convention: player.facing is 0=up,1=right,2=down,3=left.
 // FACING_TO_YAW_DEG maps that to a world-angle convention where 0deg points
 // along +x (right) and 90deg points along +y (down), matching typical
 // screen-space DDA math. Getting this table backwards mirrors/rotates every
 // wall 90 degrees off, so it's called out here explicitly.
-const FACING_TO_YAW_DEG = [270, 0, 90, 180];
-// Inverse of FACING_TO_YAW_DEG, keyed by the exact degree values above, used
-// to snap a continuous look yaw back to the nearest cardinal facing.
-const YAW_TO_FACING = { 0: 1, 90: 2, 180: 3, 270: 0 };
-
-// Wraps an angle in degrees to [0, 360). Distinct from normalizeAngleDeg()
-// below, which wraps to [-180, 180] for relative-angle (screen projection)
-// math — different contract, do not conflate the two.
-function normalizeAngleDeg0to360(angleDeg) {
-    let a = angleDeg % 360;
-    if (a < 0) a += 360;
-    return a;
-}
-
-// Snaps a continuous look yaw to the nearest cardinal facing (0-3), for
-// keeping player.facing valid while free-look is driving the camera.
-function nearestCardinalFacingFromYaw(yawDeg) {
-    const normalized = normalizeAngleDeg0to360(yawDeg);
-    const rounded = Math.round(normalized / 90) * 90;
-    const wrapped = rounded === 360 ? 0 : rounded;
-    return YAW_TO_FACING[wrapped];
-}
-
 // NOTE: this file loads before sketch.js (see index.html), which is where
 // canvasWidth/canvasHeight/tileSize are declared. Nothing in this file may
 // read those globals at module-evaluation time (top-level code) — only from
@@ -516,7 +489,7 @@ function renderBillboards(playerObj, currentLvl, originXTiles, originYTiles, yaw
 // Player.move() (the grid-snapped 2D equivalent) is never called from here
 // and is never modified by this code.
 
-const MOVE_SPEED_TILES_PER_SEC = 4;
+const LEGACY_MOVE_SPEED_TILES_PER_SEC = 4;
 
 // Point-collision test in continuous tile-space coordinates. Mirrors the
 // `cell !== 0 && cell.collide === true` pattern castRay() already uses,
@@ -633,7 +606,7 @@ function updatePlayer3DMovement(playerObj) {
     const currentLvl = levels[currentLevel_y] ? levels[currentLevel_y][currentLevel_x] : null;
     if (!currentLvl || typeof currentLvl !== 'object' || !currentLvl.map) return;
 
-    const stepTiles = MOVE_SPEED_TILES_PER_SEC * (deltaTime / 1000);
+    const stepTiles = LEGACY_MOVE_SPEED_TILES_PER_SEC * (deltaTime / 1000);
     const yawRad = (playerObj.lookYawDeg * Math.PI) / 180;
     const forwardX = Math.cos(yawRad);
     const forwardY = Math.sin(yawRad);

@@ -1,0 +1,63 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  html, body { height: 100%; margin: 0; background: #111; }
+  body { display: grid; place-items: center; }
+  canvas { width: 92vw !important; height: auto !important; max-height: 92vh; object-fit: contain; }
+</style>
+<img id="wood" src="images/tiles/Wood.png" hidden>
+<img id="grass" src="images/tiles/Grass.png" hidden>
+<img id="rick" src="images/npc/cowboy_rick.png" hidden>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/p5.min.js"></script>
+<script>
+var tileSize = 64;
+var webgl3DBuffer;
+var all_imgs = [];
+var pointerLockEngaged = false;
+
+function p5ImageFromElement(id) {
+  const source = document.getElementById(id);
+  const sprite = new p5.Image(source.naturalWidth, source.naturalHeight);
+  sprite.canvas.getContext('2d').drawImage(source, 0, 0);
+  sprite.setModified(true);
+  return sprite;
+}
+
+function setup() {
+  createCanvas(736, 608);
+  webgl3DBuffer = createGraphics(736, 608, WEBGL);
+  webgl3DBuffer.noSmooth();
+  const grass = p5ImageFromElement('grass');
+  const rick = p5ImageFromElement('rick');
+  all_imgs[1] = [grass];
+  all_imgs[5] = [p5ImageFromElement('wood')];
+  all_imgs[26] = [[rick], [rick], [rick], [rick]];
+
+  const floor = () => ({ collide: false, class: 'Tile', png: 1, variant: 0 });
+  const wall = () => ({ collide: true, class: 'Tile', png: 5, variant: 0 });
+  const npc = (x, y) => ({
+    collide: true,
+    class: 'NPC',
+    png: 26,
+    variant: 0,
+    pos: { x, y },
+    under_tile: floor()
+  });
+  const map = Array.from({ length: 9 }, () => Array.from({ length: 11 }, floor));
+  for (let x = 0; x < 11; x++) { map[0][x] = wall(); map[8][x] = wall(); }
+  for (let y = 1; y < 8; y++) { map[y][0] = wall(); map[y][10] = wall(); }
+
+  map[3][5] = npc(5 * tileSize, 3 * tileSize);
+  map[5][7] = npc(7 * tileSize, 4.75 * tileSize);
+  if (new URLSearchParams(location.search).get('wall') !== '0') map[4][6] = wall();
+
+  const player = {
+    pos: { x: 2 * tileSize, y: 4 * tileSize },
+    facing: 1,
+    lookYawDeg: 0
+  };
+  render3DViewWebgl(player, { map }, 4, 2);
+  noLoop();
+}
+</script>
+<script src="classes/raycaster3d.js?v=1"></script>

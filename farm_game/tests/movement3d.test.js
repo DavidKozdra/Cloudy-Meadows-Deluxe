@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const { readPublic, extractFunction } = require('./support/load');
 
-const source = readPublic('classes/raycaster.js');
+const source = readPublic('classes/raycaster3d.js');
 const sandbox = {};
 vm.runInNewContext(
     [
@@ -15,13 +15,16 @@ vm.runInNewContext(
         extractFunction(source, 'isPointBlocked'),
         extractFunction(source, 'moveWithSliding'),
         extractFunction(source, 'wrapPositionAcrossEdge'),
+        extractFunction(source, 'updatePlayer3DMovementWebgl'),
         // nearestCardinalFacingFromYaw() reads these two top-level consts.
         'const YAW_TO_FACING = { 0: 1, 90: 2, 180: 3, 270: 0 };',
+        'const MOVE_SPEED_TILES_PER_SEC = 4;',
         'globalThis.normalizeAngleDeg0to360 = normalizeAngleDeg0to360;',
         'globalThis.nearestCardinalFacingFromYaw = nearestCardinalFacingFromYaw;',
         'globalThis.isPointBlocked = isPointBlocked;',
         'globalThis.moveWithSliding = moveWithSliding;',
-        'globalThis.wrapPositionAcrossEdge = wrapPositionAcrossEdge;'
+        'globalThis.wrapPositionAcrossEdge = wrapPositionAcrossEdge;',
+        'globalThis.updatePlayer3DMovementWebgl = updatePlayer3DMovementWebgl;'
     ].join('\n'),
     sandbox
 );
@@ -119,4 +122,31 @@ test('wrapPositionAcrossEdge preserves overshoot when crossing the negative edge
     // Crossed the left edge by 0.3 tiles (value went negative) -> enters the
     // previous room 0.3 tiles short of its right edge.
     assert.ok(Math.abs(wrapPositionAcrossEdge(-0.3, 5, -1) - 4.7) < 1e-9);
+});
+
+test('frame movement follows continuous yaw and updates player position', () => {
+    const map = Array.from({ length: 5 }, () =>
+        Array.from({ length: 5 }, () => FLOOR)
+    );
+    Object.assign(sandbox, {
+        levels: [[{ map }]],
+        currentLevel_x: 0,
+        currentLevel_y: 0,
+        deltaTime: 250,
+        tileSize: 32,
+        canvasWidth: 160,
+        canvasHeight: 160,
+        virtualInput: { up: true, down: false, left: false, right: false },
+        move_up_button: 87,
+        move_down_button: 83,
+        move_left_button: 65,
+        move_right_button: 68,
+        keyIsDown: () => false
+    });
+    const player = { pos: { x: 32, y: 32 }, lookYawDeg: 0 };
+
+    sandbox.updatePlayer3DMovementWebgl(player);
+
+    assert.equal(player.pos.x, 64, 'yaw 0 forward movement advances one tile along +X');
+    assert.equal(player.pos.y, 32);
 });

@@ -46,10 +46,16 @@ var is3DMode = false;
 
 // True only while the browser Pointer Lock API is actively locked to the
 // game canvas — desktop-only FPS mouse-look for 3D Mode (see
-// setupPointerLock() in miscfunctions.js and updatePlayer3DMovement() in
-// classes/raycaster.js).
+// setupPointerLock() in miscfunctions.js and updatePlayer3DMovementWebgl() in
+// classes/raycaster3d.js).
 var pointerLockEngaged = false;
 const MOUSE_LOOK_SENSITIVITY_DEG_PER_PX = 0.15;
+
+// Offscreen WEBGL scene buffer for 3D Mode (classes/raycaster3d.js), created
+// once in preload.js's setup(). Never a real second <canvas> — see the
+// comment at its creation site for why createGraphics(WEBGL) is used
+// instead of a second createCanvas().
+var webgl3DBuffer;
 
 var player;
 var levels = [];
@@ -1934,8 +1940,8 @@ function draw() {
             camera.x = 0;
             camera.y = 0;
 
-            if (currentLvl && typeof currentLvl === 'object' && typeof render3DView === 'function') {
-                render3DView(player, currentLvl);
+            if (currentLvl && typeof currentLvl === 'object' && typeof render3DViewWebgl === 'function') {
+                render3DViewWebgl(player, currentLvl, currentLevel_x, currentLevel_y);
             }
         } else {
             // Apply camera transformation
