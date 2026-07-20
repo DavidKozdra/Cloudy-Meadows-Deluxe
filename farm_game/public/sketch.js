@@ -39,8 +39,8 @@ var camera = {
     enabled: false
 };
 
-// When true, the gameplay view renders as a first-person raycasted scene
-// (classes/raycaster.js) instead of the default top-down view. Kept in sync
+// When true, the gameplay view renders as a first-person WEBGL scene
+// (classes/raycaster3d.js) instead of the default top-down view. Kept in sync
 // with the persisted 'is3DMode' option by applyAccessibilityPrefs().
 var is3DMode = false;
 

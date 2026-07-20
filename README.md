@@ -5,6 +5,10 @@
 Play
 https://magentaautumn.itch.io/cloudy-meadows-deluxe
 
+## AutoFarm
+
+The repository also includes **Cloudy Meadows: AutoFarm**, an endless open-world farming and robot-automation sandbox at `/autofarm/`. Its gameplay plan and Cloudflare Durable Object deployment notes are in [`docs/autofarm-plan.md`](docs/autofarm-plan.md).
+
 ## Description
 
 Cloudy meadows is an urban vertical farming community. Meet interesting people, farm with composting and helpful animals, and if you get 

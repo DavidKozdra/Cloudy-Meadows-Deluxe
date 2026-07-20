@@ -6,3 +6,8 @@ compatibility_date = "2024-11-01"
 # compile or bundle, so the build command in the dashboard should be left empty
 # (or set to `exit 0`) and the framework preset to "None".
 pages_build_output_dir = "farm_game/public"
+
+[[durable_objects.bindings]]
+name = "AUTO_FARM_WORLD"
+class_name = "AutoFarmWorld"
+script_name = "cloudy-meadows-autofarm-world"

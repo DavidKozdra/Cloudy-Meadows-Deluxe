@@ -1,0 +1,11 @@
+name = "cloudy-meadows-autofarm-world"
+main = "src/index.js"
+compatibility_date = "2026-07-20"
+
+[[durable_objects.bindings]]
+name = "AUTO_FARM_WORLD"
+class_name = "AutoFarmWorld"
+
+[exports.AutoFarmWorld]
+type = "durable-object"
+storage = "sqlite"

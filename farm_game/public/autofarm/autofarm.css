@@ -1,0 +1,27 @@
+@font-face { font-family: AutoFarmPixel; src:url('../pixelFont.ttf'); font-display:swap; }
+html,body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; font-family:AutoFarmPixel,monospace; }
+#game-container { position:relative; width:100%; height:100%; display:grid; place-items:center; }
+#game-container canvas { image-rendering:pixelated; max-width:100vw; max-height:100vh; width:auto!important; height:auto!important; }
+.wood-panel { color:#fff; background:rgba(69,48,31,.94); border:4px solid #956c41; box-shadow:0 0 0 3px #4f3523,inset 0 0 0 2px #c29158; text-shadow:2px 2px #24180f; }
+#autofarm-status { position:fixed; z-index:20; top:12px; left:12px; display:flex; gap:18px; padding:9px 12px; font-size:10px; pointer-events:none; }
+#autofarm-status b { color:#8ff174; }
+#net-state { color:#ff9b77; }
+#net-state.online { color:#7df0d1; }
+#farmers-online { color:#aedcff; }
+#autofarm-tip { position:fixed; z-index:20; left:50%; bottom:10px; transform:translateX(-50%); padding:8px 12px; font-size:8px; white-space:nowrap; pointer-events:none; }
+#autofarm-modal { position:fixed; z-index:50; inset:0; display:none; place-items:center; padding:18px; background:rgba(4,10,16,.76); }
+#autofarm-modal.open { display:grid; }
+#autofarm-modal>section { position:relative; width:min(760px,100%); max-height:82vh; overflow:auto; padding:24px; }
+#autofarm-modal h1 { color:#fff0a6; margin:0 42px 18px 0; font-size:18px; }
+#autofarm-modal h2 { color:#9ce67f; font-size:12px; margin-top:20px; }
+#autofarm-modal p { color:#f4dfbf; font-size:9px; line-height:1.7; }
+#modal-close { position:absolute; right:10px; top:10px; width:34px; height:34px; color:#fff; background:#72472b; border:3px solid #d1a064; font:18px AutoFarmPixel; cursor:pointer; }
+.auto-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:9px; }
+.auto-row { display:flex; align-items:center; gap:9px; padding:8px; border:2px solid #9b7145; background:#30251c; color:#fff; font-size:8px; }
+.auto-row img { width:38px; height:38px; object-fit:contain; image-rendering:pixelated; }
+.auto-row button,.auto-command { margin-left:auto; padding:7px; color:#fff; background:#527b3f; border:2px solid #91b86c; font:8px AutoFarmPixel; cursor:pointer; }
+.auto-row button:disabled { opacity:.45; filter:grayscale(1); }
+.auto-command { margin:3px; }
+.auto-command.remove { background:#8d4937; border-color:#d07a61; }
+.program { min-height:45px; padding:7px; border:2px dashed #bd8d57; }
+@media(max-width:700px){#autofarm-status{font-size:7px;gap:7px;max-width:calc(100% - 24px);flex-wrap:wrap}#autofarm-tip{font-size:6px;max-width:95%;white-space:normal;text-align:center}}

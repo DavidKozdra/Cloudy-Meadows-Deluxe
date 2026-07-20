@@ -1,6 +1,5 @@
-// GPU-rendered (WEBGL) first-person renderer for 3D Mode. During the staged
-// rewrite this loads beside classes/raycaster.js so its movement helpers and
-// entity classification remain available until the final cutover.
+// GPU-rendered (WEBGL) first-person renderer for 3D Mode. Owns scene geometry,
+// camera setup, entity billboards, and continuous free-look movement.
 
 const WEBGL_WALL_HEIGHT_TILES = 1;
 const WEBGL_FOV_DEGREES = 66;
@@ -266,7 +265,13 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
     renderBillboardGeometry(billboards, cameraYawDeg);
     webgl3DBuffer.pop();
 
+    // Composite through the main 2D renderer without depending on, or
+    // mutating, any imageMode/tint state used by the screen-space overlays.
+    push();
+    imageMode(CORNER);
+    noTint();
     image(webgl3DBuffer, 0, 0);
+    pop();
 }
 
 // Point-collision test in continuous tile-space coordinates. Returns 'edge'

@@ -7,6 +7,10 @@
     "test": "npm run test:project && npm run test:unit",
     "test:project": "node scripts/test-project.js",
     "test:unit": "node --test \"farm_game/tests/**/*.test.js\"",
+    "dev:autofarm:world": "npx wrangler dev --config autofarm-worker/wrangler.toml",
+    "dev:pages": "npx wrangler pages dev",
+    "deploy:autofarm:world": "npx wrangler deploy --config autofarm-worker/wrangler.toml",
+    "deploy:pages": "npx wrangler pages deploy farm_game/public",
     "i18n:sync": "node scripts/sync-i18n.js",
     "hooks:install": "node scripts/install-hooks.js",
     "prepare": "node scripts/install-hooks.js"
