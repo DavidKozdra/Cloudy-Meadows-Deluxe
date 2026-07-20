@@ -43,7 +43,11 @@ class Entity extends Tile {
 
     tileTouching(x, y) {
         if (levels[y] && levels[y][x] && typeof levels[y][x] === 'object') {
-            return levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize];
+            // Math.round() is a no-op for grid-snapped 2D-mode positions
+            // (already exact tile multiples) and is what makes this work
+            // for continuous 3D free-look positions, which are almost never
+            // exactly tile-aligned.
+            return levels[y][x].map[Math.round(this.pos.y / tileSize)][Math.round(this.pos.x / tileSize)];
         }
         return 0;
     }

@@ -1,9 +1,13 @@
 // First-person raycasted renderer for 3D Mode.
 //
-// This module is a pure rendering alternative to the game's default top-down
-// view: it reads the same `Level.map` grid and entity instances the 2D
-// renderer uses, but never mutates game state. Movement/collision/interaction
-// logic (player.js, moveable-entity.js) is completely unaware this exists.
+// Most of this module is a pure rendering alternative to the game's default
+// top-down view: it reads the same `Level.map` grid and entity instances the
+// 2D renderer uses without mutating game state. The exception is the free-look
+// movement subsystem (updatePlayer3DMovement() and its helpers, below) — that
+// code intentionally DOES mutate player.pos/player.facing/currentLevel_x/
+// currentLevel_y/levels[][], as an additive path used only when desktop
+// mouse-look is active, deliberately kept separate from Player.move() (see
+// that function's own file for the grid-snapped 2D equivalent).
 //
 // Facing/yaw convention: player.facing is 0=up,1=right,2=down,3=left.
 // FACING_TO_YAW_DEG maps that to a world-angle convention where 0deg points
@@ -11,6 +15,27 @@
 // screen-space DDA math. Getting this table backwards mirrors/rotates every
 // wall 90 degrees off, so it's called out here explicitly.
 const FACING_TO_YAW_DEG = [270, 0, 90, 180];
+// Inverse of FACING_TO_YAW_DEG, keyed by the exact degree values above, used
+// to snap a continuous look yaw back to the nearest cardinal facing.
+const YAW_TO_FACING = { 0: 1, 90: 2, 180: 3, 270: 0 };
+
+// Wraps an angle in degrees to [0, 360). Distinct from normalizeAngleDeg()
+// below, which wraps to [-180, 180] for relative-angle (screen projection)
+// math — different contract, do not conflate the two.
+function normalizeAngleDeg0to360(angleDeg) {
+    let a = angleDeg % 360;
+    if (a < 0) a += 360;
+    return a;
+}
+
+// Snaps a continuous look yaw to the nearest cardinal facing (0-3), for
+// keeping player.facing valid while free-look is driving the camera.
+function nearestCardinalFacingFromYaw(yawDeg) {
+    const normalized = normalizeAngleDeg0to360(yawDeg);
+    const rounded = Math.round(normalized / 90) * 90;
+    const wrapped = rounded === 360 ? 0 : rounded;
+    return YAW_TO_FACING[wrapped];
+}
 
 // NOTE: this file loads before sketch.js (see index.html), which is where
 // canvasWidth/canvasHeight/tileSize are declared. Nothing in this file may
@@ -188,7 +213,15 @@ function render3DView(playerObj, currentLvl) {
 
     const originXTiles = (playerObj.pos.x + tileSize / 2) / tileSize;
     const originYTiles = (playerObj.pos.y + tileSize / 2) / tileSize;
-    const yawDeg = FACING_TO_YAW_DEG[playerObj.facing] ?? 0;
+    // Desktop mouse-look drives the camera continuously while pointer-locked;
+    // otherwise (mobile, or desktop before first engaging pointer lock) fall
+    // back to the grid-snapped facing, matching pre-mouse-look behavior.
+    // window.pointerLockEngaged (rather than the bare identifier) because
+    // this file loads before sketch.js declares that var — see the note above
+    // about canvasWidth/canvasHeight/tileSize for why that's safe here.
+    const yawDeg = (typeof isMobile !== 'undefined' && !isMobile && window.pointerLockEngaged)
+        ? playerObj.lookYawDeg
+        : (FACING_TO_YAW_DEG[playerObj.facing] ?? 0);
     const horizonY = canvasHeight / 2;
 
     if (!raycastDepthBuffer || raycastDepthBuffer.length !== canvasWidth) {
@@ -236,6 +269,21 @@ function render3DView(playerObj, currentLvl) {
     pop();
 
     renderBillboards(playerObj, currentLvl, originXTiles, originYTiles, yawDeg, raycastDepthBuffer, horizonY);
+
+    // Desktop-only affordance: prompt for pointer lock when it isn't engaged
+    // yet, drawn directly on the canvas rather than as a separate DOM overlay
+    // (consistent with 3D Mode's pure-canvas rendering, no z-index concerns).
+    if (typeof isMobile !== 'undefined' && !isMobile && !window.pointerLockEngaged) {
+        push();
+        noStroke();
+        fill(0, 0, 0, 150);
+        rect(0, canvasHeight - 40, canvasWidth, 40);
+        fill(255);
+        textAlign(CENTER, CENTER);
+        textSize(16);
+        text('Click to enable mouse look', canvasWidth / 2, canvasHeight - 20);
+        pop();
+    }
 }
 
 function normalizeAngleDeg(angleDeg) {
@@ -322,4 +370,187 @@ function renderBillboards(playerObj, currentLvl, originXTiles, originYTiles, yaw
         image(sprite, screenX, horizonY, spriteScale, spriteScale);
     }
     pop();
+}
+
+// --- Free-look movement (desktop mouse-look only) ---------------------------
+//
+// Everything below this point is the exception to this file's "pure
+// rendering" rule noted in the header comment: it mutates player.pos,
+// player.facing, currentLevel_x/currentLevel_y, and levels[][], as an
+// additive path used only when desktop pointer-lock mouse-look is active.
+// Player.move() (the grid-snapped 2D equivalent) is never called from here
+// and is never modified by this code.
+
+const MOVE_SPEED_TILES_PER_SEC = 4;
+
+// Point-collision test in continuous tile-space coordinates. Mirrors the
+// `cell !== 0 && cell.collide === true` pattern castRay() already uses,
+// extended with explicit tri-state bounds handling: 'edge' means the point
+// fell outside this room's map array (caller decides whether that's a room
+// transition or a refusal), 'wall' means an in-room solid tile, false means
+// clear to move.
+function isPointBlocked(map, xTiles, yTiles) {
+    const col = Math.floor(xTiles);
+    const row = Math.floor(yTiles);
+    const mapRow = map[row];
+    const cell = mapRow ? mapRow[col] : undefined;
+    if (cell === undefined) return 'edge';
+    if (cell !== 0 && cell.collide === true) return 'wall';
+    return false;
+}
+
+// Per-axis sweep-and-slide: attempts the X move, then the Y move against the
+// (possibly already-updated) X position. Correct and simplest given walls
+// are always axis-aligned unit tiles — gives free wall-sliding with no
+// swept-AABB math. Treats the player as a single point at cell-center
+// (matching render3DView's originXTiles/YTiles convention), not a radius.
+// 'edge' results are let through provisionally so the caller can read how
+// far past the boundary the point travelled, for overshoot-preserving
+// room-transition repositioning.
+function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles) {
+    let newX = xTiles;
+    let newY = yTiles;
+    let hitEdgeX = false;
+    let hitEdgeY = false;
+
+    if (deltaXTiles !== 0) {
+        const xTest = isPointBlocked(map, xTiles + deltaXTiles, yTiles);
+        if (xTest === 'edge') {
+            hitEdgeX = true;
+            newX = xTiles + deltaXTiles;
+        } else if (xTest === false) {
+            newX = xTiles + deltaXTiles;
+        }
+        // xTest === 'wall': newX stays unchanged (axis cancelled)
+    }
+
+    if (deltaYTiles !== 0) {
+        const yTest = isPointBlocked(map, newX, yTiles + deltaYTiles);
+        if (yTest === 'edge') {
+            hitEdgeY = true;
+            newY = yTiles + deltaYTiles;
+        } else if (yTest === false) {
+            newY = yTiles + deltaYTiles;
+        }
+    }
+
+    return { x: newX, y: newY, hitEdgeX, hitEdgeY };
+}
+
+// Given a tile-space coordinate that has run past [0, limitTiles) in one
+// direction, returns the equivalent coordinate just past the opposite edge
+// of the neighboring room, preserving the overshoot so fast movement doesn't
+// visibly snap at the boundary.
+function wrapPositionAcrossEdge(valueTiles, limitTiles, direction) {
+    if (direction > 0) {
+        return valueTiles - limitTiles;
+    }
+    return limitTiles + valueTiles;
+}
+
+// Resets the per-level transition-animation state Player.move() clears on
+// every room change (level.js fields driving the slide-in title-card
+// animation), plus the level_name_popup toggle. Extracted since it's pure
+// state reset with no branching, unlike Extra-level generation below.
+function resetLevelTransitionAnim(levelY, levelX) {
+    const lvl = levels[levelY] ? levels[levelY][levelX] : null;
+    if (!lvl || typeof lvl !== 'object') return;
+    lvl.level_name_popup = false;
+    lvl.y = -50;
+    lvl.done = false;
+    lvl.movephase = 0;
+    lvl.ticks = 0;
+}
+
+// Ensures levels[levelY][levelX] is a valid, enterable Level, auto-generating
+// a filler "Extra" level (the same constructor call Player.move() uses) if
+// the slot is undefined but in-bounds of the levels meta-array. Unlike
+// move(), this is symmetric across all 4 directions (move() refuses to
+// auto-generate when crossing left) — an intentional, more permissive
+// behavior for free-look exploration, not a bug to match. Does not replicate
+// move()'s per-direction randomized bridge-tile patches: a continuous
+// free-look crossing point won't line up with where those tiles were placed
+// anyway, so the generated Extra level is walkable but visually plainer at
+// its bridge seams — a known, acceptable minor gap, not a correctness bug.
+// Returns false if the slot is explicitly blocked (0) or out of the levels
+// meta-array's bounds entirely.
+function ensureLevelExists(levelY, levelX) {
+    if (!levels[levelY] || levelY < 0 || levelX < 0) return false;
+    const existing = levels[levelY][levelX];
+    if (existing && typeof existing === 'object') return true;
+    if (existing === 0) return false;
+    if (typeof extra_lvls === 'undefined') return false;
+
+    extraCount++;
+    levels[levelY][levelX] = new Level(
+        'Extra y:' + levelY + ' x:' + (levelX - 6),
+        JSON.parse(JSON.stringify(extra_lvls.map)),
+        JSON.parse(JSON.stringify(extra_lvls.fore))
+    );
+    return true;
+}
+
+// Called once per frame from takeInput() when desktop mouse-look free
+// movement is active (is3DMode && !isMobile && pointerLockEngaged). Moves
+// playerObj.pos continuously relative to playerObj.lookYawDeg, with per-axis
+// wall-sliding collision and seamless room-to-room transitions at map edges.
+function updatePlayer3DMovement(playerObj) {
+    const currentLvl = levels[currentLevel_y] ? levels[currentLevel_y][currentLevel_x] : null;
+    if (!currentLvl || typeof currentLvl !== 'object' || !currentLvl.map) return;
+
+    const stepTiles = MOVE_SPEED_TILES_PER_SEC * (deltaTime / 1000);
+    const yawRad = (playerObj.lookYawDeg * Math.PI) / 180;
+    const forwardX = Math.cos(yawRad);
+    const forwardY = Math.sin(yawRad);
+    const rightX = Math.cos(yawRad + Math.PI / 2);
+    const rightY = Math.sin(yawRad + Math.PI / 2);
+
+    let moveX = 0;
+    let moveY = 0;
+    if (keyIsDown(move_up_button) || virtualInput.up) { moveX += forwardX; moveY += forwardY; }
+    if (keyIsDown(move_down_button) || virtualInput.down) { moveX -= forwardX; moveY -= forwardY; }
+    if (keyIsDown(move_right_button) || virtualInput.right) { moveX += rightX; moveY += rightY; }
+    if (keyIsDown(move_left_button) || virtualInput.left) { moveX -= rightX; moveY -= rightY; }
+
+    if (moveX === 0 && moveY === 0) return;
+
+    const originXTiles = (playerObj.pos.x + tileSize / 2) / tileSize;
+    const originYTiles = (playerObj.pos.y + tileSize / 2) / tileSize;
+    const result = moveWithSliding(currentLvl.map, originXTiles, originYTiles, moveX * stepTiles, moveY * stepTiles);
+
+    let finalXTiles = result.x;
+    let finalYTiles = result.y;
+    const roomWidthTiles = canvasWidth / tileSize;
+    const roomHeightTiles = canvasHeight / tileSize;
+    // Captured before either branch below can mutate currentLevel_x/y, so a
+    // same-frame diagonal double-edge-cross resets the animation state of
+    // the room the player was actually leaving, not a room already switched
+    // into by the other axis's branch.
+    const originLevelY = currentLevel_y;
+    const originLevelX = currentLevel_x;
+
+    if (result.hitEdgeX) {
+        const dir = moveX > 0 ? 1 : -1;
+        if (ensureLevelExists(originLevelY, originLevelX + dir)) {
+            resetLevelTransitionAnim(originLevelY, originLevelX);
+            currentLevel_x += dir;
+            finalXTiles = wrapPositionAcrossEdge(result.x, roomWidthTiles, dir);
+        } else {
+            finalXTiles = dir > 0 ? roomWidthTiles - 0.05 : 0.05;
+        }
+    }
+
+    if (result.hitEdgeY) {
+        const dir = moveY > 0 ? 1 : -1;
+        if (ensureLevelExists(originLevelY + dir, originLevelX)) {
+            resetLevelTransitionAnim(originLevelY, originLevelX);
+            currentLevel_y += dir;
+            finalYTiles = wrapPositionAcrossEdge(result.y, roomHeightTiles, dir);
+        } else {
+            finalYTiles = dir > 0 ? roomHeightTiles - 0.05 : 0.05;
+        }
+    }
+
+    playerObj.pos.x = finalXTiles * tileSize - tileSize / 2;
+    playerObj.pos.y = finalYTiles * tileSize - tileSize / 2;
 }

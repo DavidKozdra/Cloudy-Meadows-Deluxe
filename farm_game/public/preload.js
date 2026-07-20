@@ -955,7 +955,12 @@ function setup() {
     
     let canvas = createCanvas(canvasWidth, canvasHeight);
     canvas.parent('game-container');
-    
+
+    // Desktop FPS mouse-look for 3D Mode (classes/raycaster.js).
+    if (typeof setupPointerLock === 'function') {
+        setupPointerLock(canvas.elt);
+    }
+
     // Setup fullscreen functionality
     setupFullscreen();
     

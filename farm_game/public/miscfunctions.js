@@ -167,6 +167,40 @@ function updateAccessibilityOption(settingKey, value) {
     return nextOptions;
 }
 
+// Wires up desktop FPS mouse-look for 3D Mode: click-to-lock on the game
+// canvas, tracks pointerLockEngaged, and accumulates mouse movement into
+// player.lookYawDeg while locked. Called once from preload.js's setup().
+function setupPointerLock(canvasElt) {
+    if (!canvasElt || typeof document === 'undefined') return;
+
+    canvasElt.addEventListener('click', () => {
+        if (typeof is3DMode !== 'undefined' && is3DMode &&
+            typeof isMobile !== 'undefined' && !isMobile &&
+            !pointerLockEngaged &&
+            !title_screen && !paused &&
+            typeof player !== 'undefined' && player && player.talking === 0) {
+            canvasElt.requestPointerLock();
+        }
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+        const engaged = document.pointerLockElement === canvasElt;
+        pointerLockEngaged = engaged;
+        window.pointerLockEngaged = engaged;
+        if (engaged && typeof player !== 'undefined' && player) {
+            player.lookYawDeg = [270, 0, 90, 180][player.facing] ?? 0;
+        }
+    });
+
+    document.addEventListener('mousemove', (event) => {
+        if (!pointerLockEngaged || typeof player === 'undefined' || !player) return;
+        player.lookYawDeg = normalizeAngleDeg0to360(
+            player.lookYawDeg + event.movementX * MOUSE_LOOK_SENSITIVITY_DEG_PER_PX
+        );
+        player.facing = nearestCardinalFacingFromYaw(player.lookYawDeg);
+    });
+}
+
 window.applyAccessibilityPrefs = applyAccessibilityPrefs;
 window.shouldReduceMotion = shouldReduceMotion;
 

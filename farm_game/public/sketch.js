@@ -44,6 +44,13 @@ var camera = {
 // with the persisted 'is3DMode' option by applyAccessibilityPrefs().
 var is3DMode = false;
 
+// True only while the browser Pointer Lock API is actively locked to the
+// game canvas — desktop-only FPS mouse-look for 3D Mode (see
+// setupPointerLock() in miscfunctions.js and updatePlayer3DMovement() in
+// classes/raycaster.js).
+var pointerLockEngaged = false;
+const MOUSE_LOOK_SENSITIVITY_DEG_PER_PX = 0.15;
+
 var player;
 var levels = [];
 var currentLevel_y = 2;
@@ -1803,6 +1810,15 @@ function draw() {
     }
 
     takeInput();
+
+    // Release mouse-look pointer lock whenever a blocking UI opens, so the
+    // player isn't stuck mouse-captured over the pause menu, title screen,
+    // or a dialogue box. Centralized here (rather than at every state
+    // transition site) so it can't be missed.
+    if (pointerLockEngaged && (paused || title_screen || (typeof player !== 'undefined' && player && player.talking != 0))) {
+        document.exitPointerLock();
+    }
+
     if (title_screen) {
         showTitle();
         if(save_anim > 0){

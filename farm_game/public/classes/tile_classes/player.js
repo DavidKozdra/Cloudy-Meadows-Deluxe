@@ -28,6 +28,11 @@ class Player extends MoveableEntity {
         this.op = 255;
         this.touching = 0;
         this.talking = 0;
+        // Continuous first-person camera yaw for 3D Mode mouse-look, decoupled
+        // from `facing` (which stays a strict 0-3 cardinal for 2D rendering,
+        // grid interaction, and save data). Seeded from facing here and on
+        // every pointer-lock engage; not persisted (see load()).
+        this.lookYawDeg = [270, 0, 90, 180][this.facing] ?? 0;
         this.oldlooking_name = 0;
         this.lastmoveMili = 0;
         this.lasteatMili = 0;
@@ -1544,8 +1549,14 @@ function takeInput() {
                     lastMili = millis();
                 }
             }
-            //basic movement  
-            player.move();
+            //basic movement
+            if (typeof is3DMode !== 'undefined' && is3DMode &&
+                typeof isMobile !== 'undefined' && !isMobile &&
+                typeof pointerLockEngaged !== 'undefined' && pointerLockEngaged) {
+                updatePlayer3DMovement(player);
+            } else {
+                player.move();
+            }
             if (keyIsDown(eat_button) || virtualInput.eat) {
                 player.eat();
             }
