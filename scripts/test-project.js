@@ -166,6 +166,19 @@ check('HTML local scripts and linked files exist', () => {
     assert.deepEqual(refs.filter(ref => !localReferenceExists(ref)).sort(), []);
 });
 
+check('AutoFarm entry point uses existing local engine files', () => {
+    const autoFarmDir = path.join(publicDir, 'autofarm');
+    const html = fs.readFileSync(path.join(autoFarmDir, 'index.html'), 'utf8');
+    const refs = [
+        ...[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]),
+        ...[...html.matchAll(/<link[^>]+href="([^"]+)"/g)].map(match => match[1])
+    ];
+    assert.deepEqual(refs.filter(ref => !localReferenceExists(ref, autoFarmDir)).sort(), []);
+    assert.ok(html.includes('../classes/tile_classes/robot.js'), 'AutoFarm must use the shared Robot class');
+    assert.ok(html.includes('../classes/raycaster3d.js'), 'AutoFarm must use the shared WEBGL renderer');
+    assert.ok(html.includes('../styles.css'), 'AutoFarm must use the shared Cloudy Meadows styles');
+});
+
 check('service-worker shell matches local app scripts', () => {
     const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
     const worker = fs.readFileSync(path.join(publicDir, 'sw.js'), 'utf8');

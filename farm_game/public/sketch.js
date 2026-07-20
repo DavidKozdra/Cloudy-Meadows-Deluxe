@@ -1266,6 +1266,7 @@ function initializeRain(dropletCount = 200) {
 }
 // Generate random weather for the day
 function generateDailyWeather() {
+    if (typeof CloudyWeather !== 'undefined') return CloudyWeather.roll();
     // Default weights mirror original probabilities
     let weights = {
         'frog-rain': 0.1,
@@ -1351,6 +1352,7 @@ function getDayNightOpacity(baseOpacity) {
 
 // Apply visual effects based on current weather
 function applyWeatherEffects() {
+    if (typeof CloudyWeather !== 'undefined') return CloudyWeather.render();
     if (currentWeather === 'clear') {
         // Clear - no effects, reset rain
         rainInitialized = false;

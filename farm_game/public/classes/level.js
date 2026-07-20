@@ -385,7 +385,10 @@ class Level {
         }
         
         // Draw the lighting buffer to main canvas in screen space
-        image(this.lightingBuffer, 0, 0);
+        push();
+        imageMode(CORNER);
+        image(this.lightingBuffer, 0, 0, canvasWidth, canvasHeight);
+        pop();
     }
 
     getReadyForSave() {
@@ -500,10 +503,12 @@ class Level {
     }
 
     daily_update() {
-        if(days % 10 == 0){
+        // The calendar decoration exists only in the story world. Procedural
+        // modes still share every generic daily tile and market update below.
+        if(typeof level17 !== 'undefined' && level17 && days % 10 == 0){
             level17.map[7][12] = new_tile_from_num(88, 12*tileSize, 7*tileSize)
         }
-        else{
+        else if(typeof level17 !== 'undefined' && level17){
             level17.map[7][12] = new_tile_from_num(57, 12*tileSize, 7*tileSize)
         }
         for (let i = 0; i < this.map.length; i++) {

@@ -5,13 +5,17 @@
 function loadAutoFarmAssets() {
     const img = path => loadImage('../' + path);
     const frames = paths => paths.map(img);
-    all_imgs = Array(170).fill(null);
+    all_imgs = Array(172).fill(null);
 
     all_imgs[0] = frames(['images/tiles/Concrete_1.png', 'images/tiles/Concrete2.png']);
     all_imgs[1] = frames(['images/tiles/Grass.png']);
     all_imgs[2] = frames(['images/tiles/Plot.png']);
     all_imgs[3] = frames(['images/tiles/dirt.png']);
+    all_imgs[4] = frames(['images/tiles/junk_tile.png']);
     all_imgs[5] = frames(['images/tiles/Wood.png']);
+    all_imgs[6] = frames(['images/tiles/Bed.png']);
+    all_imgs[12] = frames(['images/tiles/Compost_tile.png']);
+    all_imgs[13] = frames(['images/tiles/Worm_Bucket.png']);
     all_imgs[14] = frames(['images/tiles/Shop.png']);
     all_imgs[15] = frames(['images/tiles/Cart.png', 'images/tiles/sp_cart.png']);
     all_imgs[17] = frames(['images/tiles/sprinkler_cart.png']);
@@ -63,6 +67,8 @@ function loadAutoFarmAssets() {
     all_imgs[163] = img('images/items/Axe.png');
     all_imgs[168] = img('images/items/stop_watch.png');
     all_imgs[169] = img('images/items/flashLight.png');
+    all_imgs[170] = img('images/tiles/Wood.png');
+    all_imgs[171] = img('images/tiles/rock.png');
 
     player_imgs = [
         frames(['images/player/Back_Move.png','images/player/BackMove_2.png']),
@@ -83,6 +89,7 @@ function loadAutoFarmAssets() {
     chat_icon = img('images/ui/Chat_Icon.png');
     done_dot = img('images/ui/plant_done_icon.png');
     up_dot = img('images/ui/up_dot_icon.png');
+    x_img = img('images/ui/x.png');
 }
 
 function robotFrames(img, up, right, down, left) {

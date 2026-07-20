@@ -2,6 +2,8 @@ import { DurableObject } from 'cloudflare:workers';
 
 const MAX_WORLD_CHANGES = 20000;
 const MAX_MESSAGE_BYTES = 4096;
+const MAX_CHAT_LENGTH = 240;
+const CHAT_COOLDOWN_MS = 350;
 
 export class AutoFarmWorld extends DurableObject {
   constructor(state, env) {
@@ -16,7 +18,12 @@ export class AutoFarmWorld extends DurableObject {
   async fetch(request) {
     await this.ready;
     if (request.headers.get('Upgrade') !== 'websocket') {
-      return Response.json({ status: 'ready', changes: Object.keys(this.changes).length });
+      return Response.json({
+        name: 'Cloudy Meadows AutoFarm',
+        status: 'ready',
+        totalPlayers: this.state.getWebSockets().length,
+        changes: Object.keys(this.changes).length
+      });
     }
 
     const playerId = request.headers.get('X-AutoFarm-Player');
@@ -25,13 +32,16 @@ export class AutoFarmWorld extends DurableObject {
     const client = pair[0];
     const server = pair[1];
     this.state.acceptWebSocket(server, [`player:${playerId}`]);
-    server.serializeAttachment({ playerId, player: null });
+    const room = request.headers.get('X-AutoFarm-Room') || 'meadow-one';
+    server.serializeAttachment({ playerId, player: null, room, lastChatAt: 0 });
 
     server.send(JSON.stringify({
       type: 'snapshot',
       changes: this.changes,
-      players: this.connectedPlayers(playerId)
+      players: this.connectedPlayers(playerId),
+      server: this.serverInfo(room)
     }));
+    this.broadcast({ type: 'server', ...this.serverInfo(room) });
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -46,6 +56,24 @@ export class AutoFarmWorld extends DurableObject {
       attachment.player = message.player;
       socket.serializeAttachment(attachment);
       this.broadcast({ type: 'presence', player: message.player }, socket);
+      this.broadcast({ type: 'server', ...this.serverInfo(attachment.room) });
+      return;
+    }
+
+    if (message.type === 'chat' && attachment.player) {
+      const now = Date.now();
+      const chatText = cleanChat(message.text);
+      if (!chatText || now - (attachment.lastChatAt || 0) < CHAT_COOLDOWN_MS) return;
+      attachment.lastChatAt = now;
+      socket.serializeAttachment(attachment);
+      this.broadcast({
+        type: 'chat',
+        id: `${attachment.playerId}:${now}`,
+        playerId: attachment.playerId,
+        name: attachment.player.name,
+        text: chatText,
+        sentAt: now
+      });
       return;
     }
 
@@ -61,7 +89,10 @@ export class AutoFarmWorld extends DurableObject {
 
   webSocketClose(socket) {
     const attachment = socket.deserializeAttachment() || {};
-    if (attachment.playerId) this.broadcast({ type: 'leave', id: attachment.playerId }, socket);
+    if (attachment.playerId) {
+      this.broadcast({ type: 'leave', id: attachment.playerId }, socket);
+      this.broadcast({ type: 'server', ...this.serverInfo(attachment.room, socket) }, socket);
+    }
   }
 
   webSocketError(socket) {
@@ -77,6 +108,13 @@ export class AutoFarmWorld extends DurableObject {
     return players;
   }
 
+  serverInfo(room = 'meadow-one', excludeSocket = null) {
+    return {
+      room,
+      totalPlayers: this.state.getWebSockets().filter(socket => socket !== excludeSocket).length
+    };
+  }
+
   broadcast(message, except) {
     const encoded = JSON.stringify(message);
     for (const socket of this.state.getWebSockets()) {
@@ -89,13 +127,22 @@ export class AutoFarmWorld extends DurableObject {
 function validPlayer(player, playerId) {
   return player && player.id === playerId && Number.isInteger(player.x) && Number.isInteger(player.y) &&
     Math.abs(player.x) <= 1000000 && Math.abs(player.y) <= 1000000 &&
-    Number.isInteger(player.facing) && player.facing >= 0 && player.facing <= 3;
+    Number.isInteger(player.facing) && player.facing >= 0 && player.facing <= 3 &&
+    typeof player.name === 'string' && player.name.length > 0 && player.name === cleanPlayerName(player.name);
+}
+
+function cleanPlayerName(value) {
+  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().replace(/\s+/g, ' ').slice(0, 20);
+}
+
+function cleanChat(value) {
+  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().replace(/\s+/g, ' ').slice(0, MAX_CHAT_LENGTH);
 }
 
 function validPatch(message) {
-  return typeof message.key === 'string' && /^-?\d+,-?\d+$/.test(message.key) && message.key.length <= 32 &&
+  return typeof message.key === 'string' && /^\d+,\d+,\d+,\d+$/.test(message.key) && message.key.length <= 48 &&
     message.value && typeof message.value === 'object' &&
-    ['grass', 'soil', 'crop', 'chest', 'robot'].includes(message.value.type);
+    typeof message.value.name === 'string' && typeof message.value.class === 'string';
 }
 
 export default {

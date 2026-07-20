@@ -7,8 +7,8 @@ const vm = require('node:vm');
 const { readPublic } = require('./support/load');
 
 const source = readPublic('classes/raycaster3d.js');
-const primarySprite = { id: 'primary' };
-const fallbackSprite = { id: 'fallback' };
+const primarySprite = { id: 'primary', width: 32, height: 32 };
+const fallbackSprite = { id: 'fallback', width: 32, height: 32 };
 const frontSprite = { id: 'front', width: 24, height: 40 };
 const plantSprite = { id: 'plant', width: 30, height: 28 };
 const staticSprite = { id: 'static', width: 48, height: 36, get() {} };
@@ -104,7 +104,7 @@ test('billboard descriptors resolve entity sprite layouts and use live positions
     );
 });
 
-test('room geometry is reused within a room and rebuilt when room coordinates change', () => {
+test('room geometry is rebuilt for live map edits and room-coordinate changes', () => {
     const level = {
         map: [[{ collide: true, class: 'Tile', png: 0, variant: 0 }]]
     };
@@ -114,9 +114,9 @@ test('room geometry is reused within a room and rebuilt when room coordinates ch
     const sameRoom = sandbox.getRoomGeometryForRoom(level, 4, 2);
     const nextRoom = sandbox.getRoomGeometryForRoom(level, 5, 2);
 
-    assert.equal(sameRoom, first);
-    assert.equal(sameRoom.walls.length, 1);
+    assert.notEqual(sameRoom, first);
+    assert.equal(sameRoom.walls.length, 2);
     assert.equal(sameRoom.floors.length, 0);
-    assert.notEqual(nextRoom, first);
+    assert.notEqual(nextRoom, sameRoom);
     assert.equal(nextRoom.walls.length, 2);
 });

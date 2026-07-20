@@ -33,19 +33,33 @@ function isWebglBillboardEntityCell(cell) {
     return !!cell && WEBGL_BILLBOARD_ENTITY_CLASSES.indexOf(cell.class) !== -1;
 }
 
-// Only the active room's derived descriptors are retained. Walls and floors
-// are classified together in one scan when the level coordinates change, not
-// once per rendered frame.
+// Only the active room's derived descriptors are retained. A cheap signature
+// scan also catches in-place edits (placing/removing tiles or changing a
+// variant) so cached geometry cannot silently drift from the live room map.
 let webglRoomGeometryCache = {
     levelX: null,
     levelY: null,
+    mapRef: null,
+    signature: null,
     walls: [],
-    floors: []
+    floors: [],
+    wallBatches: [],
+    floorBatches: []
 };
+
+function isValidWebglTextureSource(sprite) {
+    return !!sprite && Number.isFinite(sprite.width) && sprite.width > 0 &&
+        Number.isFinite(sprite.height) && sprite.height > 0;
+}
 
 function getTileSprite(cell) {
     if (!cell || !all_imgs[cell.png]) return null;
-    return all_imgs[cell.png][cell.variant] || all_imgs[cell.png][0] || null;
+    const sprites = all_imgs[cell.png];
+    if (isValidWebglTextureSource(sprites)) return sprites;
+
+    let sprite = sprites[cell.variant] || sprites[0] || null;
+    if (Array.isArray(sprite)) sprite = sprite[0] || null;
+    return isValidWebglTextureSource(sprite) ? sprite : null;
 }
 
 function getFloorTileSprite(cell) {
@@ -90,14 +104,118 @@ function buildRoomGeometryDescriptors(map) {
     return { walls, floors };
 }
 
+function roomGeometrySignature(map) {
+    if (!Array.isArray(map)) return 'invalid';
+    const tokens = [map.length];
+    for (const row of map) {
+        if (!Array.isArray(row)) {
+            tokens.push('x');
+            continue;
+        }
+        tokens.push(row.length);
+        for (const cell of row) {
+            if (!cell) {
+                tokens.push('0');
+                continue;
+            }
+            const under = isWebglBillboardEntityCell(cell) && cell.under_tile &&
+                typeof cell.under_tile === 'object' ? cell.under_tile : null;
+            tokens.push(
+                cell.class || '', cell.collide === true ? 1 : 0,
+                cell.png ?? '', cell.variant ?? '', cell.age ?? '',
+                under ? under.png ?? '' : '', under ? under.variant ?? '' : ''
+            );
+        }
+    }
+    return tokens.join('|');
+}
+
+function addTriangle(vertices, a, b, c) {
+    vertices.push(...a, ...b, ...c);
+}
+
+function addQuad(vertices, a, b, c, d) {
+    addTriangle(vertices, [...a, 0, 0], [...b, 1, 0], [...c, 1, 1]);
+    addTriangle(vertices, [...a, 0, 0], [...c, 1, 1], [...d, 0, 1]);
+}
+
+function getOrCreateTextureBatch(batchesBySprite, sprite) {
+    const key = isValidWebglTextureSource(sprite) ? sprite : null;
+    let batch = batchesBySprite.get(key);
+    if (!batch) {
+        batch = { sprite: key, vertices: [] };
+        batchesBySprite.set(key, batch);
+    }
+    return batch;
+}
+
+function buildFloorBatches(floors) {
+    const batches = new Map();
+    for (const floor of floors) {
+        const vertices = getOrCreateTextureBatch(batches, floor.sprite).vertices;
+        const x0 = floor.xTiles * tileSize;
+        const x1 = x0 + tileSize;
+        const z0 = floor.yTiles * tileSize;
+        const z1 = z0 + tileSize;
+        addQuad(vertices, [x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]);
+    }
+    return Array.from(batches.values());
+}
+
+function isSolidWebglWall(map, row, column) {
+    const cell = map[row] && map[row][column];
+    return !!cell && cell.collide === true && !isWebglBillboardEntityCell(cell);
+}
+
+function buildWallBatches(walls, map) {
+    const batches = new Map();
+    const topY = -tileSize * WEBGL_WALL_HEIGHT_TILES;
+    const bottomY = 0;
+
+    for (const wall of walls) {
+        const vertices = getOrCreateTextureBatch(batches, wall.sprite).vertices;
+        const column = wall.xTiles;
+        const row = wall.yTiles;
+        const x0 = column * tileSize;
+        const x1 = x0 + tileSize;
+        const z0 = row * tileSize;
+        const z1 = z0 + tileSize;
+
+        // Only emit faces visible from open cells. Adjacent wall faces could
+        // never be seen, but full box() calls used to submit them every frame.
+        if (!isSolidWebglWall(map, row - 1, column)) {
+            addQuad(vertices, [x1, topY, z0], [x0, topY, z0], [x0, bottomY, z0], [x1, bottomY, z0]);
+        }
+        if (!isSolidWebglWall(map, row + 1, column)) {
+            addQuad(vertices, [x0, topY, z1], [x1, topY, z1], [x1, bottomY, z1], [x0, bottomY, z1]);
+        }
+        if (!isSolidWebglWall(map, row, column - 1)) {
+            addQuad(vertices, [x0, topY, z0], [x0, topY, z1], [x0, bottomY, z1], [x0, bottomY, z0]);
+        }
+        if (!isSolidWebglWall(map, row, column + 1)) {
+            addQuad(vertices, [x1, topY, z1], [x1, topY, z0], [x1, bottomY, z0], [x1, bottomY, z1]);
+        }
+    }
+    return Array.from(batches.values());
+}
+
 function getRoomGeometryForRoom(currentLvl, levelX, levelY) {
-    if (webglRoomGeometryCache.levelX !== levelX || webglRoomGeometryCache.levelY !== levelY) {
-        const geometry = buildRoomGeometryDescriptors(currentLvl && currentLvl.map);
+    const map = currentLvl && currentLvl.map;
+    const signature = roomGeometrySignature(map);
+    if (webglRoomGeometryCache.levelX !== levelX ||
+        webglRoomGeometryCache.levelY !== levelY ||
+        webglRoomGeometryCache.mapRef !== map ||
+        webglRoomGeometryCache.signature !== signature) {
+        const geometry = buildRoomGeometryDescriptors(map);
         webglRoomGeometryCache = {
             levelX,
             levelY,
+            mapRef: map,
+            signature,
             walls: geometry.walls,
-            floors: geometry.floors
+            floors: geometry.floors,
+            wallBatches: buildWallBatches(geometry.walls, map),
+            floorBatches: buildFloorBatches(geometry.floors)
         };
     }
 
@@ -141,47 +259,48 @@ function getActiveCameraYawDeg(playerObj) {
         : (FACING_TO_YAW_DEG[playerObj.facing] ?? 0);
 }
 
-function renderWallGeometry(walls, useTextures = true) {
-    const wallHeight = tileSize * WEBGL_WALL_HEIGHT_TILES;
-
-    webgl3DBuffer.noStroke();
-    for (const wall of walls) {
-        webgl3DBuffer.push();
-        webgl3DBuffer.translate(
-            (wall.xTiles + 0.5) * tileSize,
-            -wallHeight / 2,
-            (wall.yTiles + 0.5) * tileSize
-        );
-
-        if (useTextures && wall.sprite) {
-            webgl3DBuffer.texture(wall.sprite);
+function renderTriangleBatches(batches, useTextures, fallbackColor) {
+    for (const batch of batches) {
+        webgl3DBuffer.beginShape(TRIANGLES);
+        if (useTextures && isValidWebglTextureSource(batch.sprite)) {
+            webgl3DBuffer.texture(batch.sprite);
         } else {
-            webgl3DBuffer.fill(205, 92, 72);
+            webgl3DBuffer.fill(...fallbackColor);
         }
-        webgl3DBuffer.box(tileSize, wallHeight, tileSize);
-        webgl3DBuffer.pop();
+        for (let i = 0; i < batch.vertices.length; i += 5) {
+            webgl3DBuffer.vertex(
+                batch.vertices[i], batch.vertices[i + 1], batch.vertices[i + 2],
+                batch.vertices[i + 3], batch.vertices[i + 4]
+            );
+        }
+        webgl3DBuffer.endShape();
     }
 }
 
-function renderFloorGeometry(floors, useTextures = true) {
-    webgl3DBuffer.noStroke();
-    for (const floorTile of floors) {
-        webgl3DBuffer.push();
-        webgl3DBuffer.translate(
-            (floorTile.xTiles + 0.5) * tileSize,
-            0,
-            (floorTile.yTiles + 0.5) * tileSize
-        );
-        webgl3DBuffer.rotateX(Math.PI / 2);
+function renderBaseFloor(currentLvl) {
+    const rows = currentLvl.map.length;
+    const columns = currentLvl.map.reduce((width, row) => Math.max(width, row.length), 0);
+    if (!rows || !columns) return;
 
-        if (useTextures && floorTile.sprite) {
-            webgl3DBuffer.texture(floorTile.sprite);
-        } else {
-            webgl3DBuffer.fill(86, 60, 40);
-        }
-        webgl3DBuffer.plane(tileSize, tileSize);
-        webgl3DBuffer.pop();
-    }
+    // The 2D game exposes the Skyline background wherever map cells are 0.
+    // The old raycaster supplied a brown fallback floor beneath those gaps;
+    // without this plane the WEBGL buffer showed only its blue clear color.
+    webgl3DBuffer.push();
+    webgl3DBuffer.fill(86, 60, 40);
+    webgl3DBuffer.translate(columns * tileSize / 2, 0.05, rows * tileSize / 2);
+    webgl3DBuffer.rotateX(Math.PI / 2);
+    webgl3DBuffer.plane(columns * tileSize, rows * tileSize);
+    webgl3DBuffer.pop();
+}
+
+function renderWallGeometry(wallBatches, useTextures = true) {
+    webgl3DBuffer.noStroke();
+    renderTriangleBatches(wallBatches, useTextures, [205, 92, 72]);
+}
+
+function renderFloorGeometry(floorBatches, useTextures = true) {
+    webgl3DBuffer.noStroke();
+    renderTriangleBatches(floorBatches, useTextures, [86, 60, 40]);
 }
 
 function getWebglBillboardSprite(tile) {
@@ -213,7 +332,7 @@ function collectBillboardDescriptors(currentLvl) {
             if (!isWebglBillboardEntityCell(tile) || !tile.pos) continue;
 
             const sprite = getWebglBillboardSprite(tile);
-            if (!sprite || typeof sprite.width !== 'number' || typeof sprite.height !== 'number') continue;
+            if (!isValidWebglTextureSource(sprite)) continue;
 
             billboards.push({
                 worldX: tile.pos.x + tileSize / 2,
@@ -260,9 +379,12 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
     webgl3DBuffer.background(135, 206, 235);
     webgl3DBuffer.push();
     configurePlayerCamera(playerObj, currentLvl);
-    renderFloorGeometry(geometry.floors, useTextures);
-    renderWallGeometry(geometry.walls, useTextures);
+    webgl3DBuffer.textureMode(NORMAL);
+    renderBaseFloor(currentLvl);
+    renderFloorGeometry(geometry.floorBatches, useTextures);
+    renderWallGeometry(geometry.wallBatches, useTextures);
     renderBillboardGeometry(billboards, cameraYawDeg);
+    webgl3DBuffer.textureMode(IMAGE);
     webgl3DBuffer.pop();
 
     // Composite through the main 2D renderer without depending on, or

@@ -824,42 +824,12 @@ function preload() {
 
 // Fullscreen functionality by default
 function setupFullscreen() {
-    toggleFullscreen()
-    resizeCanvasForFullscreen();
-    // Also allow F11 key (but prevent default browser fullscreen)
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'F11') {
-            e.preventDefault();
-            toggleFullscreen();
-        }
-    });
-    
-    // Listen for window resize events
-    window.addEventListener('resize', () => {
-        resizeCanvasForFullscreen();
-        // Re-check mobile status on resize
-        if (typeof updateMobileStatus === 'function') {
-            updateMobileStatus();
-        }
-    });
-    
-    // Listen for fullscreen change events (all browser prefixes)
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-    document.addEventListener('mozfullscreenchange', onFullscreenChange);
-    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+    CloudyDisplay.setup();
 }
 
 // Handle fullscreen state changes
 function onFullscreenChange() {
-    // Small delay to let the browser finish transitioning
-    setTimeout(() => {
-        resizeCanvasForFullscreen();
-        if (typeof updateMobileStatus === 'function') {
-            updateMobileStatus();
-        }
-        console.log('Fullscreen changed, resizing canvas');
-    }, 100);
+    CloudyDisplay.onFullscreenChange();
 }
 
 function toggleFullscreen() {
@@ -908,6 +878,10 @@ function toggleFullscreen() {
 }
 
 function resizeCanvasForFullscreen() {
+    if (typeof CloudyDisplay !== 'undefined') {
+        CloudyDisplay.resizeCanvas();
+        return;
+    }
         const canvas = document.querySelector('canvas');
         if (!canvas) return;
         
@@ -974,7 +948,9 @@ function setup() {
     // 0, 0) blits it onto the real 2D canvas — the same pattern
     // Level.renderLights() already uses for its darkness buffer.
     webgl3DBuffer = createGraphics(canvasWidth, canvasHeight, WEBGL);
-    webgl3DBuffer.noSmooth(); // keep pixel-art sprites crisp, not blurred by WEBGL's default texture smoothing
+    // Keep WEBGL's default linear filtering. Nearest-neighbor sampling makes
+    // floor texels crawl and appear to break apart as the perspective camera
+    // moves, especially at shallow viewing angles.
 
     // Setup fullscreen functionality
     setupFullscreen();

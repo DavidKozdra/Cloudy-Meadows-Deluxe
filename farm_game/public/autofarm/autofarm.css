@@ -1,10 +1,37 @@
 @font-face { font-family: AutoFarmPixel; src:url('../pixelFont.ttf'); font-display:swap; }
 html,body { width:100%; height:100%; margin:0; overflow:hidden; background:#000; font-family:AutoFarmPixel,monospace; }
 #game-container { position:relative; width:100%; height:100%; display:grid; place-items:center; }
-#game-container canvas { image-rendering:pixelated; max-width:100vw; max-height:100vh; width:auto!important; height:auto!important; }
+#game-container canvas { image-rendering:pixelated; }
 .wood-panel { color:#fff; background:rgba(69,48,31,.94); border:4px solid #956c41; box-shadow:0 0 0 3px #4f3523,inset 0 0 0 2px #c29158; text-shadow:2px 2px #24180f; }
-#autofarm-status { position:fixed; z-index:20; top:12px; left:12px; display:flex; gap:18px; padding:9px 12px; font-size:10px; pointer-events:none; }
-#autofarm-status b { color:#8ff174; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+#autofarm-name-screen { position:fixed; z-index:100; inset:0; display:grid; place-items:center; padding:20px; background:rgba(4,10,16,.88); }
+#autofarm-name-form { width:min(470px,calc(100vw - 54px)); padding:28px; display:grid; gap:14px; }
+#autofarm-name-form h1 { margin:0; color:#fff0a6; font-size:20px; text-align:center; }
+#autofarm-name-form p { margin:0 0 6px; color:#f4dfbf; font-size:9px; line-height:1.7; text-align:center; }
+#autofarm-name-form label { color:#9ce67f; font-size:9px; }
+#autofarm-name-form input,#autofarm-chat-input { min-width:0; padding:11px; color:#fff; background:#241c16; border:3px solid #9b7145; outline:none; font:10px AutoFarmPixel; }
+#autofarm-name-form input:focus,#autofarm-chat-input:focus { border-color:#9ce67f; }
+#autofarm-name-form button,#autofarm-chat-form button { padding:11px; color:#fff; background:#527b3f; border:3px solid #91b86c; font:9px AutoFarmPixel; cursor:pointer; }
+#join-server-info { display:flex; justify-content:center; gap:10px; align-items:center; color:#aedcff; font-size:7px; }
+.socket-dot { display:inline-block; width:8px; height:8px; flex:0 0 auto; border-radius:50%; background:#ff785e; box-shadow:0 0 7px #ff785e; }
+.socket-dot.online { background:#7df0d1; box-shadow:0 0 7px #7df0d1; }
+.socket-dot.connecting { background:#ffd166; box-shadow:0 0 7px #ffd166; }
+#autofarm-client { position:fixed; z-index:30; top:12px; left:12px; width:min(390px,calc(100vw - 32px)); font-size:8px; }
+#autofarm-client summary { display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; list-style:none; user-select:none; }
+#autofarm-client summary::-webkit-details-marker { display:none; }
+#autofarm-client summary::after { content:'▼'; margin-left:auto; color:#f4dfbf; }
+#autofarm-client[open] summary::after { content:'▲'; }
+#autofarm-client summary b { color:#8ff174; }
+#autofarm-client:not([open]) #chat-unread:not([hidden]) { display:inline-grid; place-items:center; min-width:17px; height:17px; padding:0 3px; color:#281b12; background:#fff0a6; border-radius:9px; text-shadow:none; }
+#autofarm-server-info { display:flex; gap:9px; align-items:center; padding:8px 12px; border-top:2px solid #6d4b30; border-bottom:2px solid #6d4b30; color:#d8bea1; }
+#autofarm-server-info strong { color:#aedcff; }
+#server-connection { margin-left:auto; }
+#autofarm-chat-log { height:180px; overflow-y:auto; padding:8px 12px; background:rgba(28,20,15,.72); }
+.chat-message { margin:0 0 8px; line-height:1.55; overflow-wrap:anywhere; text-shadow:1px 1px #140e0a; }
+.chat-message strong { color:#9ce67f; }
+.chat-message.self strong { color:#8ed6ff; }
+.chat-message.system { color:#d8bea1; font-style:italic; }
+#autofarm-chat-form { display:grid; grid-template-columns:1fr auto; gap:7px; padding:9px; }
 #net-state { color:#ff9b77; }
 #net-state.online { color:#7df0d1; }
 #farmers-online { color:#aedcff; }
@@ -24,4 +51,4 @@ html,body { width:100%; height:100%; margin:0; overflow:hidden; background:#000;
 .auto-command { margin:3px; }
 .auto-command.remove { background:#8d4937; border-color:#d07a61; }
 .program { min-height:45px; padding:7px; border:2px dashed #bd8d57; }
-@media(max-width:700px){#autofarm-status{font-size:7px;gap:7px;max-width:calc(100% - 24px);flex-wrap:wrap}#autofarm-tip{font-size:6px;max-width:95%;white-space:normal;text-align:center}}
+@media(max-width:700px){#autofarm-client{font-size:7px}#autofarm-client summary{gap:7px;padding:8px}#autofarm-tip{font-size:6px;max-width:95%;white-space:normal;text-align:center}}

@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v19';
+const CACHE_VERSION = 'v24';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -43,7 +43,7 @@ const APP_SHELL = [
   './classes/Sound.js',
   './classes/Cloud.js',
   './classes/item.js?v=11',
-  './classes/level.js?v=10',
+  './classes/level.js?v=12',
   './classes/quest.js?v=8',
   './classes/dialouge.js?v=8',
   './classes/tile_classes/tile.js?v=8',
@@ -66,11 +66,13 @@ const APP_SHELL = [
   './config/constants.js?v=8',
   './config/items.js?v=9',
   './config/tiles.js?v=10',
-  './classes/raycaster3d.js?v=2',
+  './classes/raycaster3d.js?v=4',
+  './classes/ui/display.js?v=1',
+  './classes/weather-system.js?v=1',
   './miscfunctions.js?v=11',
-  './preload.js?v=11',
+  './preload.js?v=12',
   './gamepad.js?v=8',
-  './sketch.js?v=10',
+  './sketch.js?v=11',
   './images/pwa/icon-192.png',
   './images/pwa/icon-512.png',
   './images/pwa/icon-maskable-512.png',

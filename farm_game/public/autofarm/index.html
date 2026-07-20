@@ -7,7 +7,7 @@
   <meta name="description" content="Cloudy Meadows AutoFarm — an endless multiplayer farming automation game.">
   <title>Cloudy Meadows: AutoFarm</title>
   <link rel="stylesheet" href="../styles.css?v=2">
-  <link rel="stylesheet" href="autofarm.css?v=2">
+  <link rel="stylesheet" href="autofarm.css?v=3">
   <script src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/p5.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/addons/p5.sound.min.js"></script>
   <script src="../localDataStorage-3.0.0.min.js"></script>
@@ -17,7 +17,7 @@
   <script src="../classes/Sound.js"></script>
   <script src="../classes/Cloud.js"></script>
   <script src="../classes/item.js?v=11"></script>
-  <script src="../classes/level.js?v=10"></script>
+  <script src="../classes/level.js?v=12"></script>
   <script src="../classes/quest.js?v=8"></script>
   <script src="../classes/dialouge.js?v=8"></script>
   <script src="../classes/tile_classes/tile.js?v=8"></script>
@@ -39,14 +39,35 @@
   <script src="../config/items.js?v=9"></script>
   <script src="../config/tiles.js?v=10"></script>
   <script src="../miscfunctions.js?v=11"></script>
-  <script src="../classes/raycaster3d.js?v=2"></script>
+  <script src="../classes/raycaster3d.js?v=4"></script>
+  <script src="../classes/ui/display.js?v=1"></script>
+  <script src="../classes/weather-system.js?v=1"></script>
   <script src="assets.js?v=2"></script>
-  <script src="game.js?v=2"></script>
+  <script src="game.js?v=7"></script>
 </head>
 <body>
   <div id="game-container"></div>
-  <div id="autofarm-status" class="wood-panel"><b>AUTO FARM</b><span id="net-state">OFFLINE</span><span id="farmers-online">1 FARMER</span></div>
-  <div id="autofarm-tip" class="wood-panel">WASD move · E use · Q close · 1–8 select · V switch 2D/3D</div>
+  <div id="autofarm-name-screen">
+    <form id="autofarm-name-form" class="wood-panel">
+      <h1>JOIN AUTO FARM</h1>
+      <p>Choose the name shown above your farmer and in meadow chat.</p>
+      <label for="autofarm-name">FARMER NAME</label>
+      <input id="autofarm-name" name="name" maxlength="20" autocomplete="nickname" required autofocus>
+      <button type="submit">ENTER MEADOW</button>
+      <div id="join-server-info"><span class="socket-dot"></span><span id="join-server-state">CHECKING SERVER…</span><span id="join-player-count">0 PLAYERS</span></div>
+    </form>
+  </div>
+  <details id="autofarm-client" class="wood-panel">
+    <summary><span class="socket-dot"></span><b>AUTO FARM</b><span id="net-state">OFFLINE</span><span id="farmers-online">0 PLAYERS</span><span id="chat-unread" hidden>0</span></summary>
+    <div id="autofarm-server-info"><span>SERVER</span><strong id="server-room">meadow-one</strong><span id="server-connection">DISCONNECTED</span></div>
+    <div id="autofarm-chat-log" role="log" aria-live="polite" aria-label="Meadow chat"></div>
+    <form id="autofarm-chat-form">
+      <label class="sr-only" for="autofarm-chat-input">Chat message</label>
+      <input id="autofarm-chat-input" maxlength="240" autocomplete="off" placeholder="Message meadow chat…">
+      <button type="submit">SEND</button>
+    </form>
+  </details>
+  <div id="autofarm-tip" class="wood-panel">WASD move · E use · Esc pause/settings · 1–8 select · V switch 2D/3D</div>
   <div id="autofarm-modal" aria-hidden="true">
     <section class="wood-panel">
       <button id="modal-close">×</button>

@@ -1,6 +1,6 @@
 # Cloudy Meadows: AutoFarm
 
-AutoFarm is a separate endless automation ruleset served at `/autofarm/`. The route boots the same Cloudy Meadows client and directly reuses its HUD, renderers, sprites, farming, shops, robots, controls, lighting, and serialization. It has a separate world and save namespace and does not use the story deadline.
+AutoFarm is a separate endless automation game served at `/autofarm/`. It has its own HTML entry point, procedural world, simulation loop, economy, save, and multiplayer connection. It directly loads the existing Cloudy Meadows engine classes, item/tile definitions, styles, sprites, plant logic, shops, chests, robot implementation, and WEBGL renderer. It never starts the story levels, quests, difficulty selection, Mr. C, or the 100-day rules.
 
 ## Game pillars
 
@@ -11,15 +11,15 @@ AutoFarm is a separate endless automation ruleset served at `/autofarm/`. The ro
 
 ## Current vertical slice
 
-- Deterministic, on-demand Cloudy Meadows `Level` generation with grass, water, bushes, trees, and markets.
+- Deterministic, on-demand Cloudy Meadows `Level` generation with grass, water, bushes, trees, rocks, and markets.
 - A guaranteed starter market and additional procedural regional markets.
-- Markets always include the existing fruit and vegetable stalls; the third shop is selected from farming, tools, construction, machinery, and robots.
-- Existing hoe, shovel, seed, crop growth, harvesting, buying, and selling logic.
+- Every market combines guaranteed fruits, vegetables, and seeds with locally generated tools, machines, robots, chests, and command disks.
+- Hoe tilling, shovel/axe resource gathering, seed planting, shared `Plant` growth, harvesting, buying, selling, and infinite coin accumulation.
 - Placeable chests and robots.
 - The existing visual robot inventory/programmer and complete command item set.
-- The exact Cloudy Meadows HUD, top-down renderer, optional WEBGL first-person renderer, sprites, sound, touch controls, controller support, and day/night lighting.
-- Sparse generated-room persistence through the existing save/load serializer, isolated from the story-game save.
-- A Cloudflare Durable Object and Pages Function deployment scaffold for the authoritative multiplayer milestone.
+- A Cloudy Meadows inventory/calendar/coin HUD, the existing top-down `Level` renderer, and the shared optional WEBGL first-person renderer.
+- A separate AutoFarm local save that persists explored rooms, crops, construction, chests, robots, inventory, money, and time.
+- Multiplayer presence and world-cell synchronization through a Pages Function bound to a hibernating WebSocket Durable Object.
 
 ## Economy model
 
@@ -37,7 +37,7 @@ Markets use regional stock and demand. Basic food never disappears, so a new or 
 
 ## Multiplayer authority
 
-One Durable Object instance will represent one named world. Untouched terrain stays procedural; the object will persist sparse mutations and relay player presence over hibernating WebSockets. The Worker and Pages binding are scaffolded, but the reused client is not yet connected: adapting the old client to server authority is intentionally the next milestone instead of maintaining a second game implementation.
+One Durable Object instance represents one named world. Untouched terrain stays procedural, so it costs no storage. The object persists sparse world mutations and relays player presence over hibernating WebSockets. The current vertical slice synchronizes player presence and manual tile/entity changes. Wallets, inventories, crop clocks, chest contents, and robot simulation still need to move from client authority to server authority before public competitive trading.
 
 Before opening public persistent servers, move these actions from client authority to Durable Object authority:
 
@@ -51,9 +51,9 @@ The target simulation model is one active tick per room, with robots grouped by 
 
 ## Delivery roadmap
 
-### Milestone 1 — shared-client foundation (implemented)
+### Milestone 1 — separate shared-engine game (implemented)
 
-Boot the existing game at `/autofarm`, generate deterministic rooms on demand, farm, trade, place storage, program robots, switch between the shared renderers, and persist to an isolated local save.
+Boot the independent game at `/autofarm/`, generate deterministic rooms on demand, gather, farm, trade, place storage, program shared robots, switch between 2D and shared WEBGL 3D rendering, persist locally, and synchronize world changes and player presence.
 
 ### Milestone 2 — real factory loop
 

@@ -26,8 +26,7 @@ const PLOT = tile_name_to_num('plot');
 const COMPOST = tile_name_to_num('compost_tile');
 const LAMPPOST = tile_name_to_num('lamppost');
 
-// daily_update() reaches for a global `level17` (a specific authored level).
-// Give it a throwaway grid so the call doesn't crash.
+// The story calendar decoration uses authored `level17` when it exists.
 function stubLevel17() {
     global.level17 = { map: Array.from({ length: 8 }, () => Array.from({ length: 13 }, () => 0)) };
 }
@@ -84,6 +83,11 @@ test('getReadyForSave drops the transient lighting buffer', () => {
     assert.equal(level.lightingBuffer, undefined, 'the non-serializable buffer is removed before saving');
 });
 
+test('lighting composites in corner mode at full canvas size', () => {
+    const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/classes/level.js'), 'utf8');
+    assert.match(source, /imageMode\(CORNER\);\s*image\(this\.lightingBuffer, 0, 0, canvasWidth, canvasHeight\)/);
+});
+
 test('a level survives a name→id→reconstruct save round-trip', () => {
     // This mirrors loadLevel(): a saved level stores tile *names*, which are
     // mapped back to ids and rebuilt through the same Level constructor.
@@ -114,6 +118,13 @@ test('daily_update ages a plot into dirt after five days', () => {
     assert.equal(level.map[0][0].name, 'plot');
     for (let day = 0; day < 5; day++) level.daily_update();
     assert.equal(level.map[0][0].name, 'dirt', 'a neglected plot reverts to dirt');
+});
+
+test('daily_update supports procedural worlds without authored level17', () => {
+    delete global.level17;
+    const map = [[GRASS]];
+    const level = new Level('Procedural', map, emptyForeground(map));
+    assert.doesNotThrow(() => level.daily_update());
 });
 
 test('daily_update turns a finished compost tile back into base ground', () => {

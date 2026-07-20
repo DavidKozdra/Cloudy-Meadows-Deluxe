@@ -9,6 +9,18 @@ https://magentaautumn.itch.io/cloudy-meadows-deluxe
 
 The repository also includes **Cloudy Meadows: AutoFarm**, an endless open-world farming and robot-automation sandbox at `/autofarm/`. Its gameplay plan and Cloudflare Durable Object deployment notes are in [`docs/autofarm-plan.md`](docs/autofarm-plan.md).
 
+For local multiplayer development, start the two Cloudflare processes in separate terminals from the repository root:
+
+```sh
+npm run dev:autofarm:world
+```
+
+```sh
+npm run dev:pages
+```
+
+Wait until the Pages terminal reports that `AUTO_FARM_WORLD` is connected, then open `http://localhost:8788/autofarm/`. Wrangler may choose another port if 8788 is already occupied; use the URL printed by the Pages terminal.
+
 ## Description
 
 Cloudy meadows is an urban vertical farming community. Meet interesting people, farm with composting and helpful animals, and if you get 
