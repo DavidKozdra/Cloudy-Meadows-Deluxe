@@ -43,11 +43,17 @@ class Entity extends Tile {
 
     tileTouching(x, y) {
         if (levels[y] && levels[y][x] && typeof levels[y][x] === 'object') {
+            const map = levels[y][x].map;
             // Math.round() is a no-op for grid-snapped 2D-mode positions
             // (already exact tile multiples) and is what makes this work
             // for continuous 3D free-look positions, which are almost never
-            // exactly tile-aligned.
-            return levels[y][x].map[Math.round(this.pos.y / tileSize)][Math.round(this.pos.x / tileSize)];
+            // exactly tile-aligned. Clamp into the map's actual bounds since
+            // free movement can round a near-edge position to one row/col
+            // past the last valid index (e.g. pos.y just shy of the bottom
+            // edge rounds up to row 19 on a 19-row map).
+            const row = Math.min(map.length - 1, Math.max(0, Math.round(this.pos.y / tileSize)));
+            const col = Math.min(map[0].length - 1, Math.max(0, Math.round(this.pos.x / tileSize)));
+            return map[row][col];
         }
         return 0;
     }

@@ -47,7 +47,19 @@ const RAYCAST_CONFIG = Object.freeze({
     floorColor: [86, 60, 40],
     ceilingColor: [135, 206, 235], // matches the 2D mode's background(135,206,235)
     billboardFacingIndex: 2, // always draw the "facing down / toward viewer" sprite variant
-    billboardFovMarginDegrees: 10
+    billboardFovMarginDegrees: 10,
+    // Screen columns per cast ray for the wall pass (1 ray drawn as a
+    // sliceWidth-px-wide slice instead of 1px). Cuts castRay()/image()/
+    // tint() calls ~3x. The depth buffer is still filled at full column
+    // resolution regardless (see render3DView), so billboard occlusion
+    // accuracy is unaffected — only wall/texture visual resolution coarsens.
+    wallRayStride: 3,
+    // Screen-pixel grid size (both axes) for floor-casting sample blocks.
+    // Full per-pixel floor-casting would be ~224,000 image() calls/frame;
+    // this samples on an 8x8 grid instead (~3,500 calls/frame), matching
+    // the same "reduce ray count" tradeoff already made for walls. Divides
+    // both canvasWidth (736) and the floor height (304) evenly.
+    floorSampleStride: 8
 });
 
 // Solid fallback wall colors keyed by tile name, used instead of texture
@@ -85,6 +97,18 @@ const BILLBOARD_ENTITY_CLASSES = [
     'Shop', 'Chest', 'AirBallon', 'Plant'
 ];
 
+// Entity (entity.js) hardcodes collide=true on every instance regardless of
+// tile class — it's the base class movement collision relies on, so NPCs
+// still physically block the player. But that means castRay(), which just
+// checks `.collide`, would otherwise treat every NPC/Shop/Chest/etc. as an
+// opaque wall and draw it as a flat slab instead of (or self-occludingly
+// alongside) its billboard sprite. Used as castRay's skipCell predicate for
+// the wall-rendering pass only — movement collision (isPointBlocked) does
+// not use this, entities should still block walking through them.
+function isBillboardEntityCell(cell) {
+    return BILLBOARD_ENTITY_CLASSES.indexOf(cell.class) !== -1;
+}
+
 // Reused across frames so render3DView() doesn't allocate a new typed array
 // 60 times a second.
 let raycastDepthBuffer = null;
@@ -107,7 +131,17 @@ let raycastDepthBuffer = null;
 // Y-side (horizontal wall face) hit, used for cheap two-tone shading.
 // `wallX` is the fractional position (0-1) across the hit wall face, used to
 // pick which column of the wall's texture to sample.
-function castRay(map, originXTiles, originYTiles, angleDeg, maxDepthTiles) {
+//
+// `skipCell` is an optional (cell) => boolean predicate for cells that
+// should NOT stop the ray even though `.collide === true` — used by the
+// wall-rendering pass to pass through billboarded entities (NPCs, robots,
+// etc: Entity's base constructor hardcodes collide=true on every entity
+// regardless of the `class`, since it's also used for movement collision;
+// without this, every NPC/entity would render as an opaque wall slab
+// instead of (or in addition to, self-occludingly) its billboard sprite).
+// Movement collision (isPointBlocked, below) intentionally does NOT use
+// this — entities should still physically block walking through them.
+function castRay(map, originXTiles, originYTiles, angleDeg, maxDepthTiles, skipCell) {
     const angleRad = (angleDeg * Math.PI) / 180;
     const dirX = Math.cos(angleRad);
     const dirY = Math.sin(angleRad);
@@ -161,7 +195,7 @@ function castRay(map, originXTiles, originYTiles, angleDeg, maxDepthTiles) {
             return { distance: Math.abs(distance), hitTile: null, side, wallX };
         }
 
-        if (cell !== 0 && cell.collide === true) {
+        if (cell !== 0 && cell.collide === true && !(skipCell && skipCell(cell))) {
             const perpDist = side === 0
                 ? (mapX - originXTiles + (1 - stepX) / 2) / dirX
                 : (mapY - originYTiles + (1 - stepY) / 2) / dirY;
@@ -187,6 +221,40 @@ function wallXFraction(originXTiles, originYTiles, dirX, dirY, perpDistance, sid
     return wallX;
 }
 
+// Pure: world tile-space point under screen pixel (col, row), for
+// floor-casting. Returns null for any row at or above the horizon (no floor
+// projection there). Takes only explicit parameters (no p5/global reads),
+// same discipline as castRay(), so it's directly unit-testable.
+//
+// Unlike classic camera-plane floorcasting, this codebase generates ray
+// angles by per-column linear interpolation of the angle itself (see the
+// wall loop's `rayAngleDeg` formula), not a camera-plane offset vector.
+// That means the "distance is constant across a whole screen row" shortcut
+// from Lodev-style floorcasting doesn't carry over unchanged: perpDist IS
+// constant per row (by the same similar-triangles projection already used
+// for wallHeight), but converting that to a world (tileX, tileY) point
+// still requires each column's own ray angle — there's no linear world-step
+// shortcut here, the trig below is per-column, not per-row.
+function computeFloorSampleWorldPos(originXTiles, originYTiles, yawDeg, fovDegrees,
+                                     col, row, canvasWidth, canvasHeight, horizonY) {
+    if (row <= horizonY) return null;
+
+    const relativeAngleDeg = -fovDegrees / 2 + (col / canvasWidth) * fovDegrees;
+    const rayAngleDeg = yawDeg + relativeAngleDeg;
+    const perpDist = (canvasHeight / 2) / (row - horizonY);
+    // Undo the perpendicular-distance projection to get true Euclidean
+    // distance along the ray angle for this specific column (inverse of the
+    // correction renderBillboards applies the other direction).
+    const euclidDist = perpDist / Math.cos((relativeAngleDeg * Math.PI) / 180);
+    const rayAngleRad = (rayAngleDeg * Math.PI) / 180;
+
+    return {
+        tileX: originXTiles + euclidDist * Math.cos(rayAngleRad),
+        tileY: originYTiles + euclidDist * Math.sin(rayAngleRad),
+        perpDist
+    };
+}
+
 function getWallColor(hitTile) {
     if (!hitTile || !hitTile.name) return DEFAULT_WALL_COLOR;
     return TILE_WALL_COLORS[hitTile.name] || DEFAULT_WALL_COLOR;
@@ -204,6 +272,48 @@ function getWallSprite(hitTile) {
     const variants = all_imgs[hitTile.png];
     if (!variants) return null;
     return variants[hitTile.variant] || variants[0] || null;
+}
+
+// Floor-casting pass: samples the walkable-tile art (grass, tilled plots,
+// dirt paths, water, etc.) on a coarse screen-space grid and blits it under
+// the player's feet, replacing the flat floorColor fill in that area. Not
+// per-pixel (see computeFloorSampleWorldPos's header comment for why the
+// classic per-row linear-increment optimization doesn't apply here) — a
+// RAYCAST_CONFIG.floorSampleStride x floorSampleStride grid instead, same
+// "reduce ray count" tradeoff already made for walls. Misses (off-map,
+// empty cell, no sprite) simply leave the flat floorColor rect visible
+// underneath, already drawn by render3DView before this runs.
+function renderFloorCasting(currentLvl, originXTiles, originYTiles, yawDeg, horizonY) {
+    const stride = RAYCAST_CONFIG.floorSampleStride;
+    const fov = RAYCAST_CONFIG.fovDegrees;
+    const half = stride / 2;
+
+    for (let row = horizonY; row < canvasHeight; row += stride) {
+        for (let col = 0; col < canvasWidth; col += stride) {
+            const sample = computeFloorSampleWorldPos(
+                originXTiles, originYTiles, yawDeg, fov,
+                col + half, row + half, canvasWidth, canvasHeight, horizonY
+            );
+            if (!sample) continue;
+
+            const mapRow = currentLvl.map[Math.floor(sample.tileY)];
+            const cell = mapRow ? mapRow[Math.floor(sample.tileX)] : undefined;
+            if (!cell) continue;
+
+            const sprite = getWallSprite(cell);
+            if (!sprite || !sprite.width) continue;
+
+            const fracX = sample.tileX - Math.floor(sample.tileX);
+            const fracY = sample.tileY - Math.floor(sample.tileY);
+            const srcX = Math.min(sprite.width - 1, Math.floor(fracX * sprite.width));
+            const srcY = Math.min(sprite.height - 1, Math.floor(fracY * sprite.height));
+            const fogFactor = Math.max(0.3, 1 - sample.perpDist / RAYCAST_CONFIG.maxDepthTiles);
+
+            tint(255 * fogFactor, 255 * fogFactor, 255 * fogFactor);
+            image(sprite, col, row, stride, stride, srcX, srcY, 1, 1);
+        }
+    }
+    noTint();
 }
 
 // Frame entry point: draws the full first-person view (sky, floor, walls,
@@ -236,17 +346,34 @@ function render3DView(playerObj, currentLvl) {
     fill(RAYCAST_CONFIG.floorColor);
     rect(0, horizonY, canvasWidth, canvasHeight - horizonY);
 
+    // Floor-casting must run BEFORE the wall loop below: wall slices extend
+    // from the horizon down to horizonY + wallHeight/2, so if floor blocks
+    // were drawn after, they'd paint texture over the bottom portion of any
+    // visible wall. Walls are drawn on top of the floor, same ordering the
+    // flat floorColor rect above already relies on.
+    renderFloorCasting(currentLvl, originXTiles, originYTiles, yawDeg, horizonY);
+
     const fov = RAYCAST_CONFIG.fovDegrees;
-    for (let col = 0; col < canvasWidth; col++) {
+    const wallStride = RAYCAST_CONFIG.wallRayStride;
+    for (let col = 0; col < canvasWidth; col += wallStride) {
+        // Last slice may be narrower than the stride (canvasWidth isn't
+        // guaranteed to divide evenly, e.g. 736 % 3 == 1).
+        const sliceWidth = Math.min(wallStride, canvasWidth - col);
         const rayAngleDeg = yawDeg - fov / 2 + (col / canvasWidth) * fov;
-        const hit = castRay(currentLvl.map, originXTiles, originYTiles, rayAngleDeg, RAYCAST_CONFIG.maxDepthTiles);
+        const hit = castRay(
+            currentLvl.map, originXTiles, originYTiles, rayAngleDeg, RAYCAST_CONFIG.maxDepthTiles,
+            isBillboardEntityCell
+        );
 
-        if (!hit) {
-            raycastDepthBuffer[col] = RAYCAST_CONFIG.maxDepthTiles;
-            continue;
-        }
+        // Depth buffer stays at FULL column resolution regardless of the
+        // wall ray stride — renderBillboards() reads it per exact column
+        // for occlusion, and a native typed-array range-fill is cheap, so
+        // there's no reason to let billboard occlusion accuracy degrade
+        // along with wall visual resolution.
+        const distance = hit ? hit.distance : RAYCAST_CONFIG.maxDepthTiles;
+        raycastDepthBuffer.fill(distance, col, col + sliceWidth);
 
-        raycastDepthBuffer[col] = hit.distance;
+        if (!hit) continue;
 
         const wallHeight = Math.min(canvasHeight * 3, canvasHeight / Math.max(hit.distance, 0.0001));
         const sideShade = hit.side === 1 ? 0.75 : 1;
@@ -257,12 +384,12 @@ function render3DView(playerObj, currentLvl) {
         if (sprite && sprite.width) {
             const srcX = Math.min(sprite.width - 1, Math.floor(hit.wallX * sprite.width));
             tint(255 * shadeFactor, 255 * shadeFactor, 255 * shadeFactor);
-            image(sprite, col, horizonY - wallHeight / 2, 1, wallHeight, srcX, 0, 1, sprite.height);
+            image(sprite, col, horizonY - wallHeight / 2, sliceWidth, wallHeight, srcX, 0, 1, sprite.height);
             noTint();
         } else {
             const color = shadeColor(getWallColor(hit.hitTile), shadeFactor);
             fill(color[0], color[1], color[2]);
-            rect(col, horizonY - wallHeight / 2, 1, wallHeight);
+            rect(col, horizonY - wallHeight / 2, sliceWidth, wallHeight);
         }
     }
 
@@ -361,12 +488,20 @@ function renderBillboards(playerObj, currentLvl, originXTiles, originYTiles, yaw
         const screenX = ((relativeAngle + fov / 2) / fov) * canvasWidth;
         const col = Math.max(0, Math.min(canvasWidth - 1, Math.floor(screenX)));
 
-        if (distance >= depthBuffer[col]) continue;
+        // depthBuffer holds PERPENDICULAR wall distance (castRay's fisheye
+        // correction), but `distance` here is true Euclidean distance to the
+        // entity. Comparing them directly under-occludes correctly-visible
+        // entities off dead-center, since Euclidean > perpendicular for any
+        // non-zero relative angle. Convert to the same convention before
+        // comparing.
+        const perpDistance = distance * Math.cos((relativeAngle * Math.PI) / 180);
+
+        if (perpDistance >= depthBuffer[col]) continue;
 
         const sprite = getBillboardSprite(tile);
         if (!sprite) continue;
 
-        const spriteScale = Math.min(canvasHeight * 3, canvasHeight / Math.max(distance, 0.0001));
+        const spriteScale = Math.min(canvasHeight * 3, canvasHeight / Math.max(perpDistance, 0.0001));
         image(sprite, screenX, horizonY, spriteScale, spriteScale);
     }
     pop();
@@ -542,7 +677,14 @@ function updatePlayer3DMovement(playerObj) {
 
     if (result.hitEdgeY) {
         const dir = moveY > 0 ? 1 : -1;
-        if (ensureLevelExists(originLevelY + dir, originLevelX)) {
+        // Use currentLevel_x (not originLevelX) as the column: if hitEdgeX
+        // already ran above, currentLevel_x reflects the room the player is
+        // actually standing in NOW, and this Y-transition must check/create
+        // the neighbor of THAT room, not the pre-X-transition one — using
+        // originLevelX here would check/create the wrong diagonal neighbor
+        // and leave currentLevel_y/currentLevel_x pointing at a slot that
+        // was never actually verified to exist (the crash this fixes).
+        if (ensureLevelExists(originLevelY + dir, currentLevel_x)) {
             resetLevelTransitionAnim(originLevelY, originLevelX);
             currentLevel_y += dir;
             finalYTiles = wrapPositionAcrossEdge(result.y, roomHeightTiles, dir);

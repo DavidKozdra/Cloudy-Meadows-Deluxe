@@ -18,6 +18,13 @@ vm.runInNewContext(
 );
 const { castRay } = sandbox;
 
+const floorSandbox = {};
+vm.runInNewContext(
+    `${extractFunction(source, 'computeFloorSampleWorldPos')}\nglobalThis.computeFloorSampleWorldPos = computeFloorSampleWorldPos;`,
+    floorSandbox
+);
+const { computeFloorSampleWorldPos } = floorSandbox;
+
 const WALL = { collide: true };
 const FLOOR = { collide: false };
 
@@ -68,6 +75,25 @@ test('ray facing straight up hits the near wall at the expected distance', () =>
     assert.ok(Math.abs(hit.distance - 1.5) < 1e-9, `expected distance ~1.5, got ${hit.distance}`);
 });
 
+test('skipCell lets a ray pass through a collidable cell to find the wall behind it', () => {
+    const map = [
+        [WALL, WALL, WALL, WALL, WALL],
+        [WALL, FLOOR, FLOOR, FLOOR, WALL],
+        [WALL, FLOOR, WALL, FLOOR, WALL],
+        [WALL, FLOOR, FLOOR, FLOOR, WALL],
+        [WALL, WALL, WALL, WALL, WALL]
+    ];
+    const npcCell = { collide: true, class: 'NPC' };
+    map[2][2] = npcCell;
+
+    const withoutSkip = castRay(map, 1.5, 2.5, 0, 24);
+    assert.equal(withoutSkip.hitTile, npcCell, 'without a filter, the NPC cell blocks the ray like any wall');
+
+    const withSkip = castRay(map, 1.5, 2.5, 0, 24, cell => cell.class === 'NPC');
+    assert.equal(withSkip.hitTile, map[2][4], 'with the filter, the ray passes through the NPC to the real wall behind it');
+    assert.ok(withSkip.distance > withoutSkip.distance);
+});
+
 test('a single wall tile blocks a ray fired directly at it', () => {
     const map = [
         [FLOOR, FLOOR, FLOOR, FLOOR],
@@ -105,4 +131,58 @@ test('a ray that runs off the edge of the map is treated as a boundary hit', () 
     const hit = castRay(map, 1, 1, 0, 24);
     assert.ok(hit);
     assert.equal(hit.hitTile, null);
+});
+
+test('computeFloorSampleWorldPos returns null at or above the horizon', () => {
+    const canvasWidth = 736, canvasHeight = 608, horizonY = 304;
+    assert.equal(
+        computeFloorSampleWorldPos(5, 5, 0, 66, 368, horizonY, canvasWidth, canvasHeight, horizonY),
+        null
+    );
+    assert.equal(
+        computeFloorSampleWorldPos(5, 5, 0, 66, 368, horizonY - 10, canvasWidth, canvasHeight, horizonY),
+        null
+    );
+});
+
+test('computeFloorSampleWorldPos: straight-ahead column matches the hand-computed perpendicular projection', () => {
+    const canvasWidth = 736, canvasHeight = 608, horizonY = 304;
+    const centerCol = canvasWidth / 2; // relativeAngleDeg === 0 here
+    const row = horizonY + 76; // canvasHeight/4 below horizon
+    const yawDeg = 0;
+    const sample = computeFloorSampleWorldPos(5, 5, yawDeg, 66, centerCol, row, canvasWidth, canvasHeight, horizonY);
+
+    const expectedPerpDist = (canvasHeight / 2) / (row - horizonY);
+    assert.ok(Math.abs(sample.perpDist - expectedPerpDist) < 1e-9);
+    // yaw=0 -> world +x direction, and relativeAngle=0 means euclidDist == perpDist here
+    assert.ok(Math.abs(sample.tileX - (5 + expectedPerpDist)) < 1e-9);
+    assert.ok(Math.abs(sample.tileY - 5) < 1e-9);
+});
+
+test('computeFloorSampleWorldPos: off-center columns use Euclidean distance greater than perpDist (fisheye correction applied)', () => {
+    const canvasWidth = 736, canvasHeight = 608, horizonY = 304;
+    const row = horizonY + 76;
+    const offCenterCol = 100; // well off the center column, non-zero relativeAngleDeg
+    const sample = computeFloorSampleWorldPos(5, 5, 0, 66, offCenterCol, row, canvasWidth, canvasHeight, horizonY);
+    const dx = sample.tileX - 5;
+    const dy = sample.tileY - 5;
+    const euclidDist = Math.sqrt(dx * dx + dy * dy);
+    assert.ok(euclidDist > sample.perpDist, 'Euclidean distance must exceed perpendicular distance off-center');
+});
+
+test('computeFloorSampleWorldPos: columns equidistant from center produce equal perpDist and mirrored offsets', () => {
+    const canvasWidth = 736, canvasHeight = 608, horizonY = 304;
+    const row = horizonY + 76;
+    const centerCol = canvasWidth / 2;
+    const leftCol = centerCol - 80;
+    const rightCol = centerCol + 80;
+    const yawDeg = 0;
+
+    const leftSample = computeFloorSampleWorldPos(5, 5, yawDeg, 66, leftCol, row, canvasWidth, canvasHeight, horizonY);
+    const rightSample = computeFloorSampleWorldPos(5, 5, yawDeg, 66, rightCol, row, canvasWidth, canvasHeight, horizonY);
+
+    assert.ok(Math.abs(leftSample.perpDist - rightSample.perpDist) < 1e-9);
+    // Mirrored across the yaw=0 (+x) axis: same tileX offset, opposite-sign tileY offset.
+    assert.ok(Math.abs((leftSample.tileX - 5) - (rightSample.tileX - 5)) < 1e-9);
+    assert.ok(Math.abs((leftSample.tileY - 5) + (rightSample.tileY - 5)) < 1e-9);
 });
