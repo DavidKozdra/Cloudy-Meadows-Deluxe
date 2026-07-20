@@ -12,7 +12,8 @@ const ACCESSIBILITY_OPTION_DEFAULTS = Object.freeze({
     highContrast: false,
     largeText: false,
     largeControls: false,
-    uiScale: 1
+    uiScale: 1,
+    is3DMode: false
 });
 
 function getOptionsStore() {
@@ -46,7 +47,8 @@ function normalizeAccessibilityOptions(rawOptions = {}) {
         highContrast: !!rawOptions.highContrast,
         largeText: !!rawOptions.largeText,
         largeControls: !!rawOptions.largeControls,
-        uiScale: clampAccessibilityUIScale(rawOptions.uiScale)
+        uiScale: clampAccessibilityUIScale(rawOptions.uiScale),
+        is3DMode: !!rawOptions.is3DMode
     };
 }
 
@@ -129,6 +131,11 @@ function syncAccessibilityControls(sourceOptions) {
 function applyAccessibilityPrefs(sourceOptions) {
     const accessibilityOptions = getAccessibilityOptions(sourceOptions || getStoredOptions() || {});
     cachedAccessibilityOptions = accessibilityOptions;
+    if (typeof is3DMode !== 'undefined') {
+        is3DMode = accessibilityOptions.is3DMode;
+    } else {
+        window.is3DMode = accessibilityOptions.is3DMode;
+    }
     const targetNodes = [document.documentElement];
 
     if (document.body) {
@@ -2944,6 +2951,33 @@ function createAccessibilitySettingsSection(contextId, sectionOptions = {}) {
     return section;
 }
 
+function createDisplaySettingsSection(contextId, sectionOptions = {}) {
+    const section = document.createElement('div');
+    section.className = (sectionOptions.compact ? 'pause-menu-section' : 'options-section') + ' accessibility-settings-section';
+
+    const title = document.createElement(sectionOptions.compact ? 'div' : 'h3');
+    title.className = sectionOptions.compact ? 'pause-controls-title' : 'options-section-title';
+    title.textContent = 'Display';
+    section.appendChild(title);
+
+    const intro = document.createElement('p');
+    intro.className = (sectionOptions.compact ? 'pause-menu-label' : 'options-section-description') + ' accessibility-section-intro';
+    intro.textContent = 'Choose how the world is rendered.';
+    section.appendChild(intro);
+
+    const list = document.createElement('div');
+    list.className = 'accessibility-settings-list';
+    list.appendChild(createAccessibilityToggleControl(
+        contextId,
+        'is3DMode',
+        '3D Mode (First-Person)',
+        'Switch the world view to a first-person perspective. Movement and controls stay the same.'
+    ));
+    section.appendChild(list);
+
+    return section;
+}
+
 function createLanguageSettingsSection(contextId, sectionOptions = {}) {
     const section = document.createElement('div');
     section.className = (sectionOptions.compact ? 'pause-menu-section' : 'options-section') + ' language-settings-section';
@@ -3070,6 +3104,7 @@ function showTitleOptions(){
         const audioPanel = createOptionsPanel('audio', 'Audio');
         const languagePanel = createOptionsPanel('language', '🌐 ' + t('Language'));
         const accessibilityPanel = createOptionsPanel('accessibility', 'Accessibility');
+        const displayPanel = createOptionsPanel('display', 'Display');
         const controlsPanel = !mobileOrSmallScreen ? createOptionsPanel('controls', 'Controls') : null;
         const dataPanel = createOptionsPanel('data', 'Data');
         const helpPanel = !mobileOrSmallScreen ? createOptionsPanel('help', 'Help') : null;
@@ -3127,6 +3162,7 @@ function showTitleOptions(){
         audioPanel.appendChild(audioSection);
         languagePanel.appendChild(createLanguageSettingsSection('title-options'));
         accessibilityPanel.appendChild(createAccessibilitySettingsSection('title'));
+        displayPanel.appendChild(createDisplaySettingsSection('title'));
 
         if (controlsPanel) {
             const controlsSection = document.createElement('div');
@@ -4908,6 +4944,7 @@ function ensurePauseMenuContainer() {
     const audioPanel = createPausePanel('audio', 'Audio');
     const languagePanel = createPausePanel('language', '🌐 ' + t('Language'));
     const accessibilityPanel = createPausePanel('accessibility', 'Accessibility');
+    const displayPanel = createPausePanel('display', 'Display');
     const controlsPanel = !mobileOrSmallScreen ? createPausePanel('controls', 'Controls') : null;
     const helpPanel = !mobileOrSmallScreen ? createPausePanel('help', 'Help') : null;
 
@@ -4962,6 +4999,7 @@ function ensurePauseMenuContainer() {
     audioPanel.appendChild(sliderSection);
     languagePanel.appendChild(createLanguageSettingsSection('pause', { compact: true }));
     accessibilityPanel.appendChild(createAccessibilitySettingsSection('pause', { compact: true }));
+    displayPanel.appendChild(createDisplaySettingsSection('pause', { compact: true }));
 
     if (controlsPanel) {
         const controlsSection = document.createElement('div');

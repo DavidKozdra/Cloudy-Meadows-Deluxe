@@ -360,21 +360,29 @@ class Level {
         this.lightingBuffer.fill(0, 0, 0, time);
         this.lightingBuffer.rect(0, 0, canvasWidth, canvasHeight);
 
-        // Use erase mode to cut holes for lights
-        this.lightingBuffer.erase(255, 255);
-        for (let i = 0; i < this.lights.length; i++) {
-            this.lights[i].renderToBuffer(this.lightingBuffer, camX, camY, zoom);
+        // Per-light glow holes are positioned by transforming each light's
+        // world coordinates through the top-down camera (camX/camY/zoom).
+        // In 3D Mode there is no such camera — a light's screen position has
+        // no consistent meaning under a first-person projection — so skip the
+        // erase-hole pass entirely and keep only the flat day/night darkness
+        // wash above. Flashlight glow is skipped for the same reason.
+        if (typeof is3DMode === 'undefined' || !is3DMode) {
+            // Use erase mode to cut holes for lights
+            this.lightingBuffer.erase(255, 255);
+            for (let i = 0; i < this.lights.length; i++) {
+                this.lights[i].renderToBuffer(this.lightingBuffer, camX, camY, zoom);
+            }
+            // Flashlight: a transient light that follows the player when the Flashlight
+            // is the held item and toggled on. Kept out of this.lights so it never
+            // persists to saves or duplicates across frames.
+            if (typeof flashlightOn !== 'undefined' && flashlightOn &&
+                typeof player !== 'undefined' && player && player.inv &&
+                player.inv[player.hand] != 0 && player.inv[player.hand].name === 'Flashlight') {
+                const fl = new Light(player.pos.x, player.pos.y, tileSize * 5, 255, 255, 220);
+                fl.renderToBuffer(this.lightingBuffer, camX, camY, zoom);
+            }
+            this.lightingBuffer.noErase();
         }
-        // Flashlight: a transient light that follows the player when the Flashlight
-        // is the held item and toggled on. Kept out of this.lights so it never
-        // persists to saves or duplicates across frames.
-        if (typeof flashlightOn !== 'undefined' && flashlightOn &&
-            typeof player !== 'undefined' && player && player.inv &&
-            player.inv[player.hand] != 0 && player.inv[player.hand].name === 'Flashlight') {
-            const fl = new Light(player.pos.x, player.pos.y, tileSize * 5, 255, 255, 220);
-            fl.renderToBuffer(this.lightingBuffer, camX, camY, zoom);
-        }
-        this.lightingBuffer.noErase();
         
         // Draw the lighting buffer to main canvas in screen space
         image(this.lightingBuffer, 0, 0);

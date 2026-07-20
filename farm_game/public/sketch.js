@@ -39,6 +39,11 @@ var camera = {
     enabled: false
 };
 
+// When true, the gameplay view renders as a first-person raycasted scene
+// (classes/raycaster.js) instead of the default top-down view. Kept in sync
+// with the persisted 'is3DMode' option by applyAccessibilityPrefs().
+var is3DMode = false;
+
 var player;
 var levels = [];
 var currentLevel_y = 2;
@@ -1854,24 +1859,10 @@ function draw() {
         }
         
         background(135, 206, 235);
-        
-        // Apply camera transformation
-        push();
-        if (camera.enabled) {
-            scale(camera.zoom);
-            translate(-camera.x, -camera.y);
-        }
-        
-        image(background_img, 0, 0);
-        if (levels[currentLevel_y][currentLevel_x] && typeof levels[currentLevel_y][currentLevel_x] === 'object') {
-            levels[currentLevel_y][currentLevel_x].fore_render();
-            levels[currentLevel_y][currentLevel_x].render();
-            // First-time tutorial: glow/arrow over bridge tiles after Mr.C leaves
-            if (typeof renderBridgeTutorialHighlights === 'function') {
-                renderBridgeTutorialHighlights(levels[currentLevel_y][currentLevel_x]);
-            }
-        }
 
+        // World-update ticks run once per frame regardless of render mode, so
+        // gameplay (plant growth, NPC/robot movement, day/night) never drifts
+        // between 2D and 3D Mode.
         if (!paused){
             const reduceMotionEnabled = typeof shouldReduceMotion === 'function' && shouldReduceMotion();
             if (reduceMotionEnabled) {
@@ -1917,17 +1908,47 @@ function draw() {
             // Pause GIF animations
             animatedGifs.forEach(gif => gif.pause());
         }
-        player.render();
 
         const currentLvl = levels[currentLevel_y]?.[currentLevel_x];
 
-        // Tree tops render above player but below the night overlay so darkness shades them correctly
-        if(!player.dead && currentLvl && typeof currentLvl.renderTreeTops === 'function'){
-            currentLvl.renderTreeTops();
-        }
+        if (is3DMode) {
+            // 3D Mode always renders the full canvas 1:1 — the mobile 2x zoom
+            // follow-camera is a 2D-only affordance.
+            camera.enabled = false;
+            camera.x = 0;
+            camera.y = 0;
 
-        // End camera transformation
-        pop();
+            if (currentLvl && typeof currentLvl === 'object' && typeof render3DView === 'function') {
+                render3DView(player, currentLvl);
+            }
+        } else {
+            // Apply camera transformation
+            push();
+            if (camera.enabled) {
+                scale(camera.zoom);
+                translate(-camera.x, -camera.y);
+            }
+
+            image(background_img, 0, 0);
+            if (levels[currentLevel_y][currentLevel_x] && typeof levels[currentLevel_y][currentLevel_x] === 'object') {
+                levels[currentLevel_y][currentLevel_x].fore_render();
+                levels[currentLevel_y][currentLevel_x].render();
+                // First-time tutorial: glow/arrow over bridge tiles after Mr.C leaves
+                if (typeof renderBridgeTutorialHighlights === 'function') {
+                    renderBridgeTutorialHighlights(levels[currentLevel_y][currentLevel_x]);
+                }
+            }
+
+            player.render();
+
+            // Tree tops render above player but below the night overlay so darkness shades them correctly
+            if(!player.dead && currentLvl && typeof currentLvl.renderTreeTops === 'function'){
+                currentLvl.renderTreeTops();
+            }
+
+            // End camera transformation
+            pop();
+        }
 
         // Weather effects in screen space — rain/fog/lightning/frogs are authored in
         // canvas coordinates, so they must draw outside the camera zoom/translate (fixes
