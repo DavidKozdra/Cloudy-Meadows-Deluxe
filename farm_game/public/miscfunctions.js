@@ -202,8 +202,16 @@ function setupPointerLock(canvasElt) {
         const engaged = document.pointerLockElement === canvasElt;
         pointerLockEngaged = engaged;
         window.pointerLockEngaged = engaged;
-        if (engaged && typeof player !== 'undefined' && player) {
-            player.lookYawDeg = [270, 0, 90, 180][player.facing] ?? 0;
+    });
+
+    // Escape is reserved by browsers for releasing pointer lock. Remember
+    // that the pause began while locked before the browser clears the state,
+    // so the Resume button can restore it with that same click.
+    document.addEventListener('keydown', event => {
+        const activePauseKey = typeof pause_button !== 'undefined' ? pause_button : 27;
+        const autoFarmEscape = typeof autoJoined !== 'undefined' && event.key === 'Escape';
+        if ((event.keyCode === activePauseKey || autoFarmEscape) && pointerLockEngaged) {
+            window.pointerLockRestoreAfterPause = true;
         }
     });
 
@@ -214,6 +222,34 @@ function setupPointerLock(canvasElt) {
         );
         player.facing = nearestCardinalFacingFromYaw(player.lookYawDeg);
     });
+}
+
+function rememberPointerLockForPause() {
+    if (typeof pointerLockEngaged !== 'undefined' && pointerLockEngaged) {
+        window.pointerLockRestoreAfterPause = true;
+    }
+}
+
+function restorePointerLockAfterPause() {
+    if (!window.pointerLockRestoreAfterPause ||
+        typeof is3DMode === 'undefined' || !is3DMode ||
+        (typeof isMobile !== 'undefined' && isMobile) ||
+        (typeof title_screen !== 'undefined' && title_screen)) return false;
+
+    const canvas = document.querySelector('#game-container canvas') || document.querySelector('canvas');
+    if (!canvas || typeof canvas.requestPointerLock !== 'function') return false;
+    canvas.style.pointerEvents = 'auto';
+    window.pointerLockRestoreAfterPause = false;
+    try {
+        const request = canvas.requestPointerLock();
+        if (request && typeof request.catch === 'function') {
+            request.catch(() => { window.pointerLockRestoreAfterPause = true; });
+        }
+        return true;
+    } catch (_) {
+        window.pointerLockRestoreAfterPause = true;
+        return false;
+    }
 }
 
 window.applyAccessibilityPrefs = applyAccessibilityPrefs;
@@ -5113,6 +5149,7 @@ function ensurePauseMenuContainer() {
     backBtn.addEventListener('click', () => {
         paused = false;
         hidePaused();
+        restorePointerLockAfterPause();
     });
     actions.appendChild(backBtn);
 

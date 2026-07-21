@@ -277,7 +277,11 @@ function getAutoFarmInitial3DMode(savedOptions) {
 
 function setAutoPaused(value) {
     paused=value;
-    if(paused)showPaused();else{hidePaused();restoreAutoCanvasInput();}
+    if(paused){
+        if(typeof rememberPointerLockForPause==='function')rememberPointerLockForPause();
+        if(pointerLockEngaged&&document.exitPointerLock)document.exitPointerLock();
+        showPaused();
+    }else{hidePaused();restoreAutoCanvasInput();}
 }
 
 function restoreAutoCanvasInput(){const canvas=document.querySelector('#game-container canvas');if(canvas)canvas.style.pointerEvents='auto';}

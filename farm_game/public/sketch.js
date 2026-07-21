@@ -1818,6 +1818,7 @@ function draw() {
     // or a dialogue box. Centralized here (rather than at every state
     // transition site) so it can't be missed.
     if (pointerLockEngaged && (paused || title_screen || (typeof player !== 'undefined' && player && player.talking != 0))) {
+        if (paused && typeof rememberPointerLockForPause === 'function') rememberPointerLockForPause();
         document.exitPointerLock();
     }
 

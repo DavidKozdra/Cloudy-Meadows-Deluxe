@@ -8,6 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../public/autofarm/game.js'
 const raycasterSource = fs.readFileSync(path.join(__dirname, '../public/classes/raycaster3d.js'), 'utf8');
 const html = fs.readFileSync(path.join(__dirname, '../public/autofarm/index.html'), 'utf8');
 const assetsSource = fs.readFileSync(path.join(__dirname, '../public/autofarm/assets.js'), 'utf8');
+const miscSource = fs.readFileSync(path.join(__dirname, '../public/miscfunctions.js'), 'utf8');
 const context = {
     navigator: { userAgent: 'test' },
     localDataStorage() { return { get() { return null; }, set() {} }; },
@@ -254,6 +255,18 @@ test('AutoFarm includes and consumes the main-game mobile control surface', () =
     assert.match(source, /processAutoVirtualActions\(\)/);
     assert.match(source, /virtualInput\.up/);
     assert.match(source, /player\.lookYawDeg = normalizeAngleDeg0to360/);
+});
+
+test('3D pause resumes pointer lock from the Resume button click', () => {
+    assert.match(miscSource, /function rememberPointerLockForPause\(/);
+    assert.match(miscSource, /function restorePointerLockAfterPause\(/);
+    assert.match(miscSource, /backBtn\.addEventListener\('click',[\s\S]*restorePointerLockAfterPause\(\)/);
+    assert.doesNotMatch(
+        miscSource,
+        /if \(engaged && typeof player[\s\S]{0,180}player\.lookYawDeg = \[270, 0, 90, 180\]/,
+        'relocking must preserve the current camera yaw'
+    );
+    assert.match(source, /rememberPointerLockForPause\(\)/);
 });
 
 test('AutoFarm saves the floor beneath a placed wall for later removal', () => {
