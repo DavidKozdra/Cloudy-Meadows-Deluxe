@@ -336,7 +336,7 @@ function getRoomGeometryForRoom(currentLvl, levelX, levelY) {
 }
 
 function getActiveCameraYawDeg(playerObj) {
-    return pointerLockEngaged
+    return pointerLockEngaged || (typeof isMobile !== 'undefined' && isMobile)
         ? playerObj.lookYawDeg
         : (FACING_TO_YAW_DEG[playerObj.facing] ?? 0);
 }

@@ -50,7 +50,11 @@ var robotPlayButton, robotPauseButton, robotBoomButton;
 var mouse_item = 0;
 var UI_BOUNDS = {get chestGrid(){return{top:189,bottom:457,left:(canvasWidth/2)-184,right:(canvasWidth/2)+184,cellSize:90,getGridPos:(x,y,inv)=>({x:Math.min(inv[0].length-1,Math.max(0,Math.round((x-(canvasWidth/2)+139)/90))),y:Math.min(inv.length-1,Math.max(0,Math.round((y-234)/90)))})};}};
 var mobileInventoryState = { isOpen:false };
-var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+var isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || ('ontouchstart' in window)
+    || (navigator.maxTouchPoints > 0)
+    || (window.innerWidth <= 1024 && window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+    || (window.innerWidth <= 768);
 var robot_talkingSound = { play(){} }, PlantingSound = { play(){} }, shovelSound = { play(){} };
 var hoe_sound = { play(){} }, moneySound = { play(){} }, errorSound = { play(){} };
 var allSounds = [];
@@ -79,6 +83,8 @@ let autoUnreadChat = 0;
 let autoInventoryWarningUntil = 0;
 let autoLastPresence = 0;
 let autoLast3DAnim = 0;
+let autoVirtualInteractHeld = false;
+let autoVirtualEatHeld = false;
 
 function preload() {
     loadAutoFarmAssets();
@@ -104,10 +110,144 @@ function setup() {
     bindAutoModal();
     setupAutoPauseMenu();
     bindAutoMultiplayerClient();
+    setupAutoMobileControls(canvas.elt);
 }
 
 function windowResized() {
     CloudyDisplay.resizeCanvas();
+    isMobile = detectAutoMobile();
+    updateAutoMobileControlsVisibility();
+}
+
+function detectAutoMobile() {
+    return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        || ('ontouchstart' in window)
+        || (navigator.maxTouchPoints > 0)
+        || (window.innerWidth <= 1024 && window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+        || (window.innerWidth <= 768);
+}
+
+function clearAutoVirtualInput() {
+    for (const key of Object.keys(virtualInput)) virtualInput[key] = false;
+    autoVirtualInteractHeld = false;
+    autoVirtualEatHeld = false;
+    document.querySelectorAll('#mobile-controls .pressed, #mobile-controls .long-press')
+        .forEach(button => button.classList.remove('pressed', 'long-press'));
+}
+
+function updateAutoMobileControlsVisibility() {
+    const controls = document.getElementById('mobile-controls');
+    if (!controls) return;
+    const modal = document.getElementById('autofarm-modal');
+    const shouldShow = isMobile && autoJoined && !paused &&
+        !(modal && modal.classList.contains('open'));
+    controls.classList.toggle('active', shouldShow);
+    if (!shouldShow && controls.dataset.inputActive === 'true') clearAutoVirtualInput();
+    controls.dataset.inputActive = shouldShow ? 'true' : 'false';
+}
+
+function setupAutoMobileControls(canvasElt) {
+    const controls = document.getElementById('mobile-controls');
+    if (!controls) return;
+
+    const bindHold = (id, inputName, longPressSpecial = false) => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        let longPressTimer = null;
+        const release = event => {
+            if (event) event.preventDefault();
+            clearTimeout(longPressTimer);
+            virtualInput[inputName] = false;
+            if (longPressSpecial) virtualInput.special = false;
+            button.classList.remove('pressed', 'long-press');
+        };
+        button.addEventListener('pointerdown', event => {
+            event.preventDefault();
+            button.setPointerCapture?.(event.pointerId);
+            virtualInput[inputName] = true;
+            button.classList.add('pressed');
+            if (longPressSpecial) {
+                longPressTimer = setTimeout(() => {
+                    virtualInput.special = true;
+                    button.classList.add('long-press');
+                }, 300);
+            }
+        });
+        button.addEventListener('pointerup', release);
+        button.addEventListener('pointercancel', release);
+        button.addEventListener('lostpointercapture', release);
+    };
+
+    bindHold('dpad-up', 'up');
+    bindHold('dpad-down', 'down');
+    bindHold('dpad-left', 'left');
+    bindHold('dpad-right', 'right');
+    bindHold('btn-interact', 'interact', true);
+    bindHold('btn-eat', 'eat');
+
+    const bindTap = (id, callback) => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        button.addEventListener('pointerdown', event => {
+            event.preventDefault();
+            button.classList.add('pressed');
+            callback();
+        });
+        const release = event => {
+            event.preventDefault();
+            button.classList.remove('pressed');
+        };
+        button.addEventListener('pointerup', release);
+        button.addEventListener('pointercancel', release);
+    };
+
+    bindTap('hotbar-prev', () => { if (player) player.hand = (player.hand + 7) % 8; });
+    bindTap('hotbar-next', () => { if (player) player.hand = (player.hand + 1) % 8; });
+    bindTap('btn-mobile-pause', () => setAutoPaused(true));
+
+    if (canvasElt) {
+        let lookPointerId = null;
+        let lastLookX = 0;
+        canvasElt.addEventListener('pointerdown', event => {
+            if (!isMobile || !is3DMode || !autoJoined || paused || event.pointerType === 'mouse') return;
+            lookPointerId = event.pointerId;
+            lastLookX = event.clientX;
+            canvasElt.setPointerCapture?.(event.pointerId);
+            event.preventDefault();
+        });
+        canvasElt.addEventListener('pointermove', event => {
+            if (event.pointerId !== lookPointerId || !player) return;
+            const movementX = event.clientX - lastLookX;
+            lastLookX = event.clientX;
+            player.lookYawDeg = normalizeAngleDeg0to360(player.lookYawDeg + movementX * 0.35);
+            player.facing = nearestCardinalFacingFromYaw(player.lookYawDeg);
+            event.preventDefault();
+        });
+        const endLook = event => {
+            if (event.pointerId === lookPointerId) lookPointerId = null;
+        };
+        canvasElt.addEventListener('pointerup', endLook);
+        canvasElt.addEventListener('pointercancel', endLook);
+    }
+
+    isMobile = detectAutoMobile();
+    updateAutoMobileControlsVisibility();
+}
+
+function processAutoVirtualActions() {
+    const modal = document.getElementById('autofarm-modal');
+    const canAct = autoJoined && !paused && !autoTextInputActive() &&
+        !(modal && modal.classList.contains('open'));
+    if (virtualInput.interact && !autoVirtualInteractHeld && canAct && !player.talking) {
+        autoLastAction = millis();
+        useAutoItem();
+    }
+    if (virtualInput.eat && !autoVirtualEatHeld && canAct) {
+        if (player.talking && ['Chest','Backpack'].includes(player.talking.class)) closeAutoContainer();
+        else if (!player.talking) eatAutoHeld();
+    }
+    autoVirtualInteractHeld = virtualInput.interact;
+    autoVirtualEatHeld = virtualInput.eat;
 }
 
 function setupAutoPauseMenu() {
@@ -178,6 +318,7 @@ function createAutoPlayer() {
 }
 
 function draw() {
+    updateAutoMobileControlsVisibility();
     background(135,206,235);
     let level = levels[currentLevel_y][currentLevel_x];
     if (!level) return;
@@ -222,6 +363,7 @@ function updateAutoFarm(level) {
 }
 
 function handleAutoInput() {
+    processAutoVirtualActions();
     if (!autoJoined || autoTextInputActive()) return;
     if (player.talking && ['Chest','Backpack'].includes(player.talking.class)) return;
     if (document.querySelector('#autofarm-modal').classList.contains('open')) return;
@@ -230,10 +372,10 @@ function handleAutoInput() {
         return;
     }
     if (millis() - autoLastMove > 125) {
-        if (keyIsDown(move_up_button) || keyIsDown(38)) moveAutoPlayer(0,-1,0);
-        else if (keyIsDown(move_right_button) || keyIsDown(39)) moveAutoPlayer(1,0,1);
-        else if (keyIsDown(move_down_button) || keyIsDown(40)) moveAutoPlayer(0,1,2);
-        else if (keyIsDown(move_left_button) || keyIsDown(37)) moveAutoPlayer(-1,0,3);
+        if (keyIsDown(move_up_button) || keyIsDown(38) || virtualInput.up) moveAutoPlayer(0,-1,0);
+        else if (keyIsDown(move_right_button) || keyIsDown(39) || virtualInput.right) moveAutoPlayer(1,0,1);
+        else if (keyIsDown(move_down_button) || keyIsDown(40) || virtualInput.down) moveAutoPlayer(0,1,2);
+        else if (keyIsDown(move_left_button) || keyIsDown(37) || virtualInput.left) moveAutoPlayer(-1,0,3);
     }
 }
 
@@ -245,10 +387,10 @@ function updateAutoFarm3DMovement() {
     const forwardX = Math.cos(yawRad), forwardY = Math.sin(yawRad);
     const rightX = Math.cos(yawRad + Math.PI / 2), rightY = Math.sin(yawRad + Math.PI / 2);
     let moveX = 0, moveY = 0;
-    if (keyIsDown(move_up_button) || keyIsDown(38)) { moveX += forwardX; moveY += forwardY; }
-    if (keyIsDown(move_down_button) || keyIsDown(40)) { moveX -= forwardX; moveY -= forwardY; }
-    if (keyIsDown(move_right_button) || keyIsDown(39)) { moveX += rightX; moveY += rightY; }
-    if (keyIsDown(move_left_button) || keyIsDown(37)) { moveX -= rightX; moveY -= rightY; }
+    if (keyIsDown(move_up_button) || keyIsDown(38) || virtualInput.up) { moveX += forwardX; moveY += forwardY; }
+    if (keyIsDown(move_down_button) || keyIsDown(40) || virtualInput.down) { moveX -= forwardX; moveY -= forwardY; }
+    if (keyIsDown(move_right_button) || keyIsDown(39) || virtualInput.right) { moveX += rightX; moveY += rightY; }
+    if (keyIsDown(move_left_button) || keyIsDown(37) || virtualInput.left) { moveX -= rightX; moveY -= rightY; }
     if (moveX === 0 && moveY === 0) return false;
 
     const moveLength = Math.hypot(moveX, moveY);

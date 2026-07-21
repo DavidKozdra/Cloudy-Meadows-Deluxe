@@ -15,7 +15,7 @@ const context = {
     document: {},
     localStorage: { getItem() { return null; } }
 };
-vm.runInNewContext(raycasterSource + '\n' + source + '\nglobalThis.testGenerateMap=generateAutoMap;globalThis.testHash=autoHash;globalThis.testFacingTile=getAutoFacingTile;globalThis.testInitial3DMode=getAutoFarmInitial3DMode;globalThis.testUpdateAuto3D=updateAutoFarm3DMovement;globalThis.testResolvePlaceable=resolveAutoPlaceableTarget;globalThis.testSnapPlayer=snapPlayerTo2DGrid;globalThis.testSerializeTile=serializeAutoTile;', context);
+vm.runInNewContext(raycasterSource + '\n' + source + '\nglobalThis.testGenerateMap=generateAutoMap;globalThis.testHash=autoHash;globalThis.testFacingTile=getAutoFacingTile;globalThis.testInitial3DMode=getAutoFarmInitial3DMode;globalThis.testUpdateAuto3D=updateAutoFarm3DMovement;globalThis.testResolvePlaceable=resolveAutoPlaceableTarget;globalThis.testSnapPlayer=snapPlayerTo2DGrid;globalThis.testSerializeTile=serializeAutoTile;globalThis.testUseAutoItem=useAutoItem;globalThis.testActiveCameraYaw=getActiveCameraYawDeg;', context);
 
 function openMovementMap(width = 23, height = 19) {
     return Array.from({ length: height }, () =>
@@ -99,7 +99,7 @@ test('AutoFarm reuses backpacks, inventory warnings, beds, and registry placeabl
 
 test('AutoFarm loads and initializes the shared Three.js 3D renderer', () => {
     assert.match(html, /import \* as THREE from 'https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.184\.0\/build\/three\.module\.min\.js'/);
-    assert.match(html, /classes\/raycaster3d\.js\?v=24/);
+    assert.match(html, /classes\/raycaster3d\.js\?v=25/);
     assert.match(source, /initializeThree3DRenderer\(\)/);
     assert.match(source, /render3DViewWebgl\(player, level, currentLevel_x, currentLevel_y\)/);
     assert.doesNotMatch(source, /createGraphics\(canvasWidth, canvasHeight, WEBGL\)/);
@@ -121,6 +121,25 @@ test('AutoFarm 3D movement is continuous and camera-relative', () => {
     assert.equal(moved, true);
     assert.ok(context.player.pos.x > 32 && context.player.pos.x < 64, 'one frame moves a fraction of a tile');
     assert.equal(context.player.pos.y, 32);
+});
+
+test('AutoFarm 3D movement accepts the shared mobile virtual input', () => {
+    install3DMovement(openMovementMap(), 1.5, 1.5, 0);
+    context.keyIsDown = () => false;
+    context.virtualInput.up = true;
+
+    const moved = context.testUpdateAuto3D();
+
+    context.virtualInput.up = false;
+    assert.equal(moved, true);
+    assert.ok(context.player.pos.x > 32 && context.player.pos.x < 64);
+});
+
+test('AutoFarm mobile camera uses touch-drag yaw without pointer lock', () => {
+    context.pointerLockEngaged = false;
+    context.isMobile = true;
+    assert.equal(context.testActiveCameraYaw({ lookYawDeg: 137, facing: 2 }), 137);
+    context.isMobile = false;
 });
 
 test('AutoFarm 3D movement slides with a collision radius instead of entering walls', () => {
@@ -189,6 +208,52 @@ test('AutoFarm walls target the open tile ahead instead of trapping the player',
     assert.equal(context.testResolvePlaceable(
         wall, currentTile, currentPosition, currentTile, currentPosition
     ), null, 'a clamped room-edge target cannot place on the player');
+});
+
+test('using a wall on desktop places it ahead, preserves its floor, and consumes one item', () => {
+    const map = openMovementMap();
+    for (let row = 0; row < map.length; row++) {
+        for (let col = 0; col < map[row].length; col++) {
+            map[row][col] = { name: 'grass', class: 'Tile', collide: false, row, col };
+        }
+    }
+    const floor = map[4][5];
+    Object.assign(context, {
+        levels: [[{ map }]],
+        currentLevel_x: 0,
+        currentLevel_y: 0,
+        constrain: (value, low, high) => Math.min(high, Math.max(low, value)),
+        tile_name_to_num: name => name === 'grass' ? 2 : -1,
+        new_tile_from_num: (tileNum, x, y) => ({
+            name: tileNum === 6 ? 'wall' : 'unknown',
+            class: 'Tile', collide: tileNum === 6, x, y
+        }),
+        player: {
+            pos: { x: 4 * 32, y: 4 * 32 },
+            facing: 1,
+            hand: 0,
+            inv: [{ name: 'Wall', class: 'Placeable', tile_num: 6, tile_need_num: 0, amount: 2 }]
+        },
+        autoSocket: null
+    });
+
+    context.testUseAutoItem();
+
+    assert.equal(map[4][5].name, 'wall');
+    assert.equal(map[4][5].under_tile, floor);
+    assert.equal(context.player.inv[0].amount, 1);
+    assert.equal(map[4][4].name, 'grass', 'the occupied tile is unchanged');
+});
+
+test('AutoFarm includes and consumes the main-game mobile control surface', () => {
+    for (const id of ['mobile-controls','dpad-up','dpad-down','dpad-left','dpad-right',
+        'btn-interact','btn-eat','hotbar-prev','hotbar-next','btn-mobile-pause']) {
+        assert.match(html, new RegExp(`id=["']${id}["']`));
+    }
+    assert.match(source, /function setupAutoMobileControls\(/);
+    assert.match(source, /processAutoVirtualActions\(\)/);
+    assert.match(source, /virtualInput\.up/);
+    assert.match(source, /player\.lookYawDeg = normalizeAngleDeg0to360/);
 });
 
 test('AutoFarm saves the floor beneath a placed wall for later removal', () => {

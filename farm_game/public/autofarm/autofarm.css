@@ -52,3 +52,10 @@ html,body { width:100%; height:100%; margin:0; overflow:hidden; background:#000;
 .auto-command.remove { background:#8d4937; border-color:#d07a61; }
 .program { min-height:45px; padding:7px; border:2px dashed #bd8d57; }
 @media(max-width:700px){#autofarm-client{font-size:7px}#autofarm-client summary{gap:7px;padding:8px}#autofarm-tip{font-size:6px;max-width:95%;white-space:normal;text-align:center}}
+
+/* The controls themselves come from the shared game stylesheet. AutoFarm
+   only adjusts overlapping multiplayer chrome for the smaller viewport. */
+@media (max-width: 768px), (pointer: coarse) {
+  #autofarm-client { z-index: 1001; max-width: calc(100vw - 150px); }
+  #autofarm-tip { bottom: 72px; }
+}
