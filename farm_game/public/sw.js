@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v47';
+const CACHE_VERSION = 'v49';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -66,13 +66,13 @@ const APP_SHELL = [
   './config/constants.js?v=8',
   './config/items.js?v=9',
   './config/tiles.js?v=10',
-  './classes/raycaster3d.js?v=25',
+  './classes/raycaster3d.js?v=27',
   './classes/ui/display.js?v=1',
   './classes/weather-system.js?v=1',
   './miscfunctions.js?v=12',
   './preload.js?v=15',
   './gamepad.js?v=8',
-  './sketch.js?v=14',
+  './sketch.js?v=16',
   './images/pwa/icon-192.png',
   './images/pwa/icon-512.png',
   './images/pwa/icon-maskable-512.png',

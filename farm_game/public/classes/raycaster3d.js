@@ -67,6 +67,13 @@ let three3DBillboardGroup = null;
 let three3DActiveRoom = null;
 let three3DWallGeometry = null;
 let three3DFloorGeometry = null;
+let three3DViewModelScene = null;
+let three3DViewModelCamera = null;
+let three3DViewModelGroup = null;
+let three3DViewModelItemMesh = null;
+let three3DViewModelItemSprite = null;
+let three3DViewModelActionHeld = false;
+let three3DViewModelSwingStartedAt = -Infinity;
 const three3DBillboardPool = [];
 const three3DTextureCache = new WeakMap();
 const three3DMaterialCache = new WeakMap();
@@ -447,6 +454,7 @@ function initializeThree3DRenderer() {
     three3DRenderer.setSize(canvasWidth, canvasHeight, false);
     three3DRenderer.setClearColor(0x87ceeb, 1);
     three3DRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    three3DRenderer.autoClear = false;
 
     three3DScene = new THREE.Scene();
     three3DScene.background = new THREE.Color(0x87ceeb);
@@ -467,7 +475,47 @@ function initializeThree3DRenderer() {
     );
     three3DFloorGeometry = new THREE.PlaneGeometry(tileSize, tileSize);
     three3DFloorGeometry.rotateX(-Math.PI / 2);
+    initializeThreeViewModel();
     return true;
+}
+
+function initializeThreeViewModel() {
+    three3DViewModelScene = new THREE.Scene();
+    three3DViewModelCamera = new THREE.PerspectiveCamera(
+        52,
+        canvasWidth / canvasHeight,
+        0.05,
+        10
+    );
+    three3DViewModelGroup = new THREE.Group();
+
+    const skinMaterial = new THREE.MeshBasicMaterial({ color: 0xd89a70 });
+    const skinSideMaterial = new THREE.MeshBasicMaterial({ color: 0xb96f52 });
+    const sleeveMaterial = new THREE.MeshBasicMaterial({ color: 0x3477a8 });
+    const armGeometry = new THREE.BoxGeometry(0.34, 0.34, 0.92);
+    const hand = new THREE.Mesh(armGeometry, [
+        skinSideMaterial, skinSideMaterial, skinMaterial,
+        skinSideMaterial, skinMaterial, skinSideMaterial
+    ]);
+    hand.position.z = 0.08;
+    three3DViewModelGroup.add(hand);
+
+    const sleeve = new THREE.Mesh(
+        new THREE.BoxGeometry(0.39, 0.39, 0.48),
+        sleeveMaterial
+    );
+    sleeve.position.z = -0.56;
+    three3DViewModelGroup.add(sleeve);
+
+    three3DViewModelItemMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })
+    );
+    three3DViewModelItemMesh.position.set(-0.12, 0.34, 0.34);
+    three3DViewModelItemMesh.rotation.set(-0.16, 0.12, 0.17);
+    three3DViewModelItemMesh.renderOrder = 2;
+    three3DViewModelGroup.add(three3DViewModelItemMesh);
+    three3DViewModelScene.add(three3DViewModelGroup);
 }
 
 function getThreeTexture(sprite) {
@@ -710,6 +758,96 @@ function render3DInteractionPrompt(playerObj, levelX, levelY) {
     pop();
 }
 
+function get3DHeldItemSprite(playerObj) {
+    if (!playerObj || !Array.isArray(playerObj.inv)) return null;
+    const heldItem = playerObj.inv[playerObj.hand];
+    if (!heldItem || typeof heldItem.png !== 'number') return null;
+    const sprite = all_imgs[heldItem.png];
+    return isValidWebglTextureSource(sprite) ? sprite : null;
+}
+
+function isThreeViewModelMoving() {
+    const keyboardMoving = typeof keyIsDown === 'function' &&
+        typeof move_up_button !== 'undefined' &&
+        (keyIsDown(move_up_button) || keyIsDown(move_down_button) ||
+         keyIsDown(move_left_button) || keyIsDown(move_right_button));
+    const virtualMoving = typeof virtualInput !== 'undefined' && virtualInput &&
+        (virtualInput.up || virtualInput.down || virtualInput.left || virtualInput.right);
+    return keyboardMoving || virtualMoving;
+}
+
+function isThreeViewModelUsingItem() {
+    const keyboardUsing = typeof keyIsDown === 'function' &&
+        typeof interact_button !== 'undefined' && keyIsDown(interact_button);
+    const virtualUsing = typeof virtualInput !== 'undefined' && virtualInput &&
+        virtualInput.interact;
+    return keyboardUsing || virtualUsing;
+}
+
+function updateThreeViewModelItem(playerObj) {
+    const sprite = get3DHeldItemSprite(playerObj);
+    if (sprite === three3DViewModelItemSprite) return;
+    three3DViewModelItemSprite = sprite;
+    if (three3DViewModelItemMesh.material) three3DViewModelItemMesh.material.dispose();
+    if (!sprite) {
+        three3DViewModelItemMesh.visible = false;
+        return;
+    }
+
+    three3DViewModelItemMesh.material = new THREE.MeshBasicMaterial({
+        map: getThreeTexture(sprite),
+        transparent: true,
+        alphaTest: 0.08,
+        side: THREE.DoubleSide,
+        depthTest: true,
+        depthWrite: true
+    });
+    const aspect = sprite.width / sprite.height;
+    three3DViewModelItemMesh.scale.set(
+        aspect >= 1 ? 0.82 : 0.82 * aspect,
+        aspect >= 1 ? 0.82 / aspect : 0.82,
+        1
+    );
+    three3DViewModelItemMesh.visible = true;
+}
+
+// Render a separate perspective hand/item scene after clearing only the world
+// depth buffer. The arm and item therefore have real 3D foreshortening and can
+// occlude each other, but walls can never cut through the player's hand.
+function renderThreeViewModel(playerObj) {
+    if (!three3DViewModelScene || !three3DViewModelGroup || !playerObj ||
+        playerObj.dead || playerObj.talking ||
+        (typeof paused !== 'undefined' && paused)) return false;
+
+    updateThreeViewModelItem(playerObj);
+    const now = typeof millis === 'function' ? millis() : 0;
+    const reduceMotion = typeof shouldReduceMotion === 'function' && shouldReduceMotion();
+    const actionHeld = isThreeViewModelUsingItem();
+    if (actionHeld && !three3DViewModelActionHeld) three3DViewModelSwingStartedAt = now;
+    three3DViewModelActionHeld = actionHeld;
+
+    const moving = !reduceMotion && isThreeViewModelMoving();
+    const walkPhase = moving ? now * 0.009 : 0;
+    const swingProgress = reduceMotion
+        ? 1
+        : Math.min(1, Math.max(0, (now - three3DViewModelSwingStartedAt) / 280));
+    const swing = swingProgress < 1 ? Math.sin(swingProgress * Math.PI) : 0;
+    const bobX = moving ? Math.sin(walkPhase) * 0.045 : 0;
+    const bobY = moving ? Math.abs(Math.cos(walkPhase)) * 0.05 : 0;
+
+    three3DViewModelGroup.visible = true;
+    three3DViewModelGroup.position.set(0.72 + bobX, -0.62 - bobY - swing * 0.2, -1.5 + swing * 0.16);
+    three3DViewModelGroup.rotation.set(
+        -0.48 - swing * 0.72,
+        -0.34 + swing * 0.45,
+        -0.24 - swing * 0.5 + (moving ? Math.sin(walkPhase) * 0.025 : 0)
+    );
+
+    three3DRenderer.clearDepth();
+    three3DRenderer.render(three3DViewModelScene, three3DViewModelCamera);
+    return true;
+}
+
 function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = true) {
     if (!playerObj || !currentLvl || !Array.isArray(currentLvl.map)) return;
     if (!initializeThree3DRenderer()) return;
@@ -722,7 +860,9 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
             .concat(collect3DStatusMarkerDescriptors(currentLvl, playerObj)),
         useTextures
     );
+    three3DRenderer.clear(true, true, true);
     three3DRenderer.render(three3DScene, three3DCamera);
+    renderThreeViewModel(playerObj);
     compositeThreeCanvas();
     render3DInteractionPrompt(playerObj, levelX, levelY);
 }

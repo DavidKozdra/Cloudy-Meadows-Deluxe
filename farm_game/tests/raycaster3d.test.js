@@ -35,7 +35,8 @@ vm.runInNewContext(
      globalThis.getWebglBillboardSprite = getWebglBillboardSprite;
      globalThis.collectBillboardDescriptors = collectBillboardDescriptors;
      globalThis.collect3DStatusMarkerDescriptors = collect3DStatusMarkerDescriptors;
-     globalThis.get3DInteractionTarget = get3DInteractionTarget;`,
+     globalThis.get3DInteractionTarget = get3DInteractionTarget;
+     globalThis.get3DHeldItemSprite = get3DHeldItemSprite;`,
     sandbox
 );
 
@@ -160,6 +161,25 @@ test('3D interaction prompt uses the same nearby interactable target as the play
     player.looking = () => npc;
     player.talking = npc;
     assert.equal(sandbox.get3DInteractionTarget(player, 4, 2), null);
+});
+
+test('3D held-item viewmodel resolves the selected inventory sprite', () => {
+    const player = { hand: 1, inv: [{ png: 0 }, { png: 3 }] };
+
+    assert.equal(sandbox.get3DHeldItemSprite(player), staticSprite);
+    player.hand = 0;
+    assert.equal(sandbox.get3DHeldItemSprite(player), null, 'sprite arrays are not item icons');
+    player.inv[0] = 0;
+    assert.equal(sandbox.get3DHeldItemSprite(player), null);
+});
+
+test('3D held-item viewmodel uses an isolated perspective depth pass', () => {
+    assert.match(source, /three3DViewModelCamera = new THREE\.PerspectiveCamera/);
+    assert.match(source, /new THREE\.BoxGeometry\(0\.34, 0\.34, 0\.92\)/);
+    assert.match(source, /three3DRenderer\.clearDepth\(\)/);
+    assert.match(source, /three3DRenderer\.render\(three3DViewModelScene, three3DViewModelCamera\)/);
+    assert.match(source, /Math\.sin\(swingProgress \* Math\.PI\)/);
+    assert.doesNotMatch(source, /function render3DHeldItemOverlay/);
 });
 
 test('3D status markers match ready-plant and NPC quest/gift priority rules', () => {
