@@ -7,11 +7,12 @@ const vm = require('node:vm');
 const { readPublic, extractFunction } = require('./support/load');
 
 const source = readPublic('classes/raycaster3d.js');
-const sandbox = {};
+const sandbox = { pointerLockEngaged: true };
 vm.runInNewContext(
     [
         extractFunction(source, 'normalizeAngleDeg0to360'),
         extractFunction(source, 'nearestCardinalFacingFromYaw'),
+        extractFunction(source, 'getActiveCameraYawDeg'),
         extractFunction(source, 'isPointBlocked'),
         extractFunction(source, 'testMovementPosition'),
         extractFunction(source, 'moveWithSliding'),
@@ -19,6 +20,7 @@ vm.runInNewContext(
         extractFunction(source, 'updatePlayer3DMovementWebgl'),
         // nearestCardinalFacingFromYaw() reads these two top-level consts.
         'const YAW_TO_FACING = { 0: 1, 90: 2, 180: 3, 270: 0 };',
+        'const FACING_TO_YAW_DEG = [270, 0, 90, 180];',
         'const MOVE_SPEED_TILES_PER_SEC = 4;',
         'const PLAYER_COLLISION_RADIUS_TILES = 0.2;',
         'globalThis.normalizeAngleDeg0to360 = normalizeAngleDeg0to360;',
@@ -160,4 +162,74 @@ test('frame movement follows continuous yaw and updates player position', () => 
 
     assert.equal(player.pos.x, 64, 'yaw 0 forward movement advances one tile along +X');
     assert.equal(player.pos.y, 32);
+});
+
+test('3D movement ignores the player occupancy tile without ignoring real walls', () => {
+    const map = Array.from({ length: 5 }, () =>
+        Array.from({ length: 5 }, () => ({ collide: false }))
+    );
+    const occupiedCell = map[1][1];
+    occupiedCell.collide = true;
+    Object.assign(sandbox, {
+        levels: [[{ map }]],
+        currentLevel_x: 0,
+        currentLevel_y: 0,
+        deltaTime: 16,
+        tileSize: 32,
+        canvasWidth: 160,
+        canvasHeight: 160,
+        virtualInput: { up: true, down: false, left: false, right: false },
+        move_up_button: 87,
+        move_down_button: 83,
+        move_left_button: 65,
+        move_right_button: 68,
+        keyIsDown: () => false,
+        pointerLockEngaged: true
+    });
+    const player = {
+        pos: { x: 32, y: 32 },
+        facing: 1,
+        lookYawDeg: 0,
+        touching: occupiedCell,
+        tileTouching() {
+            return map[Math.round(this.pos.y / 32)][Math.round(this.pos.x / 32)];
+        }
+    };
+
+    sandbox.updatePlayer3DMovementWebgl(player);
+
+    assert.ok(player.pos.x > 32, 'a sub-tile step can leave the player-owned collision cell');
+    assert.equal(player.touching.collide, true, 'the current tile remains occupied for NPC collision');
+
+    map[1][2].collide = true;
+    const blocked = sandbox.moveWithSliding(map, 1.75, 1.5, 0.1, 0, 0.2, occupiedCell);
+    assert.equal(blocked.x, 1.75, 'an unrelated wall is still solid');
+});
+
+test('movement follows the visible cardinal camera when pointer lock is disengaged', () => {
+    const map = Array.from({ length: 5 }, () =>
+        Array.from({ length: 5 }, () => FLOOR)
+    );
+    Object.assign(sandbox, {
+        levels: [[{ map }]],
+        currentLevel_x: 0,
+        currentLevel_y: 0,
+        deltaTime: 250,
+        tileSize: 32,
+        canvasWidth: 160,
+        canvasHeight: 160,
+        virtualInput: { up: true, down: false, left: false, right: false },
+        move_up_button: 87,
+        move_down_button: 83,
+        move_left_button: 65,
+        move_right_button: 68,
+        keyIsDown: () => false,
+        pointerLockEngaged: false
+    });
+    const player = { pos: { x: 32, y: 32 }, facing: 2, lookYawDeg: 0 };
+
+    sandbox.updatePlayer3DMovementWebgl(player);
+
+    assert.equal(player.pos.x, 32, 'stale free-look yaw is ignored outside pointer lock');
+    assert.equal(player.pos.y, 64, 'facing down moves forward along the visible +Y direction');
 });

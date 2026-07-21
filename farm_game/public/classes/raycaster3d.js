@@ -62,6 +62,7 @@ let three3DBillboardGroup = null;
 let three3DActiveRoom = null;
 let three3DWallGeometry = null;
 let three3DFloorGeometry = null;
+const three3DBillboardPool = [];
 const three3DTextureCache = new WeakMap();
 const three3DMaterialCache = new WeakMap();
 const three3DBillboardGeometryCache = new Map();
@@ -198,12 +199,25 @@ function roomGeometrySignature(map) {
                 tokens.push('0');
                 continue;
             }
-            const under = isWebglBillboardEntityCell(cell) && cell.under_tile &&
-                typeof cell.under_tile === 'object' ? cell.under_tile : null;
+            // Moving entities are rendered from the live map every frame. For
+            // cached room geometry, their under-tile is the effective cell.
+            // This keeps NPC movement from rebuilding every floor/wall mesh.
+            const isDynamicBillboard = isWebglBillboardEntityCell(cell);
+            const under = cell.under_tile && typeof cell.under_tile === 'object'
+                ? cell.under_tile
+                : null;
+            const geometryCell = isDynamicBillboard ? under : cell;
+            const staticUnder = isDynamicBillboard ? null : under;
+            if (!geometryCell) {
+                tokens.push('dynamic-floor');
+                continue;
+            }
             tokens.push(
-                cell.class || '', cell.name || '', cell.collide === true ? 1 : 0,
-                cell.png ?? '', cell.variant ?? '', cell.age ?? '',
-                under ? under.png ?? '' : '', under ? under.variant ?? '' : ''
+                geometryCell.class || '', geometryCell.name || '',
+                isWebglStructuralWallCell(geometryCell) ? 1 : 0,
+                geometryCell.png ?? '', geometryCell.variant ?? '',
+                staticUnder ? staticUnder.png ?? '' : '',
+                staticUnder ? staticUnder.variant ?? '' : ''
             );
         }
     }
@@ -554,15 +568,22 @@ function getThreeBillboardGeometry(width, height) {
 }
 
 function renderThreeBillboards(billboards, useTextures) {
-    three3DBillboardGroup.clear();
-    for (const billboard of billboards) {
-        const mesh = new THREE.Mesh(
-            getThreeBillboardGeometry(billboard.width, billboard.height),
-            getThreeMaterial(billboard.sprite, 'billboard', useTextures)
-        );
+    for (let i = 0; i < billboards.length; i++) {
+        const billboard = billboards[i];
+        let mesh = three3DBillboardPool[i];
+        if (!mesh) {
+            mesh = new THREE.Mesh();
+            three3DBillboardPool.push(mesh);
+            three3DBillboardGroup.add(mesh);
+        }
+        mesh.geometry = getThreeBillboardGeometry(billboard.width, billboard.height);
+        mesh.material = getThreeMaterial(billboard.sprite, 'billboard', useTextures);
+        mesh.visible = true;
         mesh.position.set(billboard.worldX, billboard.height / 2, billboard.worldZ);
         mesh.lookAt(three3DCamera.position.x, mesh.position.y, three3DCamera.position.z);
-        three3DBillboardGroup.add(mesh);
+    }
+    for (let i = billboards.length; i < three3DBillboardPool.length; i++) {
+        three3DBillboardPool[i].visible = false;
     }
 }
 
@@ -590,12 +611,16 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
 
 // Point-collision test in continuous tile-space coordinates. Returns 'edge'
 // outside the room, 'wall' for a solid in-room tile, and false for open floor.
-function isPointBlocked(map, xTiles, yTiles) {
+function isPointBlocked(map, xTiles, yTiles, ignoredCell = null) {
     const col = Math.floor(xTiles);
     const row = Math.floor(yTiles);
     const mapRow = map[row];
     const cell = mapRow ? mapRow[col] : undefined;
     if (cell === undefined) return 'edge';
+    // The 2D movement system marks the tile occupied by the player as solid
+    // so NPCs cannot walk into it. Continuous 3D movement must ignore that
+    // one exact object or every sub-tile step is rejected as self-collision.
+    if (cell === ignoredCell) return false;
     if (cell !== 0 && cell.collide === true) return 'wall';
     return false;
 }
@@ -603,8 +628,8 @@ function isPointBlocked(map, xTiles, yTiles) {
 // Keeps a small first-person camera radius away from wall faces. Room edges
 // still use the center point so cross-room wrapping happens only after the
 // player actually leaves the map, not when the radius merely touches it.
-function testMovementPosition(map, xTiles, yTiles, radiusTiles) {
-    const center = isPointBlocked(map, xTiles, yTiles);
+function testMovementPosition(map, xTiles, yTiles, radiusTiles, ignoredCell = null) {
+    const center = isPointBlocked(map, xTiles, yTiles, ignoredCell);
     if (center !== false || radiusTiles <= 0) return center;
 
     const offsets = [
@@ -616,21 +641,21 @@ function testMovementPosition(map, xTiles, yTiles, radiusTiles) {
     for (const [offsetX, offsetY] of offsets) {
         // An offset crossing the room edge is not a collision; the center
         // point above remains authoritative for level transitions.
-        if (isPointBlocked(map, xTiles + offsetX, yTiles + offsetY) === 'wall') {
+        if (isPointBlocked(map, xTiles + offsetX, yTiles + offsetY, ignoredCell) === 'wall') {
             return 'wall';
         }
     }
     return false;
 }
 
-function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles, radiusTiles = 0) {
+function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles, radiusTiles = 0, ignoredCell = null) {
     let newX = xTiles;
     let newY = yTiles;
     let hitEdgeX = false;
     let hitEdgeY = false;
 
     if (deltaXTiles !== 0) {
-        const xTest = testMovementPosition(map, xTiles + deltaXTiles, yTiles, radiusTiles);
+        const xTest = testMovementPosition(map, xTiles + deltaXTiles, yTiles, radiusTiles, ignoredCell);
         if (xTest === 'edge') {
             hitEdgeX = true;
             newX = xTiles + deltaXTiles;
@@ -640,7 +665,7 @@ function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles, radiusTi
     }
 
     if (deltaYTiles !== 0) {
-        const yTest = testMovementPosition(map, newX, yTiles + deltaYTiles, radiusTiles);
+        const yTest = testMovementPosition(map, newX, yTiles + deltaYTiles, radiusTiles, ignoredCell);
         if (yTest === 'edge') {
             hitEdgeY = true;
             newY = yTiles + deltaYTiles;
@@ -688,7 +713,9 @@ function updatePlayer3DMovementWebgl(playerObj) {
     if (!currentLvl || typeof currentLvl !== 'object' || !currentLvl.map) return;
 
     const stepTiles = MOVE_SPEED_TILES_PER_SEC * (deltaTime / 1000);
-    const yawRad = (playerObj.lookYawDeg * Math.PI) / 180;
+    // Keep movement aligned with the camera. Outside pointer lock (including
+    // touch devices), the renderer uses the cardinal-facing fallback.
+    const yawRad = (getActiveCameraYawDeg(playerObj) * Math.PI) / 180;
     const forwardX = Math.cos(yawRad);
     const forwardY = Math.sin(yawRad);
     const rightX = Math.cos(yawRad + Math.PI / 2);
@@ -712,13 +739,17 @@ function updatePlayer3DMovementWebgl(playerObj) {
 
     const originXTiles = (playerObj.pos.x + tileSize / 2) / tileSize;
     const originYTiles = (playerObj.pos.y + tileSize / 2) / tileSize;
+    const occupiedCell = playerObj.touching && typeof playerObj.touching === 'object'
+        ? playerObj.touching
+        : null;
     const result = moveWithSliding(
         currentLvl.map,
         originXTiles,
         originYTiles,
         moveX * stepTiles,
         moveY * stepTiles,
-        PLAYER_COLLISION_RADIUS_TILES
+        PLAYER_COLLISION_RADIUS_TILES,
+        occupiedCell
     );
 
     let finalXTiles = result.x;
@@ -750,6 +781,16 @@ function updatePlayer3DMovementWebgl(playerObj) {
         }
     }
 
+    // Move the player occupancy marker without letting it participate in the
+    // player collision query above. Other entities still see the new
+    // occupied tile as solid, matching 2D-mode behavior.
+    if (occupiedCell) occupiedCell.collide = false;
     playerObj.pos.x = finalXTiles * tileSize - tileSize / 2;
     playerObj.pos.y = finalYTiles * tileSize - tileSize / 2;
+    if (typeof playerObj.tileTouching === 'function') {
+        playerObj.touching = playerObj.tileTouching(currentLevel_x, currentLevel_y);
+        if (playerObj.touching && typeof playerObj.touching === 'object') {
+            playerObj.touching.collide = true;
+        }
+    }
 }

@@ -137,3 +137,32 @@ test('room geometry is rebuilt for live map edits and room-coordinate changes', 
     assert.notEqual(nextRoom, sameRoom);
     assert.equal(nextRoom.walls.length, 2);
 });
+
+test('player occupancy and entity movement do not rebuild static room geometry', () => {
+    const grass = { name: 'grass', collide: false, class: 'Tile', png: 0, variant: 0 };
+    const dirt = { name: 'dirt', collide: false, class: 'Tile', png: 0, variant: 1 };
+    const npc = {
+        collide: true,
+        class: 'NPC',
+        png: 1,
+        pos: { x: 0, y: 0 },
+        under_tile: grass
+    };
+    const level = { map: [[npc, dirt]] };
+    const first = sandbox.getRoomGeometryForRoom(level, 7, 7);
+
+    // This is the same map update performed when an entity moves east: the
+    // old position reveals its under-tile and the entity adopts the new one.
+    level.map[0][0] = npc.under_tile;
+    npc.under_tile = dirt;
+    npc.pos.x = 32;
+    level.map[0][1] = npc;
+    const afterEntityMove = sandbox.getRoomGeometryForRoom(level, 7, 7);
+    assert.equal(afterEntityMove, first);
+
+    // Player occupancy changes collide on a named floor Tile; that affects
+    // movement only, not the cached visual geometry.
+    grass.collide = true;
+    const afterPlayerOccupancy = sandbox.getRoomGeometryForRoom(level, 7, 7);
+    assert.equal(afterPlayerOccupancy, first);
+});

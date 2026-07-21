@@ -1562,8 +1562,7 @@ function takeInput() {
             }
             //basic movement
             if (typeof is3DMode !== 'undefined' && is3DMode &&
-                typeof isMobile !== 'undefined' && !isMobile &&
-                typeof pointerLockEngaged !== 'undefined' && pointerLockEngaged) {
+                typeof updatePlayer3DMovementWebgl === 'function') {
                 updatePlayer3DMovementWebgl(player);
             } else {
                 player.move();

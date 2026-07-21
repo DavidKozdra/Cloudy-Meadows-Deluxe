@@ -5311,3 +5311,189 @@ body.acc-high-contrast .mobile-inv-slot.selected {
     .cooperative-exchange-panel { padding: 16px; }
     .cooperative-contract-list { grid-template-columns: 1fr; }
 }
+
+/* Align supporting panels with the quests visual system. */
+.config-modal {
+    border-radius: 4px;
+    box-shadow: none;
+    gap: 15px;
+    padding: 15px;
+}
+
+.config-tab,
+.config-grid-item,
+.config-filter-chip {
+    color: rgb(255, 255, 255);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.config-tab:hover,
+.config-grid-item:hover,
+.config-filter-chip:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+.config-tab.active,
+.config-grid-item.active,
+.config-grid-item.active[data-npc-name="Mr.C"],
+.config-filter-chip.active {
+    color: rgb(255, 255, 255);
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
+}
+
+.config-grid-item:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+.config-panel-help,
+.config-section,
+.config-items-toolbar,
+.config-item-row,
+.config-item-toggle,
+.config-price-wrapper,
+.config-item-note,
+.config-empty-state {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    box-shadow: none;
+}
+
+.config-item-row.custom-price {
+    border-color: rgb(255, 255, 0);
+    box-shadow: none;
+}
+
+.config-items-summary-chip,
+.config-item-badge,
+.config-price-reset,
+.config-price-label {
+    color: rgb(255, 255, 255);
+    background: rgba(149, 108, 65, 0.8);
+    border: 2px solid rgb(100, 70, 40);
+    border-radius: 3px;
+}
+
+.config-item-row[data-enabled="true"] .config-item-state-badge {
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
+}
+
+.config-item-search,
+.config-item-price {
+    color: rgb(255, 255, 255);
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+}
+
+.config-item-search:focus,
+.config-item-price:focus {
+    border-color: rgb(255, 255, 0);
+    box-shadow: none;
+}
+
+#mobile-inventory-panel {
+    border-radius: 4px;
+    gap: 15px;
+}
+
+#mobile-inv-header {
+    border-bottom-color: rgb(0, 0, 0);
+}
+
+#mobile-inv-close {
+    background: rgba(149, 108, 65, 0.8);
+    border-color: rgb(100, 70, 40);
+    border-radius: 3px;
+}
+
+#mobile-inv-close:active {
+    background: rgba(120, 90, 50, 0.9);
+}
+
+#mobile-inv-instructions,
+#mobile-inv-selected-info {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    color: rgb(255, 255, 255);
+}
+
+.mobile-inv-slot {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.mobile-inv-slot.empty {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.mobile-inv-slot.selected {
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
+    box-shadow: none;
+}
+
+#mobile-inv-actions {
+    border-top-color: rgba(0, 0, 0, 0.3);
+}
+
+.mobile-inv-action-btn {
+    background: rgba(149, 108, 65, 0.8);
+    border-color: rgb(100, 70, 40);
+    border-radius: 3px;
+}
+
+.cooperative-exchange-overlay {
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.cooperative-exchange-panel {
+    color: rgb(255, 255, 255);
+    background: rgb(187, 132, 75);
+    border: 5px solid rgb(149, 108, 65);
+    border-radius: 4px;
+    box-shadow: none;
+    padding: 15px;
+}
+
+.cooperative-exchange-panel h2 {
+    color: rgb(255, 255, 255);
+    text-shadow: 3px 3px 0 rgb(0, 0, 0);
+}
+
+.cooperative-summary span,
+.cooperative-prosperity span,
+.cooperative-evaluation,
+.cooperative-contract {
+    color: rgb(255, 255, 255);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.cooperative-contract-accepted {
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
+}
+
+.cooperative-contract-district {
+    color: rgb(255, 255, 255);
+}
+
+.cooperative-evaluation button,
+.cooperative-contract button,
+.cooperative-exchange-close,
+.cooperative-contract .cooperative-contract-abandon {
+    color: rgb(255, 255, 255);
+    background: rgba(149, 108, 65, 0.8);
+    border: 2px solid rgb(100, 70, 40);
+    border-radius: 3px;
+}
