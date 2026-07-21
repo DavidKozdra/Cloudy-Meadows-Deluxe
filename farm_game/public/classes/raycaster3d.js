@@ -22,6 +22,10 @@ const WEBGL_FLOOR_TILE_NAMES = new Set([
     'park_path_up_t', 'swamp_grass', 'water', 'water12',
     'kitchen_tile', 'dirt_path', 'sand', 'towel'
 ]);
+const WEBGL_FLAT_PROP_NAMES = new Set(['bed']);
+const WEBGL_INTERACTION_CLASSES = new Set([
+    'NPC', 'Shop', 'Chest', 'Robot', 'AirBallon'
+]);
 
 function normalizeAngleDeg0to360(angleDeg) {
     let a = angleDeg % 360;
@@ -50,6 +54,7 @@ let webglRoomGeometryCache = {
     signature: null,
     walls: [],
     floors: [],
+    flatProps: [],
     staticBillboards: [],
     wallBatches: [],
     floorBatches: []
@@ -112,6 +117,10 @@ function isWebglStaticBillboardCell(cell) {
         !isWebglStructuralWallCell(cell) && !isWebglFloorSurfaceCell(cell);
 }
 
+function isWebglFlatPropCell(cell) {
+    return !!cell && cell.class === 'Tile' && WEBGL_FLAT_PROP_NAMES.has(cell.name);
+}
+
 function getDominantFloorSprite(map) {
     const counts = new Map();
     let dominantSprite = null;
@@ -136,8 +145,9 @@ function getDominantFloorSprite(map) {
 function buildRoomGeometryDescriptors(map) {
     const walls = [];
     const floors = [];
+    const flatProps = [];
     const staticBillboards = [];
-    if (!Array.isArray(map)) return { walls, floors, staticBillboards };
+    if (!Array.isArray(map)) return { walls, floors, flatProps, staticBillboards };
     const dominantFloorSprite = getDominantFloorSprite(map);
 
     for (let row = 0; row < map.length; row++) {
@@ -155,17 +165,24 @@ function buildRoomGeometryDescriptors(map) {
                     sprite: getTileSprite(cell)
                 });
             } else {
-                const isStaticBillboard = isWebglStaticBillboardCell(cell);
+                const isFlatProp = isWebglFlatPropCell(cell);
+                const isStaticBillboard = !isFlatProp && isWebglStaticBillboardCell(cell);
                 const underSprite = cell.under_tile && typeof cell.under_tile === 'object'
                     ? getTileSprite(cell.under_tile)
                     : null;
                 floors.push({
                     xTiles: column,
                     yTiles: row,
-                    sprite: isStaticBillboard
+                    sprite: (isStaticBillboard || isFlatProp)
                         ? (underSprite || dominantFloorSprite)
                         : getFloorTileSprite(cell)
                 });
+                if (isFlatProp) {
+                    const sprite = getTileSprite(cell);
+                    if (isValidWebglTextureSource(sprite)) {
+                        flatProps.push({ xTiles: column, yTiles: row, sprite });
+                    }
+                }
                 if (isStaticBillboard) {
                     const sprite = getTileSprite(cell);
                     if (isValidWebglTextureSource(sprite)) {
@@ -182,7 +199,7 @@ function buildRoomGeometryDescriptors(map) {
         }
     }
 
-    return { walls, floors, staticBillboards };
+    return { walls, floors, flatProps, staticBillboards };
 }
 
 function roomGeometrySignature(map) {
@@ -308,6 +325,7 @@ function getRoomGeometryForRoom(currentLvl, levelX, levelY) {
             signature,
             walls: geometry.walls,
             floors: geometry.floors,
+            flatProps: geometry.flatProps,
             staticBillboards: geometry.staticBillboards,
             wallBatches: buildWallBatches(geometry.walls, map),
             floorBatches: buildFloorBatches(geometry.floors)
@@ -365,6 +383,52 @@ function collectBillboardDescriptors(currentLvl) {
     }
 
     return billboards;
+}
+
+function collect3DStatusMarkerDescriptors(currentLvl, playerObj) {
+    const markers = [];
+    if (!currentLvl || !Array.isArray(currentLvl.map)) return markers;
+
+    for (const row of currentLvl.map) {
+        if (!Array.isArray(row)) continue;
+        for (const tile of row) {
+            if (!tile || !tile.pos) continue;
+
+            let markerSprite = null;
+            if (tile.class === 'Plant') {
+                const growthSprites = all_imgs[tile.png];
+                if (Array.isArray(growthSprites) && tile.age === growthSprites.length - 2 &&
+                    typeof done_dot !== 'undefined') markerSprite = done_dot;
+            } else if (tile.class === 'NPC' && playerObj && playerObj.talking === 0) {
+                const highlightedQuest = typeof shouldHighlightMrCInWorld === 'function' &&
+                    shouldHighlightMrCInWorld(tile);
+                const hasQuest = typeof tile.hasQuestForPlayer === 'function' && tile.hasQuestForPlayer();
+                const hasGift = typeof tile.hasGiftForPlayer === 'function' && tile.hasGiftForPlayer();
+                if ((highlightedQuest || hasQuest) && typeof quest_marker_img !== 'undefined') {
+                    markerSprite = quest_marker_img;
+                } else if (hasGift && typeof gift_indication_img !== 'undefined') {
+                    markerSprite = gift_indication_img;
+                }
+            }
+
+            if (!isValidWebglTextureSource(markerSprite)) continue;
+            const entitySprite = getWebglBillboardSprite(tile);
+            const entityHeight = isValidWebglTextureSource(entitySprite)
+                ? entitySprite.height
+                : tileSize;
+            markers.push({
+                worldX: tile.pos.x + tileSize / 2,
+                worldY: entityHeight + markerSprite.height / 2,
+                worldZ: tile.pos.y + tileSize / 2,
+                width: markerSprite.width,
+                height: markerSprite.height,
+                sprite: markerSprite,
+                statusMarker: true
+            });
+        }
+    }
+
+    return markers;
 }
 
 function initializeThree3DRenderer() {
@@ -434,8 +498,9 @@ function getThreeFallbackMaterial(color, billboard) {
 }
 
 function getThreeMaterial(sprite, kind, useTextures = true) {
+    const transparentSurface = kind === 'billboard' || kind === 'flatProp';
     if (!useTextures || !isValidWebglTextureSource(sprite)) {
-        return getThreeFallbackMaterial(kind === 'wall' ? 0xcd5c48 : 0x563c28, kind === 'billboard');
+        return getThreeFallbackMaterial(kind === 'wall' ? 0xcd5c48 : 0x563c28, transparentSurface);
     }
 
     let materials = three3DMaterialCache.get(sprite);
@@ -445,12 +510,11 @@ function getThreeMaterial(sprite, kind, useTextures = true) {
     }
     if (materials[kind]) return materials[kind];
 
-    const billboard = kind === 'billboard';
     materials[kind] = new THREE.MeshBasicMaterial({
         map: getThreeTexture(sprite),
-        transparent: billboard,
+        transparent: transparentSurface,
         alphaTest: 0.08,
-        side: billboard ? THREE.DoubleSide : THREE.FrontSide,
+        side: transparentSurface ? THREE.DoubleSide : THREE.FrontSide,
         depthTest: true,
         depthWrite: true
     });
@@ -482,7 +546,9 @@ function addThreeInstancedTiles(group, descriptors, kind, useTextures) {
             const entry = entries[i];
             dummy.position.set(
                 entry.xTiles * tileSize + tileSize / 2,
-                kind === 'wall' ? tileSize * WEBGL_WALL_HEIGHT_TILES / 2 : 0,
+                kind === 'wall'
+                    ? tileSize * WEBGL_WALL_HEIGHT_TILES / 2
+                    : (kind === 'flatProp' ? tileSize * 0.06 : 0),
                 entry.yTiles * tileSize + tileSize / 2
             );
             dummy.rotation.set(0, 0, 0);
@@ -513,6 +579,7 @@ function buildThreeRoomGroup(currentLvl, geometry, useTextures) {
     }
 
     addThreeInstancedTiles(roomGroup, geometry.floors, 'floor', useTextures);
+    addThreeInstancedTiles(roomGroup, geometry.flatProps, 'flatProp', useTextures);
     addThreeInstancedTiles(roomGroup, geometry.walls, 'wall', useTextures);
     return roomGroup;
 }
@@ -579,7 +646,10 @@ function renderThreeBillboards(billboards, useTextures) {
         mesh.geometry = getThreeBillboardGeometry(billboard.width, billboard.height);
         mesh.material = getThreeMaterial(billboard.sprite, 'billboard', useTextures);
         mesh.visible = true;
-        mesh.position.set(billboard.worldX, billboard.height / 2, billboard.worldZ);
+        const centerY = Number.isFinite(billboard.worldY)
+            ? billboard.worldY
+            : billboard.height / 2;
+        mesh.position.set(billboard.worldX, centerY, billboard.worldZ);
         mesh.lookAt(three3DCamera.position.x, mesh.position.y, three3DCamera.position.z);
     }
     for (let i = billboards.length; i < three3DBillboardPool.length; i++) {
@@ -595,6 +665,51 @@ function compositeThreeCanvas() {
     pop();
 }
 
+function get3DInteractionTarget(playerObj, levelX, levelY) {
+    if (!playerObj || playerObj.talking != 0 || typeof playerObj.looking !== 'function') return null;
+    const target = playerObj.looking(levelX, levelY);
+    if (!target || !target.pos) return null;
+    if (WEBGL_INTERACTION_CLASSES.has(target.class) || target.name === 'Job Board') return target;
+    return null;
+}
+
+function render3DInteractionPrompt(playerObj, levelX, levelY) {
+    const target = get3DInteractionTarget(playerObj, levelX, levelY);
+    if (!target || typeof chat_icon === 'undefined' || !chat_icon ||
+        !three3DCamera || typeof THREE === 'undefined') return;
+
+    const sprite = getWebglBillboardSprite(target);
+    const targetHeight = isValidWebglTextureSource(sprite) ? sprite.height : tileSize;
+    const projected = new THREE.Vector3(
+        target.pos.x + tileSize / 2,
+        Math.min(tileSize * 0.8, targetHeight * 0.75),
+        target.pos.y + tileSize / 2
+    ).project(three3DCamera);
+    if (projected.z < -1 || projected.z > 1) return;
+
+    const screenX = Math.min(canvasWidth - 18, Math.max(18, (projected.x + 1) * canvasWidth / 2));
+    const screenY = Math.min(canvasHeight - 18, Math.max(18, (1 - projected.y) * canvasHeight / 2));
+    const keyLabel = String(
+        typeof Controls_Interact_button_key !== 'undefined' && Controls_Interact_button_key
+            ? Controls_Interact_button_key
+            : 'E'
+    );
+    const promptWidth = 20 + Math.max(0, keyLabel.length - 1) * 12;
+    const promptHeight = 20 + Math.max(0, keyLabel.length - 1) * 5;
+
+    push();
+    resetMatrix();
+    imageMode(CENTER);
+    noTint();
+    image(chat_icon, screenX, screenY, promptWidth, promptHeight);
+    fill(0);
+    noStroke();
+    textSize(10);
+    textAlign(CENTER, CENTER);
+    text(keyLabel, screenX, screenY - 1);
+    pop();
+}
+
 function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = true) {
     if (!playerObj || !currentLvl || !Array.isArray(currentLvl.map)) return;
     if (!initializeThree3DRenderer()) return;
@@ -602,11 +717,14 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
     getThreeRoomGroup(currentLvl, levelX, levelY, useTextures);
     configureThreePlayerCamera(playerObj, currentLvl);
     renderThreeBillboards(
-        three3DActiveRoom.geometry.staticBillboards.concat(collectBillboardDescriptors(currentLvl)),
+        three3DActiveRoom.geometry.staticBillboards
+            .concat(collectBillboardDescriptors(currentLvl))
+            .concat(collect3DStatusMarkerDescriptors(currentLvl, playerObj)),
         useTextures
     );
     three3DRenderer.render(three3DScene, three3DCamera);
     compositeThreeCanvas();
+    render3DInteractionPrompt(playerObj, levelX, levelY);
 }
 
 // Point-collision test in continuous tile-space coordinates. Returns 'edge'
@@ -617,6 +735,9 @@ function isPointBlocked(map, xTiles, yTiles, ignoredCell = null) {
     const mapRow = map[row];
     const cell = mapRow ? mapRow[col] : undefined;
     if (cell === undefined) return 'edge';
+    // Numeric zero is empty/void in the authored maps, not traversable floor.
+    // The 2D mover also requires a real tile object before allowing a step.
+    if (cell === 0 || cell === null) return 'wall';
     // The 2D movement system marks the tile occupied by the player as solid
     // so NPCs cannot walk into it. Continuous 3D movement must ignore that
     // one exact object or every sub-tile step is rejected as self-collision.
@@ -627,7 +748,7 @@ function isPointBlocked(map, xTiles, yTiles, ignoredCell = null) {
 
 // Keeps a small first-person camera radius away from wall faces. Room edges
 // still use the center point so cross-room wrapping happens only after the
-// player actually leaves the map, not when the radius merely touches it.
+// camera reaches an entrance tile center, not when its radius touches one.
 function testMovementPosition(map, xTiles, yTiles, radiusTiles, ignoredCell = null) {
     const center = isPointBlocked(map, xTiles, yTiles, ignoredCell);
     if (center !== false || radiusTiles <= 0) return center;
@@ -678,8 +799,63 @@ function moveWithSliding(map, xTiles, yTiles, deltaXTiles, deltaYTiles, radiusTi
 }
 
 function wrapPositionAcrossEdge(valueTiles, limitTiles, direction) {
-    if (direction > 0) return valueTiles - limitTiles;
-    return limitTiles + valueTiles;
+    // Player positions are tile top-lefts, while 3D collision uses the camera
+    // center. Cross at the final tile center and arrive at the corresponding
+    // entrance tile center, preserving only the small transition overshoot.
+    if (direction > 0) return valueTiles - limitTiles + 1;
+    return limitTiles - 1 + valueTiles;
+}
+
+function snapToTileCenter(valueTiles, limitTiles) {
+    const tileIndex = Math.floor(valueTiles);
+    return Math.min(limitTiles - 0.5, Math.max(0.5, tileIndex + 0.5));
+}
+
+function findNearestWalkableGridCell(map, xTiles, yTiles, ignoredCell = null) {
+    if (!Array.isArray(map)) return null;
+
+    let best = null;
+    for (let row = 0; row < map.length; row++) {
+        if (!Array.isArray(map[row])) continue;
+        for (let col = 0; col < map[row].length; col++) {
+            const cell = map[row][col];
+            if (!cell || (cell !== ignoredCell && cell.collide === true)) continue;
+
+            const distanceSquared = ((col - xTiles) ** 2) + ((row - yTiles) ** 2);
+            const cardinalDistance = Math.abs(col - xTiles) + Math.abs(row - yTiles);
+            if (!best || distanceSquared < best.distanceSquared ||
+                (distanceSquared === best.distanceSquared && cardinalDistance < best.cardinalDistance)) {
+                best = { row, col, cell, distanceSquared, cardinalDistance };
+            }
+        }
+    }
+    return best;
+}
+
+function snapPlayerTo2DGrid(playerObj, level) {
+    if (!playerObj || !playerObj.pos || !level || !Array.isArray(level.map)) return null;
+
+    const occupiedCell = playerObj.touching && typeof playerObj.touching === 'object'
+        ? playerObj.touching
+        : null;
+    const xTiles = playerObj.pos.x / tileSize;
+    const yTiles = playerObj.pos.y / tileSize;
+    const destination = findNearestWalkableGridCell(level.map, xTiles, yTiles, occupiedCell);
+    if (!destination) return null;
+
+    // Story-mode Player marks its occupied tile as collidable. Release that
+    // marker before moving it; AutoFarm does not use an occupancy marker.
+    if (occupiedCell && typeof playerObj.tileTouching === 'function') occupiedCell.collide = false;
+    playerObj.pos.x = destination.col * tileSize;
+    playerObj.pos.y = destination.row * tileSize;
+
+    if (typeof playerObj.tileTouching === 'function') {
+        playerObj.touching = playerObj.tileTouching(currentLevel_x, currentLevel_y);
+        if (playerObj.touching && typeof playerObj.touching === 'object') {
+            playerObj.touching.collide = true;
+        }
+    }
+    return destination;
 }
 
 function resetLevelTransitionAnim(levelY, levelX) {
@@ -692,12 +868,43 @@ function resetLevelTransitionAnim(levelY, levelX) {
     lvl.ticks = 0;
 }
 
-function ensureLevelExists(levelY, levelX) {
+function configureGeneratedRightBridge(level, levelY) {
+    if (!level || !Array.isArray(level.map)) return;
+
+    // Match Player.move(): a room generated to the right always receives an
+    // open entrance on its left edge, plus one randomized future exit.
+    level.map[8][0] = new_tile_from_num(8, 0, 8 * tileSize);
+    level.map[8][1] = new_tile_from_num(8, tileSize, 8 * tileSize);
+
+    let randomBridge = floor(random(0, 3));
+    if (levelY === 0) randomBridge = floor(random(1, 3));
+    if (levelY === 2) randomBridge = floor(random(0, 2));
+
+    if (randomBridge === 0) {
+        level.map[0][11] = new_tile_from_num(94, 11 * tileSize, 0);
+        level.map[1][11] = new_tile_from_num(9, 11 * tileSize, tileSize);
+    } else if (randomBridge === 1) {
+        level.map[8][22] = new_tile_from_num(93, 22 * tileSize, 8 * tileSize);
+        level.map[8][21] = new_tile_from_num(8, 21 * tileSize, 8 * tileSize);
+    } else {
+        level.map[18][11] = new_tile_from_num(9, 11 * tileSize, 18 * tileSize);
+        level.map[17][11] = new_tile_from_num(9, 11 * tileSize, 17 * tileSize);
+        level.map[16][11] = new_tile_from_num(94, 11 * tileSize, 16 * tileSize);
+        level.map[15][11] = new_tile_from_num(9, 11 * tileSize, 15 * tileSize);
+    }
+}
+
+function ensureLevelExists(levelY, levelX, transitionAxis, direction) {
     if (!levels[levelY] || levelY < 0 || levelX < 0) return false;
     const existing = levels[levelY][levelX];
     if (existing && typeof existing === 'object') return true;
     if (existing === 0) return false;
     if (typeof extra_lvls === 'undefined') return false;
+
+    // The original game only generates new rooms while moving right. Missing
+    // vertical/left neighbors are blocked; generating them here was allowing
+    // 3D players to leave the authored world and appear in unrelated areas.
+    if (transitionAxis !== 'x' || direction <= 0) return false;
 
     extraCount++;
     levels[levelY][levelX] = new Level(
@@ -705,7 +912,30 @@ function ensureLevelExists(levelY, levelX) {
         JSON.parse(JSON.stringify(extra_lvls.map)),
         JSON.parse(JSON.stringify(extra_lvls.fore))
     );
+    configureGeneratedRightBridge(levels[levelY][levelX], levelY);
     return true;
+}
+
+function getLevelEntryCell(level, transitionAxis, direction, lateralTiles) {
+    if (!level || !Array.isArray(level.map) || level.map.length === 0) return undefined;
+    if (transitionAxis === 'x') {
+        const row = Math.min(level.map.length - 1, Math.max(0, Math.floor(lateralTiles)));
+        const mapRow = level.map[row];
+        if (!Array.isArray(mapRow) || mapRow.length === 0) return undefined;
+        const column = direction > 0 ? 0 : mapRow.length - 1;
+        return mapRow[column];
+    }
+
+    const row = direction > 0 ? 0 : level.map.length - 1;
+    const mapRow = level.map[row];
+    if (!Array.isArray(mapRow) || mapRow.length === 0) return undefined;
+    const column = Math.min(mapRow.length - 1, Math.max(0, Math.floor(lateralTiles)));
+    return mapRow[column];
+}
+
+function isOpenLevelEntry(level, transitionAxis, direction, lateralTiles) {
+    const cell = getLevelEntryCell(level, transitionAxis, direction, lateralTiles);
+    return !!cell && cell.collide !== true;
 }
 
 function updatePlayer3DMovementWebgl(playerObj) {
@@ -754,30 +984,58 @@ function updatePlayer3DMovementWebgl(playerObj) {
 
     let finalXTiles = result.x;
     let finalYTiles = result.y;
-    const roomWidthTiles = canvasWidth / tileSize;
-    const roomHeightTiles = canvasHeight / tileSize;
+    const roomWidthTiles = currentLvl.map.reduce(
+        (width, row) => Math.max(width, Array.isArray(row) ? row.length : 0),
+        0
+    );
+    const roomHeightTiles = currentLvl.map.length;
     const originLevelY = currentLevel_y;
     const originLevelX = currentLevel_x;
 
-    if (result.hitEdgeX) {
-        const dir = moveX > 0 ? 1 : -1;
-        if (ensureLevelExists(originLevelY, originLevelX + dir)) {
-            resetLevelTransitionAnim(originLevelY, originLevelX);
-            currentLevel_x += dir;
-            finalXTiles = wrapPositionAcrossEdge(result.x, roomWidthTiles, dir);
-        } else {
-            finalXTiles = dir > 0 ? roomWidthTiles - 0.05 : 0.05;
-        }
+    let crossEdgeX = (moveX < 0 && result.x < 0.5) ||
+        (moveX > 0 && result.x > roomWidthTiles - 0.5);
+    let crossEdgeY = (moveY < 0 && result.y < 0.5) ||
+        (moveY > 0 && result.y > roomHeightTiles - 0.5);
+
+    // A diagonal step at a corner must never jump two rooms in one frame.
+    if (crossEdgeX && crossEdgeY) {
+        const xPenetration = moveX > 0
+            ? result.x - (roomWidthTiles - 0.5)
+            : 0.5 - result.x;
+        const yPenetration = moveY > 0
+            ? result.y - (roomHeightTiles - 0.5)
+            : 0.5 - result.y;
+        if (xPenetration >= yPenetration) crossEdgeY = false;
+        else crossEdgeX = false;
     }
 
-    if (result.hitEdgeY) {
-        const dir = moveY > 0 ? 1 : -1;
-        if (ensureLevelExists(originLevelY + dir, currentLevel_x)) {
+    if (crossEdgeX) {
+        const dir = moveX > 0 ? 1 : -1;
+        const targetY = originLevelY;
+        const targetX = originLevelX + dir;
+        const snappedY = snapToTileCenter(result.y, roomHeightTiles);
+        if (ensureLevelExists(targetY, targetX, 'x', dir) &&
+            isOpenLevelEntry(levels[targetY][targetX], 'x', dir, snappedY)) {
             resetLevelTransitionAnim(originLevelY, originLevelX);
-            currentLevel_y += dir;
-            finalYTiles = wrapPositionAcrossEdge(result.y, roomHeightTiles, dir);
+            currentLevel_x = targetX;
+            finalXTiles = wrapPositionAcrossEdge(result.x, roomWidthTiles, dir);
+            finalYTiles = snappedY;
         } else {
-            finalYTiles = dir > 0 ? roomHeightTiles - 0.05 : 0.05;
+            finalXTiles = dir > 0 ? roomWidthTiles - 0.5 : 0.5;
+        }
+    } else if (crossEdgeY) {
+        const dir = moveY > 0 ? 1 : -1;
+        const targetY = originLevelY + dir;
+        const targetX = originLevelX;
+        const snappedX = snapToTileCenter(result.x, roomWidthTiles);
+        if (ensureLevelExists(targetY, targetX, 'y', dir) &&
+            isOpenLevelEntry(levels[targetY][targetX], 'y', dir, snappedX)) {
+            resetLevelTransitionAnim(originLevelY, originLevelX);
+            currentLevel_y = targetY;
+            finalYTiles = wrapPositionAcrossEdge(result.y, roomHeightTiles, dir);
+            finalXTiles = snappedX;
+        } else {
+            finalYTiles = dir > 0 ? roomHeightTiles - 0.5 : 0.5;
         }
     }
 

@@ -89,6 +89,8 @@ function loadAutoFarmAssets() {
     chat_icon = img('images/ui/Chat_Icon.png');
     done_dot = img('images/ui/plant_done_icon.png');
     up_dot = img('images/ui/up_dot_icon.png');
+    quest_marker_img = img('images/ui/QuestMarker.png');
+    gift_indication_img = img('images/ui/gift_indication.png');
     x_img = img('images/ui/x.png');
 }
 

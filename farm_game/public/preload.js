@@ -959,7 +959,7 @@ function setup() {
     startButton.position(canvasWidth/2-250/2, canvasHeight/2+120);
     startButton.mousePressed(start);
     startButton.style('width', '250px');
-    startButton.style('background','url()');
+    startButton.style('background','none');
     startButton.style("font-family","pixelFont");
     startButton.style('cursor', 'pointer');
    
@@ -973,7 +973,7 @@ function setup() {
         clearButton.hide()
     });
     optionsButton.style('width', '250px');
-    optionsButton.style('background','url()');
+    optionsButton.style('background','none');
     optionsButton.style("font-family","pixelFont");
     optionsButton.style('cursor', 'pointer');
 
@@ -986,7 +986,7 @@ function setup() {
     });
 
     creditsButton.style('width', '250px');
-    creditsButton.style('background','url()');
+    creditsButton.style('background','none');
     creditsButton.style("font-family","pixelFont");
     creditsButton.style('cursor', 'pointer');
 
@@ -1173,7 +1173,7 @@ function setup() {
         saveOptions();
     });
     resetControlsButton.style('width', '200px');
-    resetControlsButton.style('background','url()');
+    resetControlsButton.style('background','none');
     resetControlsButton.style("font-family","pixelFont");
     resetControlsButton.style('cursor', 'pointer');
     resetControlsButton.hide();
@@ -1187,7 +1187,7 @@ function setup() {
         newWorld();
     });
     clearButton.style('width', '200px');
-    clearButton.style('background','url()');
+    clearButton.style('background','none');
     clearButton.style("font-family","pixelFont");
     clearButton.style('cursor', 'pointer');
     clearButton.hide();
@@ -1196,7 +1196,7 @@ function setup() {
     QuitButton.parent('game-container');
     QuitButton.position((canvasWidth/2)-125, (canvasWidth/2)+80);
     QuitButton.style('width', '250px');
-    QuitButton.style('background','url()');
+    QuitButton.style('background','none');
     QuitButton.style("font-family","pixelFont");
     QuitButton.style('cursor', 'pointer');
     QuitButton.mousePressed(() => {
@@ -1218,7 +1218,7 @@ function setup() {
     dif0button.position((canvasWidth/4)-90, (canvasWidth/2)-150);
     dif0button.style('width','180px');
     dif0button.style('height','300px');
-    dif0button.style('background','url()');
+    dif0button.style('background','none');
     dif0button.style('cursor', 'pointer');
     dif0button.mousePressed(() => {
         dificulty = 0;
@@ -1234,7 +1234,7 @@ function setup() {
     dif1button.position(((2*canvasWidth)/4)-90, (canvasWidth/2)-150);
     dif1button.style('width','180px');
     dif1button.style('height','300px');
-    dif1button.style('background','url()');
+    dif1button.style('background','none');
     dif1button.style('cursor', 'pointer');
     dif1button.mousePressed(() => {
         dificulty = 1;
@@ -1250,7 +1250,7 @@ function setup() {
     dif2button.position(((3*canvasWidth)/4)-90, (canvasWidth/2)-150);
     dif2button.style('width','180px');
     dif2button.style('height','300px');
-    dif2button.style('background','url()');
+    dif2button.style('background','none');
     dif2button.style('cursor', 'pointer');
     dif2button.mousePressed(() => {
         dificulty = 2;
@@ -1273,7 +1273,7 @@ function setup() {
     });
     Controls_Interact_button.style('width', '90px');
     Controls_Interact_button.style('height', '20px');
-    Controls_Interact_button.style('background','url()');
+    Controls_Interact_button.style('background','none');
     Controls_Interact_button.style("font-family","pixelFont");
     Controls_Interact_button.style('cursor', 'pointer');
     //Controls_Interact.style("border","none");
@@ -1291,7 +1291,7 @@ function setup() {
     });
     Controls_Eat_button.style('width', '90px');
     Controls_Eat_button.style('height', '20px');
-    Controls_Eat_button.style('background','url()');
+    Controls_Eat_button.style('background','none');
     Controls_Eat_button.style("font-family","pixelFont");
     Controls_Eat_button.style('cursor', 'pointer');
     //Controls_Eat.style("border","none");
@@ -1309,7 +1309,7 @@ function setup() {
     });
     Controls_Up_button.style('width', '90px');
     Controls_Up_button.style('height', '20px');
-    Controls_Up_button.style('background','url()');
+    Controls_Up_button.style('background','none');
     Controls_Up_button.style("font-family","pixelFont");
     Controls_Up_button.style('cursor', 'pointer');
     //Controls_Up.style("border","none");
@@ -1326,7 +1326,7 @@ function setup() {
     });
     Controls_Left_button.style('width', '90px');
     Controls_Left_button.style('height', '20px');
-    Controls_Left_button.style('background','url()');
+    Controls_Left_button.style('background','none');
     Controls_Left_button.style("font-family","pixelFont");
     Controls_Left_button.parent('game-container');
     Controls_Left_button.style('cursor', 'pointer');
@@ -1344,7 +1344,7 @@ function setup() {
     });
     Controls_Down_button.style('width', '90px');
     Controls_Down_button.style('height', '20px');
-    Controls_Down_button.style('background','url()');
+    Controls_Down_button.style('background','none');
     Controls_Down_button.parent('game-container');
     Controls_Down_button.style("font-family","pixelFont");
     Controls_Down_button.style('cursor', 'pointer');
@@ -1362,7 +1362,7 @@ function setup() {
     });
     Controls_Right_button.style('width', '90px');
     Controls_Right_button.style('height', '20px');
-    Controls_Right_button.style('background','url()');
+    Controls_Right_button.style('background','none');
     Controls_Right_button.parent('game-container');
     Controls_Right_button.style("font-family","pixelFont");
     Controls_Right_button.style('cursor', 'pointer');
@@ -1380,7 +1380,7 @@ function setup() {
     });
     Controls_Special_button.style('width', '90px');
     Controls_Special_button.style('height', '20px');
-    Controls_Special_button.style('background','url()');
+    Controls_Special_button.style('background','none');
     Controls_Special_button.parent('game-container');
     Controls_Special_button.style("font-family","pixelFont");
     Controls_Special_button.style('cursor', 'pointer');
@@ -1398,7 +1398,7 @@ function setup() {
     });
     Controls_Quest_button.style('width', '90px');
     Controls_Quest_button.style('height', '20px');
-    Controls_Quest_button.style('background','url()');
+    Controls_Quest_button.style('background','none');
     Controls_Quest_button.style("font-family","pixelFont");
     Controls_Quest_button.style('cursor', 'pointer');
     //Controls_Quest.style("border","none");

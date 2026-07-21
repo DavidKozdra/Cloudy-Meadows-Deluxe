@@ -24,10 +24,9 @@ var dificulty = 0;
 var current_reply = 0;
 var temp_move_bool = true;
 var worldUpdateTick = 0;
-var is3DMode = false;
+var is3DMode = true;
 var pointerLockEngaged = false;
 var MOUSE_LOOK_SENSITIVITY_DEG_PER_PX = 0.15;
-var webgl3DBuffer;
 var deltaTime = 16;
 var camera = { enabled:false, x:0, y:0, zoom:1 };
 var virtualInput = { up:false,down:false,left:false,right:false,interact:false,eat:false,special:false,pause:false,quest:false };
@@ -46,6 +45,7 @@ var weatherLog = [];
 var localData = localDataStorage('passphrase.autofarm.separate');
 var player_2, player_imgs, inv_img, inv_hand_img, hunger_e, hunger_f, calendar_img, coin_img;
 var battery_low_img, inv_full_img, background_img, chat_icon, done_dot, up_dot, x_img;
+var quest_marker_img, gift_indication_img;
 var robotPlayButton, robotPauseButton, robotBoomButton;
 var mouse_item = 0;
 var UI_BOUNDS = {get chestGrid(){return{top:189,bottom:457,left:(canvasWidth/2)-184,right:(canvasWidth/2)+184,cellSize:90,getGridPos:(x,y,inv)=>({x:Math.min(inv[0].length-1,Math.max(0,Math.round((x-(canvasWidth/2)+139)/90))),y:Math.min(inv.length-1,Math.max(0,Math.round((y-234)/90)))})};}};
@@ -61,6 +61,8 @@ var keymapping = false, currentMappingIndex = 0, control_set = 0;
 const AUTO_SAVE_KEY = 'cloudy-autofarm-world-v2';
 const AUTO_ORIGIN = 100;
 const AUTO_WORLD_SEED = 'cloudy-autofarm-shared-v2';
+const AUTO_3D_MOVE_SPEED_TILES_PER_SEC = 4;
+const AUTO_3D_COLLISION_RADIUS_TILES = 0.2;
 const AUTO_COMMAND_IDS = [19,20,21,22,23,26,29,30,34];
 let autoSave = null;
 let autoLastMove = 0;
@@ -75,6 +77,8 @@ let autoPlayerName = '';
 let autoReconnectTimer = null;
 let autoUnreadChat = 0;
 let autoInventoryWarningUntil = 0;
+let autoLastPresence = 0;
+let autoLast3DAnim = 0;
 
 function preload() {
     loadAutoFarmAssets();
@@ -89,8 +93,7 @@ function setup() {
     canvas.parent('game-container');
     noSmooth();
     if (typeof setupPointerLock === 'function') setupPointerLock(canvas.elt);
-    webgl3DBuffer = createGraphics(canvasWidth, canvasHeight, WEBGL);
-    webgl3DBuffer.noSmooth();
+    if (typeof initializeThree3DRenderer === 'function') initializeThree3DRenderer();
     CloudyDisplay.setup();
     createSharedRobotButtons();
     autoSave = readAutoSave();
@@ -109,6 +112,10 @@ function windowResized() {
 
 function setupAutoPauseMenu() {
     const savedOptions=localData.get('Options')||{};
+    applyAccessibilityPrefs({
+        ...savedOptions,
+        is3DMode:getAutoFarmInitial3DMode(savedOptions)
+    });
     musicSlider=createSlider(0,1,savedOptions.musicVolume??0.5,0.01);
     fxSlider=createSlider(0,1,savedOptions.fxVolume??0.5,0.01);
     for(const slider of [musicSlider,fxSlider]){slider.parent('game-container');slider.input(saveOptions);slider.hide();}
@@ -120,6 +127,12 @@ function setupAutoPauseMenu() {
     const resume=document.getElementById('pause-back-btn');
     if(resume)resume.addEventListener('click',()=>setAutoPaused(false));
     hidePaused();restoreAutoCanvasInput();
+}
+
+function getAutoFarmInitial3DMode(savedOptions) {
+    return savedOptions && typeof savedOptions.is3DMode === 'boolean'
+        ? savedOptions.is3DMode
+        : true;
 }
 
 function setAutoPaused(value) {
@@ -140,6 +153,15 @@ function createSharedRobotButtons() {
     }
 }
 
+function getAutoFacingTile(playerObj, levelX=currentLevel_x, levelY=currentLevel_y) {
+    if (!playerObj) return undefined;
+    const offsets=[[0,-1],[1,0],[0,1],[-1,0]],offset=offsets[playerObj.facing]||offsets[2];
+    const row=Math.round(playerObj.pos.y/tileSize)+offset[1];
+    const col=Math.round(playerObj.pos.x/tileSize)+offset[0];
+    const level=levels[levelY]&&levels[levelY][levelX];
+    return level&&level.map[row]?level.map[row][col]:undefined;
+}
+
 function createAutoPlayer() {
     const backpack=new_item_from_num(33,1);
     backpack.inv[0][0]=new_item_from_num(3,12);
@@ -148,15 +170,20 @@ function createAutoPlayer() {
     player = {
         pos:createVector(5 * tileSize, 5 * tileSize), facing:2, anim:0, hand:0, coins:200,
         hunger:maxHunger, hp:100, dead:false, talking:0, touching:0, lookYawDeg:90,
-        inv:[new_item_from_num(1,1),new_item_from_num(32,1),new_item_from_num(45,1),backpack,new_item_from_num(36,2),new_item_from_num(27,1),0,0]
+        inv:[new_item_from_num(1,1),new_item_from_num(32,1),new_item_from_num(45,1),backpack,new_item_from_num(36,2),new_item_from_num(27,1),0,0],
+        looking(levelX=currentLevel_x,levelY=currentLevel_y) {
+            return getAutoFacingTile(this,levelX,levelY);
+        }
     };
 }
 
 function draw() {
     background(135,206,235);
-    const level = levels[currentLevel_y][currentLevel_x];
+    let level = levels[currentLevel_y][currentLevel_x];
     if (!level) return;
     if (autoJoined && !paused) updateAutoFarm(level);
+    level = levels[currentLevel_y][currentLevel_x];
+    if (!level) return;
 
     if (is3DMode) {
         render3DViewWebgl(player, level, currentLevel_x, currentLevel_y);
@@ -175,6 +202,7 @@ function draw() {
 
 function updateAutoFarm(level) {
     handleAutoInput();
+    level = levels[currentLevel_y][currentLevel_x] || level;
     worldUpdateTick += 1;
     for (let y = 0; y < levels.length; y++) {
         for (let x = 0; x < levels[y].length; x++) if (levels[y][x]) levels[y][x].update(x,y,worldUpdateTick);
@@ -197,12 +225,108 @@ function handleAutoInput() {
     if (!autoJoined || autoTextInputActive()) return;
     if (player.talking && ['Chest','Backpack'].includes(player.talking.class)) return;
     if (document.querySelector('#autofarm-modal').classList.contains('open')) return;
+    if (is3DMode) {
+        updateAutoFarm3DMovement();
+        return;
+    }
     if (millis() - autoLastMove > 125) {
         if (keyIsDown(move_up_button) || keyIsDown(38)) moveAutoPlayer(0,-1,0);
         else if (keyIsDown(move_right_button) || keyIsDown(39)) moveAutoPlayer(1,0,1);
         else if (keyIsDown(move_down_button) || keyIsDown(40)) moveAutoPlayer(0,1,2);
         else if (keyIsDown(move_left_button) || keyIsDown(37)) moveAutoPlayer(-1,0,3);
     }
+}
+
+function updateAutoFarm3DMovement() {
+    const level = levels[currentLevel_y] && levels[currentLevel_y][currentLevel_x];
+    if (!level || !Array.isArray(level.map)) return false;
+
+    const yawRad = getActiveCameraYawDeg(player) * Math.PI / 180;
+    const forwardX = Math.cos(yawRad), forwardY = Math.sin(yawRad);
+    const rightX = Math.cos(yawRad + Math.PI / 2), rightY = Math.sin(yawRad + Math.PI / 2);
+    let moveX = 0, moveY = 0;
+    if (keyIsDown(move_up_button) || keyIsDown(38)) { moveX += forwardX; moveY += forwardY; }
+    if (keyIsDown(move_down_button) || keyIsDown(40)) { moveX -= forwardX; moveY -= forwardY; }
+    if (keyIsDown(move_right_button) || keyIsDown(39)) { moveX += rightX; moveY += rightY; }
+    if (keyIsDown(move_left_button) || keyIsDown(37)) { moveX -= rightX; moveY -= rightY; }
+    if (moveX === 0 && moveY === 0) return false;
+
+    const moveLength = Math.hypot(moveX, moveY);
+    if (moveLength > 1) { moveX /= moveLength; moveY /= moveLength; }
+    const frameSeconds = Math.min(Math.max(deltaTime, 0), 50) / 1000;
+    const stepTiles = AUTO_3D_MOVE_SPEED_TILES_PER_SEC * frameSeconds;
+    const originXTiles = (player.pos.x + tileSize / 2) / tileSize;
+    const originYTiles = (player.pos.y + tileSize / 2) / tileSize;
+    const result = moveWithSliding(
+        level.map,
+        originXTiles,
+        originYTiles,
+        moveX * stepTiles,
+        moveY * stepTiles,
+        AUTO_3D_COLLISION_RADIUS_TILES
+    );
+    const roomWidthTiles = level.map.reduce(
+        (width, row) => Math.max(width, Array.isArray(row) ? row.length : 0),
+        0
+    );
+    const roomHeightTiles = level.map.length;
+    const originLevelX = currentLevel_x, originLevelY = currentLevel_y;
+    let finalXTiles = result.x, finalYTiles = result.y;
+    let crossEdgeX = (moveX < 0 && result.x < 0.5) ||
+        (moveX > 0 && result.x > roomWidthTiles - 0.5);
+    let crossEdgeY = (moveY < 0 && result.y < 0.5) ||
+        (moveY > 0 && result.y > roomHeightTiles - 0.5);
+
+    if (crossEdgeX && crossEdgeY) {
+        const xPenetration = moveX > 0
+            ? result.x - (roomWidthTiles - 0.5)
+            : 0.5 - result.x;
+        const yPenetration = moveY > 0
+            ? result.y - (roomHeightTiles - 0.5)
+            : 0.5 - result.y;
+        if (xPenetration >= yPenetration) crossEdgeY = false;
+        else crossEdgeX = false;
+    }
+
+    let changedRoom = false;
+    if (crossEdgeX) {
+        const direction = moveX > 0 ? 1 : -1;
+        const targetX = originLevelX + direction, targetY = originLevelY;
+        const snappedY = snapToTileCenter(result.y, roomHeightTiles);
+        if (ensureAutoLevel(targetX, targetY) &&
+            isOpenLevelEntry(levels[targetY][targetX], 'x', direction, snappedY)) {
+            currentLevel_x = targetX;
+            finalXTiles = wrapPositionAcrossEdge(result.x, roomWidthTiles, direction);
+            finalYTiles = snappedY;
+            changedRoom = true;
+        } else {
+            finalXTiles = direction > 0 ? roomWidthTiles - 0.5 : 0.5;
+        }
+    } else if (crossEdgeY) {
+        const direction = moveY > 0 ? 1 : -1;
+        const targetX = originLevelX, targetY = originLevelY + direction;
+        const snappedX = snapToTileCenter(result.x, roomWidthTiles);
+        if (ensureAutoLevel(targetX, targetY) &&
+            isOpenLevelEntry(levels[targetY][targetX], 'y', direction, snappedX)) {
+            currentLevel_y = targetY;
+            finalYTiles = wrapPositionAcrossEdge(result.y, roomHeightTiles, direction);
+            finalXTiles = snappedX;
+            changedRoom = true;
+        } else {
+            finalYTiles = direction > 0 ? roomHeightTiles - 0.5 : 0.5;
+        }
+    }
+
+    player.pos.x = finalXTiles * tileSize - tileSize / 2;
+    player.pos.y = finalYTiles * tileSize - tileSize / 2;
+    const now = millis();
+    if (now - autoLast3DAnim >= 125) {
+        autoLast3DAnim = now;
+        player.anim = (player.anim + 1) % 2;
+    }
+    if (changedRoom) ensureAutoNeighbors();
+    sendAutoPresenceThrottled(changedRoom);
+    return true;
 }
 
 function keyPressed() {
@@ -215,7 +339,6 @@ function keyPressed() {
         if(document.querySelector('#autofarm-modal').classList.contains('open'))closeAutoModal();else setAutoPaused(!paused);
     }
     if(keyCode===eat_button&&!player.talking&&!paused){eatAutoHeld();return false;}
-    if (key === 'v' || key === 'V') { is3DMode = !is3DMode; }
 }
 
 function applyAutoControlMapping(index,keyName,code){const normalized=keyName.length===1?keyName.toLowerCase():keyName;const fields={1:['Controls_Interact_button_key','interact_button'],2:['Controls_Eat_button_key','eat_button'],3:['Controls_Up_button_key','move_up_button'],4:['Controls_Down_button_key','move_down_button'],5:['Controls_Left_button_key','move_left_button'],6:['Controls_Right_button_key','move_right_button'],7:['Controls_Special_button_key','special_key'],8:['Controls_Quest_button_key','quest_key']},field=fields[index];if(field){window[field[0]]=normalized;window[field[1]]=code;}keymapping=false;control_set=0;currentMappingIndex=0;saveOptions();const host=document.getElementById('pause-controls-container');if(host)renderControlButtons(host);}
@@ -266,21 +389,46 @@ function useAutoItem() {
     if (tile.name === 'plot' && held && held.class === 'Seed') {
         setAutoCell(position,new_tile_from_num(held.plant_num,position.col*tileSize,position.row*tileSize)); consumeAutoHeld(); return;
     }
-    if (held && held.class === 'Placeable' && ['Chest','Robot1','Robot2','Robot3'].includes(held.name) && aheadTile.collide === false) {
-        const placed = new_tile_from_num(held.tile_num,aheadPosition.col*tileSize,aheadPosition.row*tileSize);
-        placed.under_tile = aheadTile; placed.playerOwned = true; if (placed.class === 'Robot') placed.move_bool = false;
-        setAutoCell(aheadPosition,placed); consumeAutoHeld();
-        return;
-    }
-    if(held&&held.class==='Placeable'){
-        const required=held.tile_need_num||0,currentNum=tile_name_to_num(tile.name);
-        if((required===0||required===currentNum)&&!(held.name==='Sprinkler'&&tile.class==='Plant')){
-            const placed=new_tile_from_num(held.tile_num,position.col*tileSize,position.row*tileSize);
-            placed.under_tile=tile;if(['grinder','Veggie_Press','compost_bucket'].includes(placed.name))placed.playerOwned=true;
-            if(placed.name==='sprinkler'){placed.last_under_png=tile.png;placed.last_under_variant=tile.variant;}
-            setAutoCell(position,placed);consumeAutoHeld();
+    if (held && held.class === 'Placeable') {
+        const target = resolveAutoPlaceableTarget(held, tile, position, aheadTile, aheadPosition);
+        if (!target) return;
+        const placed = new_tile_from_num(
+            held.tile_num,
+            target.position.col * tileSize,
+            target.position.row * tileSize
+        );
+        if (!placed) return;
+        placed.under_tile = target.tile;
+        if (['Chest','Robot1','Robot2','Robot3'].includes(held.name) ||
+            ['grinder','Veggie_Press','compost_bucket'].includes(placed.name)) {
+            placed.playerOwned = true;
         }
+        if (placed.class === 'Robot') placed.move_bool = false;
+        if (placed.name === 'sprinkler') {
+            placed.last_under_png = target.tile.png;
+            placed.last_under_variant = target.tile.variant;
+        }
+        setAutoCell(target.position, placed);
+        consumeAutoHeld();
     }
+}
+
+function resolveAutoPlaceableTarget(held, currentTile, currentPosition, aheadTile, aheadPosition) {
+    if (!held || held.class !== 'Placeable') return null;
+    // Solid construction and inventory entities belong in front of the player.
+    // Putting a wall on the occupied tile traps the continuous 3D controller
+    // inside newly-created collision geometry.
+    const placeAhead = ['Wall','Chest','Robot1','Robot2','Robot3'].includes(held.name);
+    const targetTile = placeAhead ? aheadTile : currentTile;
+    const targetPosition = placeAhead ? aheadPosition : currentPosition;
+    if (!targetTile || !targetPosition || (placeAhead && targetTile.collide === true)) return null;
+    if (placeAhead && targetPosition.row === currentPosition.row &&
+        targetPosition.col === currentPosition.col) return null;
+
+    const required = held.tile_need_num || 0;
+    if (required !== 0 && required !== tile_name_to_num(targetTile.name)) return null;
+    if (held.name === 'Sprinkler' && targetTile.class === 'Plant') return null;
+    return { tile: targetTile, position: targetPosition };
 }
 
 function eatAutoHeld(){const food=player.inv[player.hand];if(!food||food.class!=='Eat'||player.hunger>=maxHunger)return;player.hunger=Math.min(maxHunger,player.hunger+food.hunger);const seedNum=food.seed_num||0,seedAmount=seedNum?Math.max(1,Math.floor(((food.seed_min||1)+(food.seed_max||food.seed_min||1))/2)):0;food.amount-=1;if(food.amount<=0)player.inv[player.hand]=0;if(seedNum)addAutoItem(seedNum,seedAmount);}
@@ -444,8 +592,8 @@ function autoItemPath(name){const paths={Hoe:'Hoe.png',Shovel:'shovel.png',Axe:'
 
 function serializeAutoItem(item){if(!item)return 0;const data={name:item.name,amount:item.amount};if(item.class==='Backpack')data.inv=item.inv.map(row=>row.map(serializeAutoItem));return data;}
 function deserializeAutoItem(data){if(!data)return 0;const item=new_item_from_num(item_name_to_num(data.name),data.amount);if(item&&item.class==='Backpack'&&data.inv)item.inv=data.inv.map(row=>row.map(deserializeAutoItem));return item;}
-function serializeAutoTile(tile){if(!tile)return null;const data={name:tile.name,class:tile.class,age:tile.age,variant:tile.variant};if(tile.class==='Shop')data.inv=tile.inv.map(serializeAutoItem);if(tile.class==='Robot'){data.instructions=tile.instructions.map(i=>i&&i.name||0);data.inv=tile.inv.map(serializeAutoItem);data.facing=tile.facing;data.fuel=tile.fuel;data.move_bool=tile.move_bool;}if(tile.class==='Chest')data.inv=tile.inv.map(row=>row.map(serializeAutoItem));return data;}
-function deserializeAutoTile(data,col,row){if(!data)return new_tile_from_num(2,col*32,row*32);if(data.name==='rock')return new Tile('rock',139,col*32,row*32,true,-1);if(data.class==='Shop'){const inv=(data.inv||[]).filter(Boolean).map(i=>({num:item_name_to_num(i.name),amount:i.amount}));return new Shop(data.name,15,col*32,row*32,inv,2);}let num=tile_name_to_num(data.name),tile=new_tile_from_num(num,col*32,row*32);if(!tile)return new_tile_from_num(2,col*32,row*32);if(typeof data.age==='number')tile.age=data.age;if(data.class==='Robot'){tile.instructions=data.instructions.map(n=>n?new_item_from_num(item_name_to_num(n),1):0);tile.inv=data.inv.map(deserializeAutoItem);tile.facing=data.facing;tile.fuel=data.fuel;tile.move_bool=data.move_bool;tile.playerOwned=true;}if(data.class==='Chest'){tile.inv=data.inv.map(items=>items.map(deserializeAutoItem));tile.playerOwned=true;}return tile;}
+function serializeAutoTile(tile){if(!tile)return null;const data={name:tile.name,class:tile.class,age:tile.age,variant:tile.variant};if(tile.under_tile)data.underTile=serializeAutoTile(tile.under_tile);if(tile.class==='Shop')data.inv=tile.inv.map(serializeAutoItem);if(tile.class==='Robot'){data.instructions=tile.instructions.map(i=>i&&i.name||0);data.inv=tile.inv.map(serializeAutoItem);data.facing=tile.facing;data.fuel=tile.fuel;data.move_bool=tile.move_bool;}if(tile.class==='Chest')data.inv=tile.inv.map(row=>row.map(serializeAutoItem));return data;}
+function deserializeAutoTile(data,col,row){if(!data)return new_tile_from_num(2,col*32,row*32);if(data.name==='rock')return new Tile('rock',139,col*32,row*32,true,-1);if(data.class==='Shop'){const inv=(data.inv||[]).filter(Boolean).map(i=>({num:item_name_to_num(i.name),amount:i.amount}));return new Shop(data.name,15,col*32,row*32,inv,2);}let num=tile_name_to_num(data.name),tile=new_tile_from_num(num,col*32,row*32);if(!tile)return new_tile_from_num(2,col*32,row*32);if(data.underTile)tile.under_tile=deserializeAutoTile(data.underTile,col,row);if(typeof data.age==='number')tile.age=data.age;if(data.class==='Robot'){tile.instructions=data.instructions.map(n=>n?new_item_from_num(item_name_to_num(n),1):0);tile.inv=data.inv.map(deserializeAutoItem);tile.facing=data.facing;tile.fuel=data.fuel;tile.move_bool=data.move_bool;tile.playerOwned=true;}if(data.class==='Chest'){tile.inv=data.inv.map(items=>items.map(deserializeAutoItem));tile.playerOwned=true;}return tile;}
 
 function readAutoSave(){try{return JSON.parse(localStorage.getItem(AUTO_SAVE_KEY))||{levels:{}};}catch(_){return{levels:{}};}}
 function saveAutoFarm(){const saved={inventoryVersion:2,days,time,timephase,currentWeather,lastRainDay,lastFrogRainDay,currentLevel_x,currentLevel_y,x:player.pos.x,y:player.pos.y,coins:player.coins,hunger:player.hunger,hand:player.hand,inv:player.inv.map(serializeAutoItem),levels:{}};for(let y=0;y<levels.length;y++)for(let x=0;x<levels[y].length;x++)if(levels[y][x])saved.levels[x+','+y]=levels[y][x].map.map(row=>row.map(serializeAutoTile));localStorage.setItem(AUTO_SAVE_KEY,JSON.stringify(saved));autoSave=saved;}
@@ -471,6 +619,7 @@ function scrollAutoChat(){const log=document.querySelector('#autofarm-chat-log')
 function updateAutoUnreadChat(){const badge=document.querySelector('#chat-unread');badge.textContent=autoUnreadChat;badge.hidden=autoUnreadChat===0;}
 function sendAutoMessage(message){if(autoSocket&&autoSocket.readyState===WebSocket.OPEN)autoSocket.send(JSON.stringify(message));}
 function sendAutoPresence(){sendAutoMessage({type:'presence',player:{id:localStorage.getItem('autofarm-player-id'),name:autoPlayerName,levelX:currentLevel_x,levelY:currentLevel_y,x:player.pos.x,y:player.pos.y,facing:player.facing}});}
+function sendAutoPresenceThrottled(force=false){const now=millis();if(force||now-autoLastPresence>=100){autoLastPresence=now;sendAutoPresence();}}
 function applyAutoPatch(key,value){const p=key.split(',').map(Number);if(p.length!==4)return;ensureAutoLevel(p[0],p[1]);levels[p[1]][p[0]].map[p[2]][p[3]]=deserializeAutoTile(value,p[3],p[2]);webglRoomGeometryCache.levelX=null;}
 
 // Compatibility hooks required by shared classes but owned by the story UI.

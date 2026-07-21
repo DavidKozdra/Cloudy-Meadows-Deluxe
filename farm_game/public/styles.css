@@ -3499,6 +3499,15 @@ button {
     transform: scale(0.95);
 }
 
+.mobile-menu-btn img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: none;
+}
+
 /* D-Pad Container */
 #dpad {
     position: absolute;

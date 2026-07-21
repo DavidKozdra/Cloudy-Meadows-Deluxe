@@ -131,10 +131,25 @@ function syncAccessibilityControls(sourceOptions) {
 function applyAccessibilityPrefs(sourceOptions) {
     const accessibilityOptions = getAccessibilityOptions(sourceOptions || getStoredOptions() || {});
     cachedAccessibilityOptions = accessibilityOptions;
+    const was3DMode = typeof is3DMode !== 'undefined' && is3DMode;
     if (typeof is3DMode !== 'undefined') {
         is3DMode = accessibilityOptions.is3DMode;
     } else {
         window.is3DMode = accessibilityOptions.is3DMode;
+    }
+    if (was3DMode && !accessibilityOptions.is3DMode &&
+        typeof player !== 'undefined' && player &&
+        typeof levels !== 'undefined' && levels &&
+        typeof currentLevel_x !== 'undefined' && typeof currentLevel_y !== 'undefined' &&
+        typeof snapPlayerTo2DGrid === 'function') {
+        const level = levels[currentLevel_y] && levels[currentLevel_y][currentLevel_x];
+        const snapped = snapPlayerTo2DGrid(player, level);
+        if (snapped && typeof sendAutoPresenceThrottled === 'function') {
+            sendAutoPresenceThrottled(true);
+        }
+        if (typeof document.exitPointerLock === 'function' && document.pointerLockElement) {
+            document.exitPointerLock();
+        }
     }
     const targetNodes = [document.documentElement];
 

@@ -65,13 +65,13 @@
     <script type="text/javascript" src="config/tiles.js?v=10"></script>
 
     <!-- GPU-rendered 3D Mode -->
-    <script type="text/javascript" src="classes/raycaster3d.js?v=20"></script>
+    <script type="text/javascript" src="classes/raycaster3d.js?v=24"></script>
     <script type="text/javascript" src="classes/ui/display.js?v=1"></script>
     <script type="text/javascript" src="classes/weather-system.js?v=1"></script>
 
     <!-- Main game files -->
-    <script type="text/javascript" src="miscfunctions.js?v=11"></script>
-    <script type="text/javascript" src="preload.js?v=14"></script>
+    <script type="text/javascript" src="miscfunctions.js?v=12"></script>
+    <script type="text/javascript" src="preload.js?v=15"></script>
     <script type="text/javascript" src="gamepad.js?v=8"></script>
     <script type="text/javascript" src="sketch.js?v=14"></script>
 
@@ -209,8 +209,12 @@
     <div id="mobile-controls">
       <!-- Top Left Menu Buttons -->
       <div id="mobile-menu-buttons">
-        <button id="btn-mobile-pause" class="mobile-menu-btn">⏸</button>
-        <button id="btn-mobile-quests" class="mobile-menu-btn">📋</button>
+        <button id="btn-mobile-pause" class="mobile-menu-btn" aria-label="Pause game">
+          <img src="images/ui/mobile-pause-icon.png" alt="">
+        </button>
+        <button id="btn-mobile-quests" class="mobile-menu-btn" aria-label="Open quests">
+          <img src="images/ui/mobile-quests-icon.png" alt="">
+        </button>
       </div>
       
       <!-- D-Pad -->
