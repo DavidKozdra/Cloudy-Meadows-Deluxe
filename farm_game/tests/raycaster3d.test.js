@@ -104,6 +104,23 @@ test('billboard descriptors resolve entity sprite layouts and use live positions
     );
 });
 
+test('static props become billboards over the room floor instead of opaque wall cubes', () => {
+    const dirt = { name: 'dirt', collide: false, class: 'Tile', png: 0, variant: 1 };
+    const lamp = { name: 'lamppost', collide: true, class: 'Tile', png: 3, variant: 0 };
+
+    const geometry = sandbox.buildRoomGeometryDescriptors([[dirt, lamp]]);
+
+    assert.equal(geometry.walls.length, 0);
+    assert.equal(geometry.floors.length, 2);
+    assert.equal(geometry.floors[1].sprite, primarySprite);
+    assert.equal(geometry.staticBillboards.length, 1);
+    assert.deepEqual(
+        JSON.parse(JSON.stringify((({ sprite, ...descriptor }) => descriptor)(geometry.staticBillboards[0]))),
+        { worldX: 48, worldZ: 16, width: 48, height: 36 }
+    );
+    assert.equal(geometry.staticBillboards[0].sprite, staticSprite);
+});
+
 test('room geometry is rebuilt for live map edits and room-coordinate changes', () => {
     const level = {
         map: [[{ collide: true, class: 'Tile', png: 0, variant: 0 }]]

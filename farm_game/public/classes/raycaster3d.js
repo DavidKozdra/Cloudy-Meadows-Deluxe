@@ -1,4 +1,4 @@
-// GPU-rendered (WEBGL) first-person renderer for 3D Mode. Owns scene geometry,
+// Three.js first-person renderer for 3D Mode. Owns persistent scene geometry,
 // camera setup, entity billboards, and continuous free-look movement.
 
 const WEBGL_WALL_HEIGHT_TILES = 1;
@@ -16,6 +16,12 @@ const WEBGL_BILLBOARD_ENTITY_CLASSES = [
     'FreeMoveEntity', 'LightMoveEntity', 'PayToMoveEntity',
     'Shop', 'Chest', 'AirBallon', 'Plant'
 ];
+const WEBGL_FLOOR_TILE_NAMES = new Set([
+    'concrete', 'grass', 'plot', 'dirt', 'Bridge', 'bridge2',
+    'park_grass', 'park_path', 'park_path_vert', 'park_path_cross',
+    'park_path_up_t', 'swamp_grass', 'water', 'water12',
+    'kitchen_tile', 'dirt_path', 'sand', 'towel'
+]);
 
 function normalizeAngleDeg0to360(angleDeg) {
     let a = angleDeg % 360;
@@ -44,26 +50,26 @@ let webglRoomGeometryCache = {
     signature: null,
     walls: [],
     floors: [],
+    staticBillboards: [],
     wallBatches: [],
     floorBatches: []
 };
 
+let three3DRenderer = null;
+let three3DScene = null;
+let three3DCamera = null;
+let three3DBillboardGroup = null;
+let three3DActiveRoom = null;
+let three3DWallGeometry = null;
+let three3DFloorGeometry = null;
+const three3DTextureCache = new WeakMap();
+const three3DMaterialCache = new WeakMap();
+const three3DBillboardGeometryCache = new Map();
+const three3DFallbackMaterials = new Map();
+
 function isValidWebglTextureSource(sprite) {
     return !!sprite && Number.isFinite(sprite.width) && sprite.width > 0 &&
         Number.isFinite(sprite.height) && sprite.height > 0;
-}
-
-function bindWebglTexture(sprite) {
-    webgl3DBuffer.texture(sprite);
-
-    // p5 1.4.1's Graphics.noSmooth() does not update WEBGL texture samplers.
-    // Reassert nearest-neighbor after texture() creates or updates it; p5 may
-    // restore its default linear sampler while binding a source.
-    const renderer = webgl3DBuffer._renderer;
-    const texture = renderer.textures.find(candidate => candidate.src === sprite);
-    if (!texture || (texture.glMinFilter === renderer.GL.NEAREST &&
-        texture.glMagFilter === renderer.GL.NEAREST)) return;
-    texture.setInterpolation(NEAREST, NEAREST);
 }
 
 function getTileSprite(cell) {
@@ -86,10 +92,52 @@ function getFloorTileSprite(cell) {
     return getTileSprite(cell);
 }
 
+function isWebglStructuralWallCell(cell) {
+    if (!cell || cell.class !== 'Tile') return false;
+    if (cell.name === 'wall') return true;
+    // Preserve the pure-helper contract for old saves/tests whose Tile objects
+    // predate the name field.
+    return !cell.name && cell.collide === true;
+}
+
+function isWebglFloorSurfaceCell(cell) {
+    if (!cell || cell.class !== 'Tile') return false;
+    if (!cell.name) return cell.collide !== true;
+    return WEBGL_FLOOR_TILE_NAMES.has(cell.name);
+}
+
+function isWebglStaticBillboardCell(cell) {
+    return !!cell && cell.class === 'Tile' && !!cell.name &&
+        !isWebglStructuralWallCell(cell) && !isWebglFloorSurfaceCell(cell);
+}
+
+function getDominantFloorSprite(map) {
+    const counts = new Map();
+    let dominantSprite = null;
+    let dominantCount = 0;
+    for (const row of map) {
+        if (!Array.isArray(row)) continue;
+        for (const cell of row) {
+            if (!isWebglFloorSurfaceCell(cell)) continue;
+            const sprite = getTileSprite(cell);
+            if (!isValidWebglTextureSource(sprite)) continue;
+            const nextCount = (counts.get(sprite) || 0) + 1;
+            counts.set(sprite, nextCount);
+            if (nextCount > dominantCount) {
+                dominantCount = nextCount;
+                dominantSprite = sprite;
+            }
+        }
+    }
+    return dominantSprite;
+}
+
 function buildRoomGeometryDescriptors(map) {
     const walls = [];
     const floors = [];
-    if (!Array.isArray(map)) return { walls, floors };
+    const staticBillboards = [];
+    if (!Array.isArray(map)) return { walls, floors, staticBillboards };
+    const dominantFloorSprite = getDominantFloorSprite(map);
 
     for (let row = 0; row < map.length; row++) {
         const mapRow = map[row];
@@ -99,23 +147,41 @@ function buildRoomGeometryDescriptors(map) {
             const cell = mapRow[column];
             if (!cell) continue;
 
-            if (cell.collide === true && !isWebglBillboardEntityCell(cell)) {
+            if (isWebglStructuralWallCell(cell)) {
                 walls.push({
                     xTiles: column,
                     yTiles: row,
                     sprite: getTileSprite(cell)
                 });
             } else {
+                const isStaticBillboard = isWebglStaticBillboardCell(cell);
+                const underSprite = cell.under_tile && typeof cell.under_tile === 'object'
+                    ? getTileSprite(cell.under_tile)
+                    : null;
                 floors.push({
                     xTiles: column,
                     yTiles: row,
-                    sprite: getFloorTileSprite(cell)
+                    sprite: isStaticBillboard
+                        ? (underSprite || dominantFloorSprite)
+                        : getFloorTileSprite(cell)
                 });
+                if (isStaticBillboard) {
+                    const sprite = getTileSprite(cell);
+                    if (isValidWebglTextureSource(sprite)) {
+                        staticBillboards.push({
+                            worldX: column * tileSize + tileSize / 2,
+                            worldZ: row * tileSize + tileSize / 2,
+                            width: sprite.width || tileSize,
+                            height: sprite.height || tileSize,
+                            sprite
+                        });
+                    }
+                }
             }
         }
     }
 
-    return { walls, floors };
+    return { walls, floors, staticBillboards };
 }
 
 function roomGeometrySignature(map) {
@@ -135,7 +201,7 @@ function roomGeometrySignature(map) {
             const under = isWebglBillboardEntityCell(cell) && cell.under_tile &&
                 typeof cell.under_tile === 'object' ? cell.under_tile : null;
             tokens.push(
-                cell.class || '', cell.collide === true ? 1 : 0,
+                cell.class || '', cell.name || '', cell.collide === true ? 1 : 0,
                 cell.png ?? '', cell.variant ?? '', cell.age ?? '',
                 under ? under.png ?? '' : '', under ? under.variant ?? '' : ''
             );
@@ -178,7 +244,7 @@ function buildFloorBatches(floors) {
 
 function isSolidWebglWall(map, row, column) {
     const cell = map[row] && map[row][column];
-    return !!cell && cell.collide === true && !isWebglBillboardEntityCell(cell);
+    return isWebglStructuralWallCell(cell);
 }
 
 function buildWallBatches(walls, map) {
@@ -228,6 +294,7 @@ function getRoomGeometryForRoom(currentLvl, levelX, levelY) {
             signature,
             walls: geometry.walls,
             floors: geometry.floors,
+            staticBillboards: geometry.staticBillboards,
             wallBatches: buildWallBatches(geometry.walls, map),
             floorBatches: buildFloorBatches(geometry.floors)
         };
@@ -236,85 +303,10 @@ function getRoomGeometryForRoom(currentLvl, levelX, levelY) {
     return webglRoomGeometryCache;
 }
 
-function configurePlayerCamera(playerObj, currentLvl) {
-    const rows = currentLvl.map.length;
-    const columns = currentLvl.map.reduce((width, row) => Math.max(width, row.length), 0);
-    const roomWidth = columns * tileSize;
-    const roomDepth = rows * tileSize;
-    const maxDimension = Math.max(roomWidth, roomDepth, tileSize);
-    const eyeX = playerObj.pos.x + tileSize / 2;
-    const eyeY = -tileSize * WEBGL_WALL_HEIGHT_TILES / 2;
-    const eyeZ = playerObj.pos.y + tileSize / 2;
-    const yawDeg = getActiveCameraYawDeg(playerObj);
-    const yawRad = yawDeg * Math.PI / 180;
-
-    webgl3DBuffer.perspective(
-        WEBGL_FOV_DEGREES * Math.PI / 180,
-        webgl3DBuffer.width / webgl3DBuffer.height,
-        0.1,
-        maxDimension * 5
-    );
-    webgl3DBuffer.camera(
-        eyeX,
-        eyeY,
-        eyeZ,
-        eyeX + Math.cos(yawRad),
-        eyeY,
-        eyeZ + Math.sin(yawRad),
-        0,
-        1,
-        0
-    );
-}
-
 function getActiveCameraYawDeg(playerObj) {
     return pointerLockEngaged
         ? playerObj.lookYawDeg
         : (FACING_TO_YAW_DEG[playerObj.facing] ?? 0);
-}
-
-function renderTriangleBatches(batches, useTextures, fallbackColor) {
-    for (const batch of batches) {
-        webgl3DBuffer.beginShape(TRIANGLES);
-        if (useTextures && isValidWebglTextureSource(batch.sprite)) {
-            bindWebglTexture(batch.sprite);
-        } else {
-            webgl3DBuffer.fill(...fallbackColor);
-        }
-        for (let i = 0; i < batch.vertices.length; i += 5) {
-            webgl3DBuffer.vertex(
-                batch.vertices[i], batch.vertices[i + 1], batch.vertices[i + 2],
-                batch.vertices[i + 3], batch.vertices[i + 4]
-            );
-        }
-        webgl3DBuffer.endShape();
-    }
-}
-
-function renderBaseFloor(currentLvl) {
-    const rows = currentLvl.map.length;
-    const columns = currentLvl.map.reduce((width, row) => Math.max(width, row.length), 0);
-    if (!rows || !columns) return;
-
-    // The 2D game exposes the Skyline background wherever map cells are 0.
-    // The old raycaster supplied a brown fallback floor beneath those gaps;
-    // without this plane the WEBGL buffer showed only its blue clear color.
-    webgl3DBuffer.push();
-    webgl3DBuffer.fill(86, 60, 40);
-    webgl3DBuffer.translate(columns * tileSize / 2, 0.05, rows * tileSize / 2);
-    webgl3DBuffer.rotateX(Math.PI / 2);
-    webgl3DBuffer.plane(columns * tileSize, rows * tileSize);
-    webgl3DBuffer.pop();
-}
-
-function renderWallGeometry(wallBatches, useTextures = true) {
-    webgl3DBuffer.noStroke();
-    renderTriangleBatches(wallBatches, useTextures, [205, 92, 72]);
-}
-
-function renderFloorGeometry(floorBatches, useTextures = true) {
-    webgl3DBuffer.noStroke();
-    renderTriangleBatches(floorBatches, useTextures, [86, 60, 40]);
 }
 
 function getWebglBillboardSprite(tile) {
@@ -361,53 +353,239 @@ function collectBillboardDescriptors(currentLvl) {
     return billboards;
 }
 
-function renderBillboardGeometry(billboards, cameraYawDeg) {
-    const cameraYawRad = cameraYawDeg * Math.PI / 180;
+function initializeThree3DRenderer() {
+    if (three3DRenderer) return true;
+    if (typeof THREE === 'undefined' || typeof document === 'undefined') return false;
 
-    webgl3DBuffer.noStroke();
-    for (const billboard of billboards) {
-        webgl3DBuffer.push();
-        webgl3DBuffer.translate(
-            billboard.worldX,
-            -billboard.height / 2,
-            billboard.worldZ
+    const renderCanvas = document.createElement('canvas');
+    three3DRenderer = new THREE.WebGLRenderer({
+        canvas: renderCanvas,
+        antialias: false,
+        alpha: false,
+        preserveDrawingBuffer: true,
+        powerPreference: 'high-performance'
+    });
+    three3DRenderer.setPixelRatio(1);
+    three3DRenderer.setSize(canvasWidth, canvasHeight, false);
+    three3DRenderer.setClearColor(0x87ceeb, 1);
+    three3DRenderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    three3DScene = new THREE.Scene();
+    three3DScene.background = new THREE.Color(0x87ceeb);
+    three3DCamera = new THREE.PerspectiveCamera(
+        WEBGL_FOV_DEGREES,
+        canvasWidth / canvasHeight,
+        0.1,
+        Math.max(canvasWidth, canvasHeight) * 5
+    );
+    three3DCamera.up.set(0, 1, 0);
+    three3DBillboardGroup = new THREE.Group();
+    three3DScene.add(three3DBillboardGroup);
+
+    three3DWallGeometry = new THREE.BoxGeometry(
+        tileSize,
+        tileSize * WEBGL_WALL_HEIGHT_TILES,
+        tileSize
+    );
+    three3DFloorGeometry = new THREE.PlaneGeometry(tileSize, tileSize);
+    three3DFloorGeometry.rotateX(-Math.PI / 2);
+    return true;
+}
+
+function getThreeTexture(sprite) {
+    if (!isValidWebglTextureSource(sprite)) return null;
+    const cached = three3DTextureCache.get(sprite);
+    if (cached) return cached;
+
+    const source = sprite.canvas || sprite.elt || sprite;
+    const texture = new THREE.Texture(source);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    texture.needsUpdate = true;
+    three3DTextureCache.set(sprite, texture);
+    return texture;
+}
+
+function getThreeFallbackMaterial(color, billboard) {
+    const key = `${color}|${billboard ? 1 : 0}`;
+    if (!three3DFallbackMaterials.has(key)) {
+        three3DFallbackMaterials.set(key, new THREE.MeshBasicMaterial({
+            color,
+            side: billboard ? THREE.DoubleSide : THREE.FrontSide
+        }));
+    }
+    return three3DFallbackMaterials.get(key);
+}
+
+function getThreeMaterial(sprite, kind, useTextures = true) {
+    if (!useTextures || !isValidWebglTextureSource(sprite)) {
+        return getThreeFallbackMaterial(kind === 'wall' ? 0xcd5c48 : 0x563c28, kind === 'billboard');
+    }
+
+    let materials = three3DMaterialCache.get(sprite);
+    if (!materials) {
+        materials = {};
+        three3DMaterialCache.set(sprite, materials);
+    }
+    if (materials[kind]) return materials[kind];
+
+    const billboard = kind === 'billboard';
+    materials[kind] = new THREE.MeshBasicMaterial({
+        map: getThreeTexture(sprite),
+        transparent: billboard,
+        alphaTest: 0.08,
+        side: billboard ? THREE.DoubleSide : THREE.FrontSide,
+        depthTest: true,
+        depthWrite: true
+    });
+    return materials[kind];
+}
+
+function groupDescriptorsBySprite(descriptors) {
+    const groups = new Map();
+    for (const descriptor of descriptors) {
+        const sprite = isValidWebglTextureSource(descriptor.sprite) ? descriptor.sprite : null;
+        if (!groups.has(sprite)) groups.set(sprite, []);
+        groups.get(sprite).push(descriptor);
+    }
+    return groups;
+}
+
+function addThreeInstancedTiles(group, descriptors, kind, useTextures) {
+    const descriptorGroups = groupDescriptorsBySprite(descriptors);
+    const dummy = new THREE.Object3D();
+    const geometry = kind === 'wall' ? three3DWallGeometry : three3DFloorGeometry;
+
+    for (const [sprite, entries] of descriptorGroups) {
+        const mesh = new THREE.InstancedMesh(
+            geometry,
+            getThreeMaterial(sprite, kind, useTextures),
+            entries.length
         );
-        // A p5 plane starts in XY with its front normal along +Z. The first
-        // quarter-turn makes it vertical-facing along -X at yaw 0; the yaw
-        // turn keeps that front face aimed back toward the camera.
-        webgl3DBuffer.rotateY(-Math.PI / 2);
-        webgl3DBuffer.rotateY(-cameraYawRad);
-        bindWebglTexture(billboard.sprite);
-        webgl3DBuffer.plane(billboard.width, billboard.height);
-        webgl3DBuffer.pop();
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            dummy.position.set(
+                entry.xTiles * tileSize + tileSize / 2,
+                kind === 'wall' ? tileSize * WEBGL_WALL_HEIGHT_TILES / 2 : 0,
+                entry.yTiles * tileSize + tileSize / 2
+            );
+            dummy.rotation.set(0, 0, 0);
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i, dummy.matrix);
+        }
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.computeBoundingSphere();
+        group.add(mesh);
     }
 }
 
-function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = true) {
-    if (!webgl3DBuffer || !playerObj || !currentLvl || !Array.isArray(currentLvl.map)) return;
+function buildThreeRoomGroup(currentLvl, geometry, useTextures) {
+    const roomGroup = new THREE.Group();
+    const rows = currentLvl.map.length;
+    const columns = currentLvl.map.reduce((width, row) => Math.max(width, row.length), 0);
 
+    if (rows && columns) {
+        const baseGeometry = new THREE.PlaneGeometry(columns * tileSize, rows * tileSize);
+        baseGeometry.rotateX(-Math.PI / 2);
+        const baseFloor = new THREE.Mesh(
+            baseGeometry,
+            getThreeFallbackMaterial(0x563c28, false)
+        );
+        baseFloor.position.set(columns * tileSize / 2, -0.02, rows * tileSize / 2);
+        roomGroup.add(baseFloor);
+    }
+
+    addThreeInstancedTiles(roomGroup, geometry.floors, 'floor', useTextures);
+    addThreeInstancedTiles(roomGroup, geometry.walls, 'wall', useTextures);
+    return roomGroup;
+}
+
+function getThreeRoomGroup(currentLvl, levelX, levelY, useTextures) {
     const geometry = getRoomGeometryForRoom(currentLvl, levelX, levelY);
-    const cameraYawDeg = getActiveCameraYawDeg(playerObj);
-    const billboards = collectBillboardDescriptors(currentLvl);
+    if (!three3DActiveRoom ||
+        three3DActiveRoom.geometry !== geometry ||
+        three3DActiveRoom.useTextures !== useTextures) {
+        if (three3DActiveRoom) {
+            three3DScene.remove(three3DActiveRoom.group);
+            for (const child of three3DActiveRoom.group.children) {
+                if (child.geometry && child.geometry !== three3DWallGeometry &&
+                    child.geometry !== three3DFloorGeometry) child.geometry.dispose();
+            }
+        }
+        const group = buildThreeRoomGroup(currentLvl, geometry, useTextures);
+        three3DScene.add(group);
+        three3DActiveRoom = { geometry, group, useTextures };
+    }
+    return three3DActiveRoom.group;
+}
 
-    webgl3DBuffer.background(135, 206, 235);
-    webgl3DBuffer.push();
-    configurePlayerCamera(playerObj, currentLvl);
-    webgl3DBuffer.textureMode(NORMAL);
-    renderBaseFloor(currentLvl);
-    renderFloorGeometry(geometry.floorBatches, useTextures);
-    renderWallGeometry(geometry.wallBatches, useTextures);
-    renderBillboardGeometry(billboards, cameraYawDeg);
-    webgl3DBuffer.textureMode(IMAGE);
-    webgl3DBuffer.pop();
+function configureThreePlayerCamera(playerObj, currentLvl) {
+    const rows = currentLvl.map.length;
+    const columns = currentLvl.map.reduce((width, row) => Math.max(width, row.length), 0);
+    const maxDimension = Math.max(columns * tileSize, rows * tileSize, tileSize);
+    const eyeX = playerObj.pos.x + tileSize / 2;
+    const eyeY = tileSize * WEBGL_WALL_HEIGHT_TILES / 2;
+    const eyeZ = playerObj.pos.y + tileSize / 2;
+    const yawRad = getActiveCameraYawDeg(playerObj) * Math.PI / 180;
 
-    // Composite through the main 2D renderer without depending on, or
-    // mutating, any imageMode/tint state used by the screen-space overlays.
+    three3DCamera.fov = WEBGL_FOV_DEGREES;
+    three3DCamera.aspect = canvasWidth / canvasHeight;
+    three3DCamera.near = 0.1;
+    three3DCamera.far = maxDimension * 5;
+    three3DCamera.updateProjectionMatrix();
+    three3DCamera.position.set(eyeX, eyeY, eyeZ);
+    three3DCamera.lookAt(
+        eyeX + Math.cos(yawRad),
+        eyeY,
+        eyeZ + Math.sin(yawRad)
+    );
+    three3DCamera.updateMatrixWorld();
+}
+
+function getThreeBillboardGeometry(width, height) {
+    const key = `${width}x${height}`;
+    if (!three3DBillboardGeometryCache.has(key)) {
+        three3DBillboardGeometryCache.set(key, new THREE.PlaneGeometry(width, height));
+    }
+    return three3DBillboardGeometryCache.get(key);
+}
+
+function renderThreeBillboards(billboards, useTextures) {
+    three3DBillboardGroup.clear();
+    for (const billboard of billboards) {
+        const mesh = new THREE.Mesh(
+            getThreeBillboardGeometry(billboard.width, billboard.height),
+            getThreeMaterial(billboard.sprite, 'billboard', useTextures)
+        );
+        mesh.position.set(billboard.worldX, billboard.height / 2, billboard.worldZ);
+        mesh.lookAt(three3DCamera.position.x, mesh.position.y, three3DCamera.position.z);
+        three3DBillboardGroup.add(mesh);
+    }
+}
+
+function compositeThreeCanvas() {
     push();
-    imageMode(CORNER);
+    resetMatrix();
     noTint();
-    image(webgl3DBuffer, 0, 0);
+    drawingContext.drawImage(three3DRenderer.domElement, 0, 0, canvasWidth, canvasHeight);
     pop();
+}
+
+function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = true) {
+    if (!playerObj || !currentLvl || !Array.isArray(currentLvl.map)) return;
+    if (!initializeThree3DRenderer()) return;
+
+    getThreeRoomGroup(currentLvl, levelX, levelY, useTextures);
+    configureThreePlayerCamera(playerObj, currentLvl);
+    renderThreeBillboards(
+        three3DActiveRoom.geometry.staticBillboards.concat(collectBillboardDescriptors(currentLvl)),
+        useTextures
+    );
+    three3DRenderer.render(three3DScene, three3DCamera);
+    compositeThreeCanvas();
 }
 
 // Point-collision test in continuous tile-space coordinates. Returns 'edge'

@@ -935,20 +935,13 @@ function setup() {
         setupPointerLock(canvas.elt);
     }
 
-    // Offscreen WEBGL buffer for the GPU-rendered 3D Mode scene
-    // (classes/raycaster3d.js). Using createGraphics(..., WEBGL) rather than
-    // a second createCanvas() is deliberate: this codebase is entirely
-    // global-mode p5, and a second createCanvas() call would silently
-    // redirect every subsequent bare image()/fill()/rect()/text() call in
-    // the ENTIRE game to the new canvas. A p5.Graphics buffer's own methods
-    // (webgl3DBuffer.camera(), .plane(), .texture(), etc.) are called
-    // directly on the buffer object and never touch the global default
-    // renderer, so every existing 2D draw call keeps working unmodified.
-    // The 3D scene renders into this buffer, then one image(webgl3DBuffer,
-    // 0, 0) blits it onto the real 2D canvas — the same pattern
-    // Level.renderLights() already uses for its darkness buffer.
-    webgl3DBuffer = createGraphics(canvasWidth, canvasHeight, WEBGL);
-    webgl3DBuffer.noSmooth();
+    // Three.js owns a separate offscreen WebGL canvas. It is never attached to
+    // the DOM, so p5 remains the only visible canvas and all existing 2D/HUD
+    // drawing stays untouched. render3DViewWebgl() blits the finished Three.js
+    // frame into p5's 2D canvas before overlays are drawn.
+    if (typeof initializeThree3DRenderer === 'function') {
+        initializeThree3DRenderer();
+    }
 
     // Setup fullscreen functionality
     setupFullscreen();

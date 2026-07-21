@@ -51,12 +51,6 @@ var is3DMode = false;
 var pointerLockEngaged = false;
 const MOUSE_LOOK_SENSITIVITY_DEG_PER_PX = 0.15;
 
-// Offscreen WEBGL scene buffer for 3D Mode (classes/raycaster3d.js), created
-// once in preload.js's setup(). Never a real second <canvas> — see the
-// comment at its creation site for why createGraphics(WEBGL) is used
-// instead of a second createCanvas().
-var webgl3DBuffer;
-
 var player;
 var levels = [];
 var currentLevel_y = 2;
