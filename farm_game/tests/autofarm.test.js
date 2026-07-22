@@ -100,7 +100,7 @@ test('AutoFarm reuses backpacks, inventory warnings, beds, and registry placeabl
 
 test('AutoFarm loads and initializes the shared Three.js 3D renderer', () => {
     assert.match(html, /import \* as THREE from 'https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.184\.0\/build\/three\.module\.min\.js'/);
-    assert.match(html, /classes\/raycaster3d\.js\?v=29/);
+    assert.match(html, /classes\/raycaster3d\.js\?v=31/);
     assert.match(source, /initializeThree3DRenderer\(\)/);
     assert.match(source, /render3DViewWebgl\(player, level, currentLevel_x, currentLevel_y\)/);
     assert.doesNotMatch(source, /createGraphics\(canvasWidth, canvasHeight, WEBGL\)/);

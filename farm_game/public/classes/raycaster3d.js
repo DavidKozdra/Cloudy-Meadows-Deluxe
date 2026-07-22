@@ -26,6 +26,7 @@ const WEBGL_FLAT_PROP_NAMES = new Set(['bed']);
 const WEBGL_INTERACTION_CLASSES = new Set([
     'NPC', 'Shop', 'Chest', 'Robot', 'AirBallon'
 ]);
+const WEBGL_BRIDGE_TILE_NAMES = new Set(['Bridge', 'bridge2']);
 
 function normalizeAngleDeg0to360(angleDeg) {
     let a = angleDeg % 360;
@@ -64,6 +65,10 @@ let three3DRenderer = null;
 let three3DScene = null;
 let three3DCamera = null;
 let three3DBillboardGroup = null;
+let three3DBridgeHintGroup = null;
+let three3DBridgeHintGeometry = null;
+let three3DBridgeHintMaterial = null;
+let three3DBridgeArrowMesh = null;
 let three3DActiveRoom = null;
 let three3DWallGeometry = null;
 let three3DFloorGeometry = null;
@@ -75,6 +80,7 @@ let three3DViewModelItemSprite = null;
 let three3DViewModelActionHeld = false;
 let three3DViewModelSwingStartedAt = -Infinity;
 const three3DBillboardPool = [];
+const three3DBridgeHintPool = [];
 const three3DTextureCache = new WeakMap();
 const three3DMaterialCache = new WeakMap();
 const three3DBillboardGeometryCache = new Map();
@@ -470,6 +476,40 @@ function collect3DStatusMarkerDescriptors(currentLvl, playerObj) {
     return markers;
 }
 
+function collect3DBridgeTutorialHintDescriptors(currentLvl, playerObj) {
+    const hints = [];
+    if (typeof window === 'undefined' || !window.bridgeTutorialActive ||
+        !currentLvl || !Array.isArray(currentLvl.map)) return hints;
+
+    const playerX = playerObj && playerObj.pos ? playerObj.pos.x : 0;
+    const playerZ = playerObj && playerObj.pos ? playerObj.pos.y : 0;
+    let nearest = null;
+    let nearestDistance = Infinity;
+
+    for (let row = 0; row < currentLvl.map.length; row++) {
+        const mapRow = currentLvl.map[row];
+        if (!Array.isArray(mapRow)) continue;
+        for (let column = 0; column < mapRow.length; column++) {
+            const tile = mapRow[column];
+            if (!tile || !WEBGL_BRIDGE_TILE_NAMES.has(tile.name)) continue;
+            const worldX = tile.pos ? tile.pos.x + tileSize / 2 : column * tileSize + tileSize / 2;
+            const worldZ = tile.pos ? tile.pos.y + tileSize / 2 : row * tileSize + tileSize / 2;
+            const hint = { worldX, worldZ, nearest: false };
+            hints.push(hint);
+
+            const distance = ((worldX - (playerX + tileSize / 2)) ** 2) +
+                ((worldZ - (playerZ + tileSize / 2)) ** 2);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = hint;
+            }
+        }
+    }
+
+    if (nearest) nearest.nearest = true;
+    return hints;
+}
+
 function initializeThree3DRenderer() {
     if (three3DRenderer) return true;
     if (typeof THREE === 'undefined' || typeof document === 'undefined') return false;
@@ -499,6 +539,36 @@ function initializeThree3DRenderer() {
     three3DCamera.up.set(0, 1, 0);
     three3DBillboardGroup = new THREE.Group();
     three3DScene.add(three3DBillboardGroup);
+
+    three3DBridgeHintGroup = new THREE.Group();
+    three3DBridgeHintGeometry = new THREE.RingGeometry(
+        tileSize * 0.36,
+        tileSize * 0.72,
+        32
+    );
+    three3DBridgeHintGeometry.rotateX(-Math.PI / 2);
+    three3DBridgeHintMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffe77a,
+        transparent: true,
+        opacity: 0.72,
+        side: THREE.DoubleSide,
+        depthTest: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+    });
+    three3DBridgeArrowMesh = new THREE.Mesh(
+        new THREE.ConeGeometry(tileSize * 0.16, tileSize * 0.34, 4),
+        new THREE.MeshBasicMaterial({
+            color: 0xffef9a,
+            transparent: true,
+            opacity: 0.95,
+            depthTest: true,
+            depthWrite: false
+        })
+    );
+    three3DBridgeArrowMesh.rotation.z = Math.PI;
+    three3DBridgeHintGroup.add(three3DBridgeArrowMesh);
+    three3DScene.add(three3DBridgeHintGroup);
 
     three3DWallGeometry = new THREE.BoxGeometry(
         tileSize,
@@ -572,6 +642,22 @@ function isAnimatedWebglSprite(sprite) {
         (Array.isArray(gif.frames) && gif.frames.length > 1) ||
         (Number.isFinite(gif.numFrames) && gif.numFrames > 1)
     );
+}
+
+function advanceAnimatedWebglSprite(sprite) {
+    if (!isAnimatedWebglSprite(sprite)) return false;
+    // p5 normally calls this from image()/texture(). Three.js reads the p5
+    // canvas directly, so it must trigger the same frame-timing step first.
+    if (typeof sprite._animateGif === 'function') {
+        // p5's _lastFrameTime uses performance.now(). Keep the same clock so
+        // switching between 2D and 3D cannot produce a negative GIF delta.
+        const frameTime = typeof performance !== 'undefined' &&
+            typeof performance.now === 'function'
+            ? performance.now()
+            : Date.now();
+        sprite._animateGif({ _lastFrameTime: frameTime });
+    }
+    return true;
 }
 
 function getThreeFallbackMaterial(color, billboard) {
@@ -735,7 +821,7 @@ function renderThreeBillboards(billboards, useTextures) {
         mesh.material = getThreeMaterial(billboard.sprite, 'billboard', useTextures);
         // p5 advances an animated GIF on its backing canvas. Three.js does not
         // know that canvas changed, so explicitly upload the current GIF frame.
-        if (useTextures && isAnimatedWebglSprite(billboard.sprite)) {
+        if (useTextures && advanceAnimatedWebglSprite(billboard.sprite)) {
             const texture = getThreeTexture(billboard.sprite);
             if (texture) texture.needsUpdate = true;
         }
@@ -748,6 +834,55 @@ function renderThreeBillboards(billboards, useTextures) {
     }
     for (let i = billboards.length; i < three3DBillboardPool.length; i++) {
         three3DBillboardPool[i].visible = false;
+    }
+}
+
+function renderThreeBridgeTutorialHints(currentLvl, playerObj) {
+    if (!three3DBridgeHintGroup) return;
+    const hints = collect3DBridgeTutorialHintDescriptors(currentLvl, playerObj);
+    three3DBridgeHintGroup.visible = hints.length > 0;
+    if (!hints.length) {
+        if (three3DBridgeArrowMesh) three3DBridgeArrowMesh.visible = false;
+        for (const mesh of three3DBridgeHintPool) mesh.visible = false;
+        return;
+    }
+
+    const reduceMotion = typeof shouldReduceMotion === 'function' && shouldReduceMotion();
+    const now = typeof millis === 'function' ? millis() : 0;
+    const pulse = reduceMotion ? 0.82 : 0.72 + (0.18 * Math.sin(now * 0.006));
+    three3DBridgeHintMaterial.opacity = reduceMotion
+        ? 0.72
+        : 0.58 + (0.2 * Math.abs(Math.sin(now * 0.006)));
+
+    let nearest = null;
+    for (let i = 0; i < hints.length; i++) {
+        const hint = hints[i];
+        let mesh = three3DBridgeHintPool[i];
+        if (!mesh) {
+            mesh = new THREE.Mesh(three3DBridgeHintGeometry, three3DBridgeHintMaterial);
+            mesh.renderOrder = 3;
+            three3DBridgeHintPool.push(mesh);
+            three3DBridgeHintGroup.add(mesh);
+        }
+        mesh.visible = true;
+        mesh.position.set(hint.worldX, 0.12, hint.worldZ);
+        mesh.scale.set(pulse, pulse, pulse);
+        if (hint.nearest) nearest = hint;
+    }
+    for (let i = hints.length; i < three3DBridgeHintPool.length; i++) {
+        three3DBridgeHintPool[i].visible = false;
+    }
+
+    if (three3DBridgeArrowMesh) {
+        three3DBridgeArrowMesh.visible = !!nearest;
+        if (nearest) {
+            const bounce = reduceMotion ? 0 : Math.sin(now * 0.006) * tileSize * 0.1;
+            three3DBridgeArrowMesh.position.set(
+                nearest.worldX,
+                tileSize * 0.8 + bounce,
+                nearest.worldZ
+            );
+        }
     }
 }
 
@@ -900,6 +1035,7 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
 
     getThreeRoomGroup(currentLvl, levelX, levelY, useTextures);
     configureThreePlayerCamera(playerObj, currentLvl);
+    renderThreeBridgeTutorialHints(currentLvl, playerObj);
     renderThreeBillboards(
         three3DActiveRoom.geometry.staticBillboards
             .concat(collectBillboardDescriptors(currentLvl))

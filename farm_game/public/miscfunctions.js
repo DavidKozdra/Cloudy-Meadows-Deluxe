@@ -1108,23 +1108,29 @@ function startBridgeTutorial() {
 
 // Ends the tutorial and records that it has been seen so it never returns.
 function endBridgeTutorial() {
-    if (!window.bridgeTutorialActive) return;
+    const wasActive = !!window.bridgeTutorialActive;
     window.bridgeTutorialActive = false;
-    markBridgeTutorialSeen();
+    if (wasActive) markBridgeTutorialSeen();
     hideBridgeTutorialBanner();
+}
+
+// Keep completion independent from either renderer. In particular, 3D mode
+// must dismiss the banner on the first frame after a bridge changes rooms.
+function updateBridgeTutorialState(level) {
+    if (!window.bridgeTutorialActive) return false;
+    if (window.bridgeTutorialStartLevel && level &&
+        level.name !== window.bridgeTutorialStartLevel) {
+        endBridgeTutorial();
+        return false;
+    }
+    return true;
 }
 
 // Draw a pulsing glow + arrow over every bridge tile on the current screen so
 // the player's eye is pulled straight to the exit. Mirrors the Mr.C world
 // highlight style in level.js. Call from the level render pass (world space).
 function renderBridgeTutorialHighlights(level) {
-    if (!window.bridgeTutorialActive || !level || !level.map) return;
-
-    // The player crossed to a new screen — mission accomplished, end the tutorial.
-    if (window.bridgeTutorialStartLevel && level.name !== window.bridgeTutorialStartLevel) {
-        endBridgeTutorial();
-        return;
-    }
+    if (!level || !level.map || !updateBridgeTutorialState(level)) return;
 
     const reduceMotion = typeof shouldReduceMotion === 'function' && shouldReduceMotion();
     const pulse = reduceMotion ? 0.8 : (0.55 + (0.45 * Math.abs(Math.sin(millis() * 0.006))));
@@ -1240,6 +1246,7 @@ function hideBridgeTutorialBanner() {
 
 window.startBridgeTutorial = startBridgeTutorial;
 window.endBridgeTutorial = endBridgeTutorial;
+window.updateBridgeTutorialState = updateBridgeTutorialState;
 window.renderBridgeTutorialHighlights = renderBridgeTutorialHighlights;
 window.isBridgeTile = isBridgeTile;
 

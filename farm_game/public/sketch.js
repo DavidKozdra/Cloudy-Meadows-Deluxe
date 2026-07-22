@@ -1930,6 +1930,13 @@ function draw() {
 
         const currentLvl = levels[currentLevel_y]?.[currentLevel_x];
 
+        // Tutorial completion is gameplay state, not a 2D render side effect.
+        // Run it in both render modes so the bridge banner disappears after
+        // crossing while playing in first person.
+        if (currentLvl && typeof updateBridgeTutorialState === 'function') {
+            updateBridgeTutorialState(currentLvl);
+        }
+
         if (is3DMode) {
             // 3D Mode always renders the full canvas 1:1 — the mobile 2x zoom
             // follow-camera is a 2D-only affordance.

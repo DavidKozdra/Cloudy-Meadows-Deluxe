@@ -16,6 +16,7 @@ const readyMarker = { id: 'ready', width: 16, height: 16 };
 const questMarker = { id: 'quest', width: 16, height: 16 };
 const giftMarker = { id: 'gift', width: 16, height: 16 };
 const sandbox = {
+    window: {},
     all_imgs: [
         [fallbackSprite, primarySprite],
         [[fallbackSprite], [fallbackSprite], [frontSprite], [fallbackSprite]],
@@ -36,7 +37,9 @@ vm.runInNewContext(
      globalThis.getWebglBillboardSprite = getWebglBillboardSprite;
      globalThis.collectBillboardDescriptors = collectBillboardDescriptors;
      globalThis.isAnimatedWebglSprite = isAnimatedWebglSprite;
+     globalThis.advanceAnimatedWebglSprite = advanceAnimatedWebglSprite;
      globalThis.collect3DStatusMarkerDescriptors = collect3DStatusMarkerDescriptors;
+     globalThis.collect3DBridgeTutorialHintDescriptors = collect3DBridgeTutorialHintDescriptors;
      globalThis.get3DInteractionTarget = get3DInteractionTarget;
      globalThis.get3DHeldItemSprite = get3DHeldItemSprite;`,
     sandbox
@@ -116,10 +119,12 @@ test('billboard descriptors resolve entity sprite layouts and use live positions
 });
 
 test('generic animated entities such as ladybugs render as 3D billboards', () => {
+    let advancedAt = null;
     const ladybugSprite = {
         width: 32,
         height: 32,
-        gifProperties: { frames: [{}, {}] }
+        gifProperties: { frames: [{}, {}] },
+        _animateGif(p5Instance) { advancedAt = p5Instance._lastFrameTime; }
     };
     sandbox.all_imgs[4] = ladybugSprite;
     const ladybug = {
@@ -135,6 +140,9 @@ test('generic animated entities such as ladybugs render as 3D billboards', () =>
     assert.equal(descriptors.length, 1);
     assert.equal(descriptors[0].sprite, ladybugSprite);
     assert.equal(sandbox.isAnimatedWebglSprite(ladybugSprite), true);
+    sandbox.performance = { now: () => 125 };
+    assert.equal(sandbox.advanceAnimatedWebglSprite(ladybugSprite), true);
+    assert.equal(advancedAt, 125, 'the p5 GIF frame timer advances before upload');
 });
 
 test('crop floors use dry or wet soil textures and invalidate when watering changes', () => {
@@ -246,6 +254,25 @@ test('3D interaction prompt uses the same nearby interactable target as the play
     player.looking = () => npc;
     player.talking = npc;
     assert.equal(sandbox.get3DInteractionTarget(player, 4, 2), null);
+});
+
+test('active bridge tutorial exposes every bridge to 3D and marks the nearest one', () => {
+    const bridgeA = { name: 'Bridge', pos: { x: 0, y: 64 } };
+    const bridgeB = { name: 'bridge2', pos: { x: 96, y: 64 } };
+    const floor = { name: 'grass', pos: { x: 32, y: 64 } };
+    const level = { map: [[bridgeA, floor, bridgeB]] };
+    const player = { pos: { x: 80, y: 64 } };
+
+    sandbox.window.bridgeTutorialActive = false;
+    assert.equal(sandbox.collect3DBridgeTutorialHintDescriptors(level, player).length, 0);
+
+    sandbox.window.bridgeTutorialActive = true;
+    const hints = sandbox.collect3DBridgeTutorialHintDescriptors(level, player);
+    assert.equal(hints.length, 2);
+    assert.equal(hints[0].nearest, false);
+    assert.equal(hints[1].nearest, true);
+    assert.match(source, /renderThreeBridgeTutorialHints\(currentLvl, playerObj\)/);
+    sandbox.window.bridgeTutorialActive = false;
 });
 
 test('3D held-item viewmodel resolves the selected inventory sprite', () => {
