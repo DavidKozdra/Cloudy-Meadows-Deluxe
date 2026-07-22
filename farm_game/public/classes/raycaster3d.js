@@ -12,7 +12,7 @@ const FACING_TO_YAW_DEG = [270, 0, 90, 180];
 const YAW_TO_FACING = { 0: 1, 90: 2, 180: 3, 270: 0 };
 const WEBGL_BILLBOARD_FACING_INDEX = 2;
 const WEBGL_BILLBOARD_ENTITY_CLASSES = [
-    'MovableEntity', 'NPC', 'Robot', 'FarmRobot', 'GridMoveEntity',
+    'Entity', 'MovableEntity', 'NPC', 'Robot', 'FarmRobot', 'GridMoveEntity',
     'FreeMoveEntity', 'LightMoveEntity', 'PayToMoveEntity',
     'Shop', 'Chest', 'AirBallon', 'Plant'
 ];
@@ -95,12 +95,28 @@ function getTileSprite(cell) {
     return isValidWebglTextureSource(sprite) ? sprite : null;
 }
 
+function getRememberedUnderTileSprite(cell) {
+    if (!cell) return null;
+    if (cell.under_tile && typeof cell.under_tile === 'object') {
+        return getTileSprite(cell.under_tile);
+    }
+    if (Number.isInteger(cell.last_under_png)) {
+        return getTileSprite({
+            png: cell.last_under_png,
+            variant: Number.isInteger(cell.last_under_variant) ? cell.last_under_variant : 0
+        });
+    }
+    return null;
+}
+
 function getFloorTileSprite(cell) {
     if (!cell) return null;
+    if (cell.class === 'Plant') {
+        const isWet = cell.waterneeded > 0 && cell.watermet === true;
+        return getTileSprite({ png: isWet ? 93 : 2, variant: 0 });
+    }
     if (isWebglBillboardEntityCell(cell)) {
-        return cell.under_tile && typeof cell.under_tile === 'object'
-            ? getTileSprite(cell.under_tile)
-            : null;
+        return getRememberedUnderTileSprite(cell);
     }
     return getTileSprite(cell);
 }
@@ -174,9 +190,7 @@ function buildRoomGeometryDescriptors(map) {
             } else {
                 const isFlatProp = isWebglFlatPropCell(cell);
                 const isStaticBillboard = !isFlatProp && isWebglStaticBillboardCell(cell);
-                const underSprite = cell.under_tile && typeof cell.under_tile === 'object'
-                    ? getTileSprite(cell.under_tile)
-                    : null;
+                const underSprite = getRememberedUnderTileSprite(cell);
                 floors.push({
                     xTiles: column,
                     yTiles: row,
@@ -193,9 +207,18 @@ function buildRoomGeometryDescriptors(map) {
                 if (isStaticBillboard) {
                     const sprite = getTileSprite(cell);
                     if (isValidWebglTextureSource(sprite)) {
+                        const pairedTreeBottom = cell.name === 'tree_top' &&
+                            map[row + 1] && map[row + 1][column] &&
+                            map[row + 1][column].name === 'tree_bottom';
                         staticBillboards.push({
                             worldX: column * tileSize + tileSize / 2,
-                            worldZ: row * tileSize + tileSize / 2,
+                            // A 2D tree occupies two map rows for draw order. In
+                            // first person those images are one vertical object:
+                            // trunk on the ground, then canopy directly above it.
+                            worldY: pairedTreeBottom
+                                ? tileSize + sprite.height / 2
+                                : undefined,
+                            worldZ: (pairedTreeBottom ? row + 1 : row) * tileSize + tileSize / 2,
                             width: sprite.width || tileSize,
                             height: sprite.height || tileSize,
                             sprite
@@ -233,7 +256,14 @@ function roomGeometrySignature(map) {
             const geometryCell = isDynamicBillboard ? under : cell;
             const staticUnder = isDynamicBillboard ? null : under;
             if (!geometryCell) {
-                tokens.push('dynamic-floor');
+                if (cell.class === 'Plant') {
+                    tokens.push(
+                        'plant-floor',
+                        cell.waterneeded > 0 && cell.watermet === true ? 'wet' : 'dry'
+                    );
+                } else {
+                    tokens.push('dynamic-floor');
+                }
                 continue;
             }
             tokens.push(
@@ -241,7 +271,9 @@ function roomGeometrySignature(map) {
                 isWebglStructuralWallCell(geometryCell) ? 1 : 0,
                 geometryCell.png ?? '', geometryCell.variant ?? '',
                 staticUnder ? staticUnder.png ?? '' : '',
-                staticUnder ? staticUnder.variant ?? '' : ''
+                staticUnder ? staticUnder.variant ?? '' : '',
+                !staticUnder ? cell.last_under_png ?? '' : '',
+                !staticUnder ? cell.last_under_variant ?? '' : ''
             );
         }
     }
@@ -534,6 +566,14 @@ function getThreeTexture(sprite) {
     return texture;
 }
 
+function isAnimatedWebglSprite(sprite) {
+    const gif = sprite && sprite.gifProperties;
+    return !!gif && (
+        (Array.isArray(gif.frames) && gif.frames.length > 1) ||
+        (Number.isFinite(gif.numFrames) && gif.numFrames > 1)
+    );
+}
+
 function getThreeFallbackMaterial(color, billboard) {
     const key = `${color}|${billboard ? 1 : 0}`;
     if (!three3DFallbackMaterials.has(key)) {
@@ -693,6 +733,12 @@ function renderThreeBillboards(billboards, useTextures) {
         }
         mesh.geometry = getThreeBillboardGeometry(billboard.width, billboard.height);
         mesh.material = getThreeMaterial(billboard.sprite, 'billboard', useTextures);
+        // p5 advances an animated GIF on its backing canvas. Three.js does not
+        // know that canvas changed, so explicitly upload the current GIF frame.
+        if (useTextures && isAnimatedWebglSprite(billboard.sprite)) {
+            const texture = getThreeTexture(billboard.sprite);
+            if (texture) texture.needsUpdate = true;
+        }
         mesh.visible = true;
         const centerY = Number.isFinite(billboard.worldY)
             ? billboard.worldY

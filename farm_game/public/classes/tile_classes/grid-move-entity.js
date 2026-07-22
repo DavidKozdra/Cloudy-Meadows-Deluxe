@@ -8,6 +8,13 @@ class GridMoveEntity extends MoveableEntity{
         this.class = 'GridMoveEntity';
     }
 
+    // Subclasses can veto a destination without duplicating the grid-swap
+    // logic below. NPC uses this to keep moving characters out of the
+    // player's occupied cell even when the floor collision marker is stale.
+    canEnterGridCell(levelX, levelY, column, row) {
+        return true;
+    }
+
     move(x, y) {
         this.moving_timer -= 1;
         if(player.touching.name == 'bed'){
@@ -17,7 +24,8 @@ class GridMoveEntity extends MoveableEntity{
             if (this.instructions[this.current_instruction] == 'up') {
                 this.facing = 0;
                 if (this.pos.y - tileSize < 0) {
-                    if (levels[y-1] && levels[y-1][x] && typeof levels[y-1][x] === 'object') {
+                    if (levels[y-1] && levels[y-1][x] && typeof levels[y-1][x] === 'object' &&
+                        this.canEnterGridCell(x, y - 1, this.pos.x / tileSize, 18)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y-1][x].map[18][this.pos.x / tileSize];
@@ -36,7 +44,8 @@ class GridMoveEntity extends MoveableEntity{
                 }
                 else {
                     let look = this.looking(x, y);
-                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true) {
+                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true &&
+                        this.canEnterGridCell(x, y, this.pos.x / tileSize, (this.pos.y / tileSize) - 1)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y][x].map[(this.pos.y / tileSize) - 1][this.pos.x / tileSize];
@@ -52,7 +61,8 @@ class GridMoveEntity extends MoveableEntity{
             else if (this.instructions[this.current_instruction] == 'right') {
                 this.facing = 1;
                 if (this.pos.x + tileSize >= canvasWidth) {
-                    if (levels[y][x+1] && typeof levels[y][x+1] === 'object') {
+                    if (levels[y][x+1] && typeof levels[y][x+1] === 'object' &&
+                        this.canEnterGridCell(x + 1, y, 0, this.pos.y / tileSize)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y][x+1].map[this.pos.y / tileSize][0];
@@ -71,7 +81,8 @@ class GridMoveEntity extends MoveableEntity{
                 }
                 else {
                     let look = this.looking(x, y);
-                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true) {
+                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true &&
+                        this.canEnterGridCell(x, y, (this.pos.x / tileSize) + 1, this.pos.y / tileSize)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) + 1];
@@ -87,7 +98,8 @@ class GridMoveEntity extends MoveableEntity{
             else if (this.instructions[this.current_instruction] == 'down') {
                 this.facing = 2;
                 if (this.pos.y + tileSize >= canvasHeight) {
-                    if (levels[y+1] && levels[y+1][x] && typeof levels[y+1][x] === 'object') {
+                    if (levels[y+1] && levels[y+1][x] && typeof levels[y+1][x] === 'object' &&
+                        this.canEnterGridCell(x, y + 1, this.pos.x / tileSize, 0)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y+1][x].map[0][this.pos.x / tileSize];
@@ -106,7 +118,8 @@ class GridMoveEntity extends MoveableEntity{
                 }
                 else {
                     let look = this.looking(x, y);
-                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true) {
+                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true &&
+                        this.canEnterGridCell(x, y, this.pos.x / tileSize, (this.pos.y / tileSize) + 1)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y][x].map[(this.pos.y / tileSize) + 1][this.pos.x / tileSize];
@@ -122,7 +135,8 @@ class GridMoveEntity extends MoveableEntity{
             else if (this.instructions[this.current_instruction] == 'left') {
                 this.facing = 3;
                 if (this.pos.x - tileSize < 0) {
-                    if (levels[y][x-1] && typeof levels[y][x-1] === 'object') {
+                    if (levels[y][x-1] && typeof levels[y][x-1] === 'object' &&
+                        this.canEnterGridCell(x - 1, y, 22, this.pos.y / tileSize)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y][x-1].map[this.pos.y / tileSize][22];
@@ -141,7 +155,8 @@ class GridMoveEntity extends MoveableEntity{
                 }
                 else {
                     let look = this.looking(x, y);
-                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true) {
+                    if (look !== 0 && typeof look !== 'undefined' && look && look.collide !== true &&
+                        this.canEnterGridCell(x, y, (this.pos.x / tileSize) - 1, this.pos.y / tileSize)) {
                         let temp = this;
                         levels[y][x].map[this.pos.y / tileSize][this.pos.x / tileSize] = this.under_tile;
                         temp.under_tile = levels[y][x].map[this.pos.y / tileSize][(this.pos.x / tileSize) - 1];

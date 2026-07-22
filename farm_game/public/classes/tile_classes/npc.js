@@ -61,6 +61,21 @@ class NPC extends GridMoveEntity {
         super.move(x, y);
     }
 
+    canEnterGridCell(levelX, levelY, column, row) {
+        if (typeof player === 'undefined' || !player || !player.pos ||
+            typeof currentLevel_x === 'undefined' || typeof currentLevel_y === 'undefined' ||
+            levelX !== currentLevel_x || levelY !== currentLevel_y) {
+            return true;
+        }
+
+        // Use position rather than player.touching/collide: first-person
+        // movement is continuous, and that mutable marker can briefly lag a
+        // frame behind. This guard applies to every moving NPC, including Mira.
+        const playerColumn = Math.round(player.pos.x / tileSize);
+        const playerRow = Math.round(player.pos.y / tileSize);
+        return column !== playerColumn || row !== playerRow;
+    }
+
     // Check if this NPC has a quest the player doesn't have
     hasQuestForPlayer() {
         if(!this.dialouges) return false;

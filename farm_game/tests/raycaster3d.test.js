@@ -32,8 +32,10 @@ vm.runInNewContext(
     `${source}
      globalThis.buildRoomGeometryDescriptors = buildRoomGeometryDescriptors;
      globalThis.getRoomGeometryForRoom = getRoomGeometryForRoom;
+     globalThis.getFloorTileSprite = getFloorTileSprite;
      globalThis.getWebglBillboardSprite = getWebglBillboardSprite;
      globalThis.collectBillboardDescriptors = collectBillboardDescriptors;
+     globalThis.isAnimatedWebglSprite = isAnimatedWebglSprite;
      globalThis.collect3DStatusMarkerDescriptors = collect3DStatusMarkerDescriptors;
      globalThis.get3DInteractionTarget = get3DInteractionTarget;
      globalThis.get3DHeldItemSprite = get3DHeldItemSprite;`,
@@ -111,6 +113,89 @@ test('billboard descriptors resolve entity sprite layouts and use live positions
             { worldX: 16, worldZ: 80, width: 48, height: 36 }
         ]
     );
+});
+
+test('generic animated entities such as ladybugs render as 3D billboards', () => {
+    const ladybugSprite = {
+        width: 32,
+        height: 32,
+        gifProperties: { frames: [{}, {}] }
+    };
+    sandbox.all_imgs[4] = ladybugSprite;
+    const ladybug = {
+        class: 'Entity',
+        name: 'ladybug',
+        png: 4,
+        pos: { x: 32, y: 64 },
+        under_tile: { class: 'Tile', name: 'grass', png: 0, variant: 0 }
+    };
+
+    const descriptors = sandbox.collectBillboardDescriptors({ map: [[ladybug]] });
+
+    assert.equal(descriptors.length, 1);
+    assert.equal(descriptors[0].sprite, ladybugSprite);
+    assert.equal(sandbox.isAnimatedWebglSprite(ladybugSprite), true);
+});
+
+test('crop floors use dry or wet soil textures and invalidate when watering changes', () => {
+    const originalPlotSprites = sandbox.all_imgs[2];
+    const plotSprite = { id: 'plot', width: 32, height: 32 };
+    const wetPlotSprite = { id: 'wet-plot', width: 32, height: 32 };
+    const cropSprite = { id: 'crop', width: 32, height: 32 };
+    sandbox.all_imgs[2] = [plotSprite];
+    sandbox.all_imgs[4] = [cropSprite];
+    sandbox.all_imgs[93] = [wetPlotSprite];
+    const plant = {
+        class: 'Plant', name: 'strawberry', png: 4, age: 0,
+        waterneeded: 1, watermet: false, pos: { x: 0, y: 0 }
+    };
+    const level = { map: [[plant]] };
+
+    const dryGeometry = sandbox.getRoomGeometryForRoom(level, 30, 30);
+    assert.equal(dryGeometry.floors[0].sprite, plotSprite);
+
+    plant.watermet = true;
+    const wetGeometry = sandbox.getRoomGeometryForRoom(level, 30, 30);
+    assert.notEqual(wetGeometry, dryGeometry, 'watering invalidates cached floor geometry');
+    assert.equal(wetGeometry.floors[0].sprite, wetPlotSprite);
+
+    sandbox.all_imgs[2] = originalPlotSprites;
+});
+
+test('sprinkler floors recover their remembered underlying soil texture', () => {
+    const originalPlotSprites = sandbox.all_imgs[2];
+    const plotSprite = { id: 'plot', width: 32, height: 32 };
+    const sprinklerSprite = { id: 'sprinkler', width: 16, height: 16 };
+    sandbox.all_imgs[2] = [plotSprite];
+    sandbox.all_imgs[4] = [sprinklerSprite];
+    const sprinkler = {
+        class: 'Tile', name: 'sprinkler', png: 4, variant: 0,
+        last_under_png: 2, last_under_variant: 0
+    };
+
+    const geometry = sandbox.buildRoomGeometryDescriptors([[sprinkler]]);
+
+    assert.equal(geometry.floors[0].sprite, plotSprite);
+    assert.equal(geometry.staticBillboards[0].sprite, sprinklerSprite);
+    sandbox.all_imgs[2] = originalPlotSprites;
+});
+
+test('park tree billboards stack the canopy above the trunk at one 3D position', () => {
+    const trunkSprite = { id: 'trunk', width: 32, height: 32 };
+    const canopySprite = { id: 'canopy', width: 40, height: 32 };
+    sandbox.all_imgs[4] = [trunkSprite];
+    sandbox.all_imgs[5] = [canopySprite];
+    const top = { name: 'tree_top', class: 'Tile', png: 5, variant: 0 };
+    const bottom = { name: 'tree_bottom', class: 'Tile', png: 4, variant: 0 };
+
+    const geometry = sandbox.buildRoomGeometryDescriptors([[top], [bottom]]);
+    const topDescriptor = geometry.staticBillboards.find(entry => entry.sprite === canopySprite);
+    const bottomDescriptor = geometry.staticBillboards.find(entry => entry.sprite === trunkSprite);
+
+    assert.equal(bottomDescriptor.worldZ, 48);
+    assert.equal(bottomDescriptor.worldY, undefined);
+    assert.equal(topDescriptor.worldZ, 48, 'canopy shares the trunk ground position');
+    assert.equal(topDescriptor.worldY, 48, 'canopy is one tile above the trunk');
 });
 
 test('static props become billboards over the room floor instead of opaque wall cubes', () => {
