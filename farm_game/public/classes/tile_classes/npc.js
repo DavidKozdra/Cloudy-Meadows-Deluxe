@@ -22,17 +22,28 @@ class NPC extends GridMoveEntity {
         }
     }
 
+    // Shared by the 2D renderer and the 3D billboard renderer so David keeps the
+    // same appearance when switching modes. A render gap means he has re-entered
+    // view, at which point a new variant is selected.
+    getDavidVariantSprite() {
+        if(this.name != 'David') return null;
+
+        const currentFrame = typeof frameCount === 'number' ? frameCount : 0;
+        if(!Number.isInteger(this.davidVariant) ||
+            !Number.isFinite(this.davidLastRenderFrame) ||
+            currentFrame - this.davidLastRenderFrame > 1){
+            this.davidVariant = randomDavidVariantIndex();
+        }
+        this.davidLastRenderFrame = currentFrame;
+        return davidVariantImgFor(this.davidVariant);
+    }
+
     // David shows a random sprite variant for every facing. The variant is stable
     // while he's on screen and re-rolls each time he re-enters view, so he may look
     // different every time you come across him (but never strobes frame-to-frame).
     render() {
         if(this.name == 'David'){
-            // A gap since the last frame he drew on means he just came back into view.
-            if(frameCount - this.davidLastRenderFrame > 1){
-                this.davidVariant = randomDavidVariantIndex();
-            }
-            this.davidLastRenderFrame = frameCount;
-            const variantImg = davidVariantImgFor(this.davidVariant);
+            const variantImg = this.getDavidVariantSprite();
             if(variantImg){
                 push();
                 imageMode(CENTER);

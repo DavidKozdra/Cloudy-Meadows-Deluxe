@@ -5,6 +5,8 @@ const WEBGL_WALL_HEIGHT_TILES = 1;
 const WEBGL_FOV_DEGREES = 66;
 const MOVE_SPEED_TILES_PER_SEC = 4;
 const PLAYER_COLLISION_RADIUS_TILES = 0.2;
+const WEBGL_SWAMP_BANK_DEPTH_TILES = 0.12;
+const WEBGL_SWAMP_WATER_RECESS_TILES = 0.1;
 
 // Facing/yaw convention shared with the original renderer and Player:
 // facing 0=up, 1=right, 2=down, 3=left; yaw 0deg=+X and 90deg=+Z/south.
@@ -57,6 +59,7 @@ let webglRoomGeometryCache = {
     floors: [],
     flatProps: [],
     staticBillboards: [],
+    swampGround: [],
     wallBatches: [],
     floorBatches: []
 };
@@ -72,6 +75,7 @@ let three3DBridgeArrowMesh = null;
 let three3DActiveRoom = null;
 let three3DWallGeometry = null;
 let three3DFloorGeometry = null;
+let three3DSwampGroundGeometry = null;
 let three3DViewModelScene = null;
 let three3DViewModelCamera = null;
 let three3DViewModelGroup = null;
@@ -176,7 +180,10 @@ function buildRoomGeometryDescriptors(map) {
     const floors = [];
     const flatProps = [];
     const staticBillboards = [];
-    if (!Array.isArray(map)) return { walls, floors, flatProps, staticBillboards };
+    const swampGround = [];
+    if (!Array.isArray(map)) {
+        return { walls, floors, flatProps, staticBillboards, swampGround };
+    }
     const dominantFloorSprite = getDominantFloorSprite(map);
 
     for (let row = 0; row < map.length; row++) {
@@ -197,13 +204,28 @@ function buildRoomGeometryDescriptors(map) {
                 const isFlatProp = isWebglFlatPropCell(cell);
                 const isStaticBillboard = !isFlatProp && isWebglStaticBillboardCell(cell);
                 const underSprite = getRememberedUnderTileSprite(cell);
-                floors.push({
+                const terrainCell = isWebglBillboardEntityCell(cell) &&
+                    cell.under_tile && typeof cell.under_tile === 'object'
+                    ? cell.under_tile
+                    : cell;
+                const floorDescriptor = {
                     xTiles: column,
                     yTiles: row,
                     sprite: (isStaticBillboard || isFlatProp)
                         ? (underSprite || dominantFloorSprite)
                         : getFloorTileSprite(cell)
-                });
+                };
+                if (terrainCell.name === 'water' || terrainCell.name === 'water12') {
+                    floorDescriptor.surfaceY = -tileSize * WEBGL_SWAMP_WATER_RECESS_TILES;
+                }
+                if (terrainCell.name === 'swamp_grass') {
+                    floorDescriptor.materialKind = 'swampFloor';
+                }
+                floors.push(floorDescriptor);
+
+                if (terrainCell.name === 'swamp_grass') {
+                    swampGround.push({ xTiles: column, yTiles: row });
+                }
                 if (isFlatProp) {
                     const sprite = getTileSprite(cell);
                     if (isValidWebglTextureSource(sprite)) {
@@ -235,7 +257,7 @@ function buildRoomGeometryDescriptors(map) {
         }
     }
 
-    return { walls, floors, flatProps, staticBillboards };
+    return { walls, floors, flatProps, staticBillboards, swampGround };
 }
 
 function roomGeometrySignature(map) {
@@ -313,7 +335,14 @@ function buildFloorBatches(floors) {
         const x1 = x0 + tileSize;
         const z0 = floor.yTiles * tileSize;
         const z1 = z0 + tileSize;
-        addQuad(vertices, [x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]);
+        const surfaceY = Number.isFinite(floor.surfaceY) ? floor.surfaceY : 0;
+        addQuad(
+            vertices,
+            [x0, surfaceY, z0],
+            [x1, surfaceY, z0],
+            [x1, surfaceY, z1],
+            [x0, surfaceY, z1]
+        );
     }
     return Array.from(batches.values());
 }
@@ -372,6 +401,7 @@ function getRoomGeometryForRoom(currentLvl, levelX, levelY) {
             floors: geometry.floors,
             flatProps: geometry.flatProps,
             staticBillboards: geometry.staticBillboards,
+            swampGround: geometry.swampGround,
             wallBatches: buildWallBatches(geometry.walls, map),
             floorBatches: buildFloorBatches(geometry.floors)
         };
@@ -388,6 +418,11 @@ function getActiveCameraYawDeg(playerObj) {
 
 function getWebglBillboardSprite(tile) {
     if (!tile || !all_imgs[tile.png]) return null;
+
+    if (tile.name === 'David' && typeof tile.getDavidVariantSprite === 'function') {
+        const variantSprite = tile.getDavidVariantSprite();
+        if (isValidWebglTextureSource(variantSprite)) return variantSprite;
+    }
 
     if (tile.class === 'Plant') {
         return all_imgs[tile.png][tile.age] || null;
@@ -530,6 +565,15 @@ function initializeThree3DRenderer() {
 
     three3DScene = new THREE.Scene();
     three3DScene.background = new THREE.Color(0x87ceeb);
+    // Most pixel-art materials are intentionally unlit. Swamp ground uses the
+    // lights below with its texture as a subtle bump map so the authored grass,
+    // flowers, and mushrooms gain depth without separate generated objects.
+    const swampSun = new THREE.DirectionalLight(0xfff1cf, 0.85);
+    swampSun.position.set(-1, 2, 1);
+    three3DScene.add(
+        new THREE.HemisphereLight(0xf4ffe8, 0x36502c, 0.8),
+        swampSun
+    );
     three3DCamera = new THREE.PerspectiveCamera(
         WEBGL_FOV_DEGREES,
         canvasWidth / canvasHeight,
@@ -577,6 +621,11 @@ function initializeThree3DRenderer() {
     );
     three3DFloorGeometry = new THREE.PlaneGeometry(tileSize, tileSize);
     three3DFloorGeometry.rotateX(-Math.PI / 2);
+    three3DSwampGroundGeometry = new THREE.BoxGeometry(
+        tileSize,
+        tileSize * WEBGL_SWAMP_BANK_DEPTH_TILES,
+        tileSize
+    );
     initializeThreeViewModel();
     return true;
 }
@@ -674,7 +723,10 @@ function getThreeFallbackMaterial(color, billboard) {
 function getThreeMaterial(sprite, kind, useTextures = true) {
     const transparentSurface = kind === 'billboard' || kind === 'flatProp';
     if (!useTextures || !isValidWebglTextureSource(sprite)) {
-        return getThreeFallbackMaterial(kind === 'wall' ? 0xcd5c48 : 0x563c28, transparentSurface);
+        const fallbackColor = kind === 'wall'
+            ? 0xcd5c48
+            : (kind === 'swampFloor' ? 0x689f45 : 0x563c28);
+        return getThreeFallbackMaterial(fallbackColor, transparentSurface);
     }
 
     let materials = three3DMaterialCache.get(sprite);
@@ -684,14 +736,28 @@ function getThreeMaterial(sprite, kind, useTextures = true) {
     }
     if (materials[kind]) return materials[kind];
 
-    materials[kind] = new THREE.MeshBasicMaterial({
-        map: getThreeTexture(sprite),
-        transparent: transparentSurface,
-        alphaTest: 0.08,
-        side: transparentSurface ? THREE.DoubleSide : THREE.FrontSide,
-        depthTest: true,
-        depthWrite: true
-    });
+    const texture = getThreeTexture(sprite);
+    if (kind === 'swampFloor') {
+        materials[kind] = new THREE.MeshPhongMaterial({
+            map: texture,
+            bumpMap: texture,
+            bumpScale: 0.72,
+            shininess: 5,
+            specular: 0x526b43,
+            side: THREE.FrontSide,
+            depthTest: true,
+            depthWrite: true
+        });
+    } else {
+        materials[kind] = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: transparentSurface,
+            alphaTest: 0.08,
+            side: transparentSurface ? THREE.DoubleSide : THREE.FrontSide,
+            depthTest: true,
+            depthWrite: true
+        });
+    }
     return materials[kind];
 }
 
@@ -722,7 +788,9 @@ function addThreeInstancedTiles(group, descriptors, kind, useTextures) {
                 entry.xTiles * tileSize + tileSize / 2,
                 kind === 'wall'
                     ? tileSize * WEBGL_WALL_HEIGHT_TILES / 2
-                    : (kind === 'flatProp' ? tileSize * 0.06 : 0),
+                    : (kind === 'flatProp'
+                        ? tileSize * 0.06
+                        : (Number.isFinite(entry.surfaceY) ? entry.surfaceY : 0)),
                 entry.yTiles * tileSize + tileSize / 2
             );
             dummy.rotation.set(0, 0, 0);
@@ -736,23 +804,41 @@ function addThreeInstancedTiles(group, descriptors, kind, useTextures) {
     }
 }
 
+function addThreeSwampTerrain(group, swampGround) {
+    if (swampGround.length) {
+        const bankMesh = new THREE.InstancedMesh(
+            three3DSwampGroundGeometry,
+            getThreeFallbackMaterial(0x29451f, false),
+            swampGround.length
+        );
+        const dummy = new THREE.Object3D();
+        const bankDepth = tileSize * WEBGL_SWAMP_BANK_DEPTH_TILES;
+        for (let i = 0; i < swampGround.length; i++) {
+            const entry = swampGround[i];
+            dummy.position.set(
+                entry.xTiles * tileSize + tileSize / 2,
+                -bankDepth / 2 - 0.03,
+                entry.yTiles * tileSize + tileSize / 2
+            );
+            dummy.rotation.set(0, 0, 0);
+            dummy.scale.set(1, 1, 1);
+            dummy.updateMatrix();
+            bankMesh.setMatrixAt(i, dummy.matrix);
+        }
+        bankMesh.instanceMatrix.needsUpdate = true;
+        bankMesh.computeBoundingSphere();
+        group.add(bankMesh);
+    }
+}
+
 function buildThreeRoomGroup(currentLvl, geometry, useTextures) {
     const roomGroup = new THREE.Group();
-    const rows = currentLvl.map.length;
-    const columns = currentLvl.map.reduce((width, row) => Math.max(width, row.length), 0);
+    const swampFloors = geometry.floors.filter(floor => floor.materialKind === 'swampFloor');
+    const otherFloors = geometry.floors.filter(floor => floor.materialKind !== 'swampFloor');
 
-    if (rows && columns) {
-        const baseGeometry = new THREE.PlaneGeometry(columns * tileSize, rows * tileSize);
-        baseGeometry.rotateX(-Math.PI / 2);
-        const baseFloor = new THREE.Mesh(
-            baseGeometry,
-            getThreeFallbackMaterial(0x563c28, false)
-        );
-        baseFloor.position.set(columns * tileSize / 2, -0.02, rows * tileSize / 2);
-        roomGroup.add(baseFloor);
-    }
-
-    addThreeInstancedTiles(roomGroup, geometry.floors, 'floor', useTextures);
+    addThreeSwampTerrain(roomGroup, geometry.swampGround);
+    addThreeInstancedTiles(roomGroup, otherFloors, 'floor', useTextures);
+    addThreeInstancedTiles(roomGroup, swampFloors, 'swampFloor', useTextures);
     addThreeInstancedTiles(roomGroup, geometry.flatProps, 'flatProp', useTextures);
     addThreeInstancedTiles(roomGroup, geometry.walls, 'wall', useTextures);
     return roomGroup;
@@ -767,7 +853,8 @@ function getThreeRoomGroup(currentLvl, levelX, levelY, useTextures) {
             three3DScene.remove(three3DActiveRoom.group);
             for (const child of three3DActiveRoom.group.children) {
                 if (child.geometry && child.geometry !== three3DWallGeometry &&
-                    child.geometry !== three3DFloorGeometry) child.geometry.dispose();
+                    child.geometry !== three3DFloorGeometry &&
+                    child.geometry !== three3DSwampGroundGeometry) child.geometry.dispose();
             }
         }
         const group = buildThreeRoomGroup(currentLvl, geometry, useTextures);
@@ -1034,6 +1121,17 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
     if (!initializeThree3DRenderer()) return;
 
     getThreeRoomGroup(currentLvl, levelX, levelY, useTextures);
+    if (useTextures) {
+        const animatedFloorSprites = new Set();
+        for (const floor of three3DActiveRoom.geometry.floors) {
+            if (animatedFloorSprites.has(floor.sprite)) continue;
+            animatedFloorSprites.add(floor.sprite);
+            if (advanceAnimatedWebglSprite(floor.sprite)) {
+                const texture = getThreeTexture(floor.sprite);
+                if (texture) texture.needsUpdate = true;
+            }
+        }
+    }
     configureThreePlayerCamera(playerObj, currentLvl);
     renderThreeBridgeTutorialHints(currentLvl, playerObj);
     renderThreeBillboards(

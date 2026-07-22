@@ -80,6 +80,46 @@ test('room descriptors separate walls and floors while excluding billboard entit
     assert.equal(geometry.floors[1].sprite, primarySprite);
 });
 
+test('void map cells expose the sky instead of receiving a room-wide brown floor', () => {
+    const floor = { collide: false, class: 'Tile', png: 0, variant: 0 };
+    const geometry = sandbox.buildRoomGeometryDescriptors([[floor, 0]]);
+
+    assert.equal(geometry.floors.length, 1);
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(geometry.floors.map(({ xTiles, yTiles }) => ({ xTiles, yTiles })))),
+        [{ xTiles: 0, yTiles: 0 }]
+    );
+    assert.doesNotMatch(source, /const baseFloor\s*=\s*new THREE\.Mesh/);
+});
+
+test('swamp terrain raises grass, recesses water, and adds depth to the authored texture', () => {
+    const swampBase = { id: 'swamp-base', width: 32, height: 32 };
+    const swampMushrooms = { id: 'swamp-mushrooms', width: 32, height: 32 };
+    const water = { id: 'water', width: 32, height: 32 };
+    sandbox.all_imgs[5] = Array.from({ length: 14 }, (_, index) =>
+        index >= 11 ? swampMushrooms : swampBase
+    );
+    sandbox.all_imgs[6] = [water];
+    const swamp = {
+        name: 'swamp_grass', collide: false, class: 'Tile', png: 5, variant: 13
+    };
+    const swampWater = {
+        name: 'water', collide: true, class: 'Tile', png: 6, variant: 0
+    };
+
+    const geometry = sandbox.buildRoomGeometryDescriptors([[swamp, swampWater]]);
+
+    assert.deepEqual(JSON.parse(JSON.stringify(geometry.swampGround)), [{ xTiles: 0, yTiles: 0 }]);
+    assert.equal(geometry.swampDetails, undefined, 'mushrooms stay in the tile texture');
+    assert.equal(geometry.floors[0].materialKind, 'swampFloor');
+    assert.equal(geometry.floors[0].surfaceY, undefined);
+    assert.equal(geometry.floors[1].surfaceY, -3.2);
+    assert.match(source, /new THREE\.MeshPhongMaterial\(\{[\s\S]*bumpMap: texture/);
+    assert.doesNotMatch(source, /SwampMushroom|mushroomInstances/);
+    assert.match(source, /addThreeSwampTerrain\(roomGroup, geometry\.swampGround\)/);
+    assert.match(source, /animatedFloorSprites/);
+});
+
 test('billboard descriptors resolve entity sprite layouts and use live positions', () => {
     const movable = {
         collide: true,
@@ -143,6 +183,26 @@ test('generic animated entities such as ladybugs render as 3D billboards', () =>
     sandbox.performance = { now: () => 125 };
     assert.equal(sandbox.advanceAnimatedWebglSprite(ladybugSprite), true);
     assert.equal(advancedAt, 125, 'the p5 GIF frame timer advances before upload');
+});
+
+test('David\'s 3D billboard uses the same live sprite variant as his 2D renderer', () => {
+    const davidVariantSprite = { id: 'david-variant', width: 32, height: 32 };
+    let selections = 0;
+    const david = {
+        class: 'NPC',
+        name: 'David',
+        png: 1,
+        pos: { x: 32, y: 64 },
+        getDavidVariantSprite() {
+            selections += 1;
+            return davidVariantSprite;
+        }
+    };
+
+    assert.equal(sandbox.getWebglBillboardSprite(david), davidVariantSprite);
+    const descriptors = sandbox.collectBillboardDescriptors({ map: [[david]] });
+    assert.equal(descriptors[0].sprite, davidVariantSprite);
+    assert.equal(selections, 2);
 });
 
 test('crop floors use dry or wet soil textures and invalidate when watering changes', () => {
