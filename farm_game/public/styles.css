@@ -5202,6 +5202,71 @@ body.acc-high-contrast .mobile-inv-slot.selected {
     border-color: rgb(255, 221, 102);
 }
 
+/* PWA update prompt: shown only after a replacement service worker is ready. */
+#pwa-update-banner {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 13000;
+    width: min(360px, calc(100vw - 32px));
+    box-sizing: border-box;
+    padding: 16px;
+    color: #382817;
+    background: #fff1be;
+    border: 4px solid #8b6237;
+    box-shadow: 5px 5px 0 #392818;
+    font-family: pixelFont, "Press Start 2P", monospace;
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+#pwa-update-banner[hidden] {
+    display: none;
+}
+
+#pwa-update-banner p {
+    margin: 0 0 14px;
+}
+
+.pwa-update-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pwa-update-actions button {
+    padding: 10px 12px;
+    color: #fff8c9;
+    background: #4b8b3b;
+    border: 3px solid #2e5c27;
+    box-shadow: 3px 3px 0 #1d3a18;
+    font: inherit;
+    cursor: pointer;
+}
+
+.pwa-update-actions button:hover,
+.pwa-update-actions button:focus-visible {
+    background: #62a84e;
+}
+
+.pwa-update-actions button:last-child {
+    color: #382817;
+    background: #d9c08a;
+    border-color: #8b6237;
+    box-shadow: 3px 3px 0 #71502e;
+}
+
+.pwa-update-actions button:disabled {
+    cursor: wait;
+    opacity: 0.75;
+}
+
+@media (max-width: 480px) {
+    #pwa-update-banner {
+        font-size: 9px;
+    }
+}
+
 /* Postgame Regional Cooperative Exchange */
 .cooperative-exchange-overlay {
     position: fixed;
