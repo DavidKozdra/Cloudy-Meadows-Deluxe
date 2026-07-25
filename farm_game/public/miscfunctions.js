@@ -2916,7 +2916,7 @@ function hideControls() {
 
 }
 
-function createAccessibilityToggleControl(contextId, settingKey, labelText, descriptionText) {
+function createAccessibilityToggleControl(contextId, settingKey, labelText, descriptionText, warningText) {
     const row = document.createElement('label');
     row.className = 'accessibility-toggle-row';
     row.htmlFor = contextId + '-accessibility-' + settingKey;
@@ -2935,6 +2935,14 @@ function createAccessibilityToggleControl(contextId, settingKey, labelText, desc
     description.textContent = descriptionText;
     copy.appendChild(description);
 
+    if (warningText) {
+        const warning = document.createElement('span');
+        warning.className = 'accessibility-warning';
+        warning.setAttribute('role', 'note');
+        warning.textContent = warningText;
+        copy.appendChild(warning);
+    }
+
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.id = contextId + '-accessibility-' + settingKey;
@@ -2942,6 +2950,15 @@ function createAccessibilityToggleControl(contextId, settingKey, labelText, desc
     input.dataset.accessibilitySetting = settingKey;
     input.setAttribute('aria-describedby', description.id);
     input.addEventListener('change', () => {
+        const isMobile3DEnable = settingKey === 'is3DMode' && input.checked &&
+            ((typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768);
+        if (isMobile3DEnable && !window.confirm(
+            '3D Mode is difficult to use on phones and tablets. It needs mouse-look to turn the camera, so mobile play may not work well. Enable it anyway?'
+        )) {
+            input.checked = false;
+            input.setAttribute('aria-checked', 'false');
+            return;
+        }
         updateAccessibilityOption(settingKey, input.checked);
     });
 
@@ -3063,7 +3080,8 @@ function createDisplaySettingsSection(contextId, sectionOptions = {}) {
         contextId,
         'is3DMode',
         '3D Mode (First-Person)',
-        'Switch the world view to a first-person perspective. Movement and controls stay the same.'
+        'Switch the world view to a first-person perspective. Movement and controls stay the same.',
+        'Mobile warning: looking around needs mouse controls, so 3D Mode may be difficult or not work well on a phone or tablet.'
     ));
     section.appendChild(list);
 

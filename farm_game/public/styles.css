@@ -4616,6 +4616,17 @@ body.acc-large-ui {
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
+.accessibility-warning {
+    padding: calc(6px * var(--ui-scale)) calc(8px * var(--ui-scale));
+    color: rgb(79, 30, 14);
+    background: rgb(255, 213, 110);
+    border-left: 3px solid rgb(172, 79, 25);
+    font-family: pixelFont, monospace;
+    font-size: calc(9px * var(--ui-scale) * var(--acc-text-scale));
+    line-height: 1.5;
+    text-shadow: none;
+}
+
 .accessibility-toggle-input {
     width: calc(22px * var(--ui-scale) * var(--acc-control-scale));
     height: calc(22px * var(--ui-scale) * var(--acc-control-scale));
