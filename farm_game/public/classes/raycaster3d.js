@@ -68,6 +68,7 @@ let three3DRenderer = null;
 let three3DScene = null;
 let three3DCamera = null;
 let three3DBillboardGroup = null;
+let three3DMultiplayerGroup = null;
 let three3DBridgeHintGroup = null;
 let three3DBridgeHintGeometry = null;
 let three3DBridgeHintMaterial = null;
@@ -84,6 +85,7 @@ let three3DViewModelItemSprite = null;
 let three3DViewModelActionHeld = false;
 let three3DViewModelSwingStartedAt = -Infinity;
 const three3DBillboardPool = [];
+const three3DMultiplayerPlayerPool = [];
 const three3DBridgeHintPool = [];
 const three3DTextureCache = new WeakMap();
 const three3DMaterialCache = new WeakMap();
@@ -584,6 +586,11 @@ function initializeThree3DRenderer() {
     three3DBillboardGroup = new THREE.Group();
     three3DScene.add(three3DBillboardGroup);
 
+    // Remote players are kept apart from world billboards: their contents can
+    // change every network update without rebuilding the room geometry.
+    three3DMultiplayerGroup = new THREE.Group();
+    three3DScene.add(three3DMultiplayerGroup);
+
     three3DBridgeHintGroup = new THREE.Group();
     three3DBridgeHintGeometry = new THREE.RingGeometry(
         tileSize * 0.36,
@@ -924,6 +931,100 @@ function renderThreeBillboards(billboards, useTextures) {
     }
 }
 
+function createThreeNameTagMaterial(name) {
+    const label = String(name || '').trim().slice(0, 20) || 'Farmer';
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = 'bold 32px monospace';
+    const padding = 18;
+    canvas.width = Math.max(96, Math.ceil(context.measureText(label).width) + padding * 2);
+    canvas.height = 54;
+    context.font = 'bold 32px monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = 'rgba(31, 24, 18, 0.9)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.lineWidth = 3;
+    context.strokeStyle = '#231810';
+    context.strokeText(label, canvas.width / 2, canvas.height / 2 + 1);
+    context.fillStyle = '#fff4c7';
+    context.fillText(label, canvas.width / 2, canvas.height / 2 + 1);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    texture.generateMipmaps = false;
+    return new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: true,
+        depthWrite: false
+    });
+}
+
+// Renders remote clients as camera-facing player sprites, with name tags in
+// the same 3D scene. The caller supplies only peers in the active room.
+function render3DMultiplayerPlayers(peers) {
+    if (!three3DMultiplayerGroup || !Array.isArray(peers)) return;
+    let visiblePlayers = 0;
+    for (const peer of peers) {
+        if (!peer || !isValidWebglTextureSource(peer.sprite) ||
+            !Number.isFinite(peer.x) || !Number.isFinite(peer.y)) continue;
+
+        let entry = three3DMultiplayerPlayerPool[visiblePlayers];
+        if (!entry) {
+            const avatar = new THREE.Sprite();
+            const nameTag = new THREE.Sprite();
+            nameTag.renderOrder = 2;
+            three3DMultiplayerGroup.add(avatar, nameTag);
+            entry = { avatar, nameTag, sprite: null, name: null };
+            three3DMultiplayerPlayerPool.push(entry);
+        }
+
+        if (entry.sprite !== peer.sprite) {
+            if (entry.avatar.material) entry.avatar.material.dispose();
+            entry.avatar.material = new THREE.SpriteMaterial({
+                map: getThreeTexture(peer.sprite),
+                transparent: true,
+                alphaTest: 0.08,
+                depthTest: true,
+                depthWrite: true
+            });
+            entry.sprite = peer.sprite;
+        }
+        if (entry.name !== peer.name) {
+            if (entry.nameTag.material) {
+                entry.nameTag.material.map.dispose();
+                entry.nameTag.material.dispose();
+            }
+            entry.nameTag.material = createThreeNameTagMaterial(peer.name);
+            entry.name = peer.name;
+        }
+
+        const avatarWidth = tileSize;
+        const avatarHeight = tileSize;
+        const worldX = peer.x + tileSize / 2;
+        const worldZ = peer.y + tileSize / 2;
+        entry.avatar.position.set(worldX, avatarHeight / 2, worldZ);
+        entry.avatar.scale.set(avatarWidth, avatarHeight, 1);
+
+        const tagAspect = entry.nameTag.material.map.image.width /
+            entry.nameTag.material.map.image.height;
+        const tagHeight = tileSize * 0.3;
+        entry.nameTag.position.set(worldX, avatarHeight + tagHeight * 0.75, worldZ);
+        entry.nameTag.scale.set(tagHeight * tagAspect, tagHeight, 1);
+        entry.avatar.visible = true;
+        entry.nameTag.visible = true;
+        visiblePlayers++;
+    }
+    for (let index = visiblePlayers; index < three3DMultiplayerPlayerPool.length; index++) {
+        const entry = three3DMultiplayerPlayerPool[index];
+        entry.avatar.visible = false;
+        entry.nameTag.visible = false;
+    }
+}
+
 function renderThreeBridgeTutorialHints(currentLvl, playerObj) {
     if (!three3DBridgeHintGroup) return;
     const hints = collect3DBridgeTutorialHintDescriptors(currentLvl, playerObj);
@@ -1116,7 +1217,7 @@ function renderThreeViewModel(playerObj) {
     return true;
 }
 
-function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = true) {
+function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = true, multiplayerPeers = []) {
     if (!playerObj || !currentLvl || !Array.isArray(currentLvl.map)) return;
     if (!initializeThree3DRenderer()) return;
 
@@ -1140,6 +1241,7 @@ function render3DViewWebgl(playerObj, currentLvl, levelX, levelY, useTextures = 
             .concat(collect3DStatusMarkerDescriptors(currentLvl, playerObj)),
         useTextures
     );
+    render3DMultiplayerPlayers(multiplayerPeers);
     three3DRenderer.clear(true, true, true);
     three3DRenderer.render(three3DScene, three3DCamera);
     renderThreeViewModel(playerObj);

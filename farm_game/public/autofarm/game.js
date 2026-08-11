@@ -22,7 +22,6 @@ var lose_screen = false;
 var dificulty_screen = false;
 var dificulty = 0;
 var current_reply = 0;
-var temp_move_bool = true;
 var worldUpdateTick = 0;
 var is3DMode = true;
 var pointerLockEngaged = false;
@@ -46,7 +45,6 @@ var localData = localDataStorage('passphrase.autofarm.separate');
 var player_2, player_imgs, inv_img, inv_hand_img, hunger_e, hunger_f, calendar_img, coin_img;
 var battery_low_img, inv_full_img, background_img, chat_icon, done_dot, up_dot, x_img;
 var quest_marker_img, gift_indication_img;
-var robotPlayButton, robotPauseButton, robotBoomButton;
 var mouse_item = 0;
 var UI_BOUNDS = {get chestGrid(){return{top:189,bottom:457,left:(canvasWidth/2)-184,right:(canvasWidth/2)+184,cellSize:90,getGridPos:(x,y,inv)=>({x:Math.min(inv[0].length-1,Math.max(0,Math.round((x-(canvasWidth/2)+139)/90))),y:Math.min(inv.length-1,Math.max(0,Math.round((y-234)/90)))})};}};
 var mobileInventoryState = { isOpen:false };
@@ -101,7 +99,6 @@ function setup() {
     if (typeof setupPointerLock === 'function') setupPointerLock(canvas.elt);
     if (typeof initializeThree3DRenderer === 'function') initializeThree3DRenderer();
     CloudyDisplay.setup();
-    createSharedRobotButtons();
     autoSave = readAutoSave();
     createAutoPlayer();
     ensureAutoNeighbors();
@@ -288,15 +285,6 @@ function restoreAutoCanvasInput(){const canvas=document.querySelector('#game-con
 
 function disconnectAutoFarm(){if(player.talking&&['Chest','Backpack'].includes(player.talking.class))closeAutoContainer();saveAutoFarm();clearTimeout(autoReconnectTimer);autoJoined=false;autoPeers={};const socket=autoSocket;autoSocket=null;if(socket){socket.autoIntentionalClose=true;try{socket.close(1000,'Player disconnected');}catch(_){}}updateAutoPlayerCount(0);setAutoSocketState('offline');setAutoPaused(false);const screen=document.querySelector('#autofarm-name-screen'),input=document.querySelector('#autofarm-name');screen.style.display='grid';input.value=autoPlayerName||localStorage.getItem('autofarm-player-name')||'';document.querySelector('#join-server-state').textContent='DISCONNECTED — SAVE COMPLETE';document.querySelector('#autofarm-client').open=false;setTimeout(()=>{input.focus();refreshAutoServerInfo();},100);}
 
-function createSharedRobotButtons() {
-    robotPlayButton = createButton('Play');
-    robotPauseButton = createButton('Pause');
-    robotBoomButton = createButton('Pack Up');
-    for (const button of [robotPlayButton, robotPauseButton, robotBoomButton]) {
-        button.parent('game-container'); button.hide();
-    }
-}
-
 function getAutoFacingTile(playerObj, levelX=currentLevel_x, levelY=currentLevel_y) {
     if (!playerObj) return undefined;
     const offsets=[[0,-1],[1,0],[0,1],[-1,0]],offset=offsets[playerObj.facing]||offsets[2];
@@ -331,7 +319,7 @@ function draw() {
     if (!level) return;
 
     if (is3DMode) {
-        render3DViewWebgl(player, level, currentLevel_x, currentLevel_y);
+        render3DViewWebgl(player, level, currentLevel_x, currentLevel_y, true, getAutoPeers3D());
     } else {
         image(background_img, 0, 0, canvasWidth, canvasHeight);
         level.render();
@@ -598,20 +586,28 @@ function setAutoCell(position,tile,remote) {
     if (!remote) sendAutoMessage({type:'patch',key:autoPatchKey(currentLevel_x,currentLevel_y,position.row,position.col),value:serializeAutoTile(tile)});
 }
 
-function addAutoItem(id,amount) {
+function addAutoItem(id,amount,excludedBackpack=null) {
     const definition=all_items[id];if(!definition||amount<=0)return false;
     let slot=definition.class==='Backpack'?null:player.inv.find(entry=>entry&&entry.name===definition.name);
     if(slot){slot.amount+=amount;return true;}
-    if(definition.class!=='Backpack')for(const backpack of player.inv.filter(entry=>entry&&entry.class==='Backpack'))for(const row of backpack.inv){slot=row.find(entry=>entry&&entry.name===definition.name);if(slot){slot.amount+=amount;return true;}}
+    if(definition.class!=='Backpack')for(const backpack of player.inv.filter(entry=>entry&&entry.class==='Backpack'&&entry!==excludedBackpack))for(const row of backpack.inv){slot=row.find(entry=>entry&&entry.name===definition.name);if(slot){slot.amount+=amount;return true;}}
     const empty=player.inv.indexOf(0);if(empty>=0){player.inv[empty]=new_item_from_num(id,amount);return true;}
-    if(definition.class!=='Backpack')for(const backpack of player.inv.filter(entry=>entry&&entry.class==='Backpack'))for(const row of backpack.inv){const backpackEmpty=row.indexOf(0);if(backpackEmpty>=0){row[backpackEmpty]=new_item_from_num(id,amount);return true;}}
+    if(definition.class!=='Backpack')for(const backpack of player.inv.filter(entry=>entry&&entry.class==='Backpack'&&entry!==excludedBackpack))for(const row of backpack.inv){const backpackEmpty=row.indexOf(0);if(backpackEmpty>=0){row[backpackEmpty]=new_item_from_num(id,amount);return true;}}
     autoInventoryWarningUntil=millis()+1800;return false;
 }
 function consumeAutoHeld() { if (--player.inv[player.hand].amount <= 0) player.inv[player.hand] = 0; }
 
 function renderAutoPlayer() { push();imageMode(CENTER);image(player_imgs[player.facing][player.anim],player.pos.x+16,player.pos.y+16);pop(); }
 function renderAutoPeers() {
-    push();imageMode(CENTER);for (const peer of Object.values(autoPeers)) if (peer.levelX === currentLevel_x && peer.levelY === currentLevel_y) image(player_imgs[peer.facing || 2][0],peer.x+16,peer.y+16);pop();
+    push();imageMode(CENTER);for (const peer of Object.values(autoPeers)) if (peer.levelX === currentLevel_x && peer.levelY === currentLevel_y) image(player_imgs[peer.facing ?? 2][0],peer.x+16,peer.y+16);pop();
+}
+function getAutoPeers3D() {
+    return Object.values(autoPeers)
+        .filter(peer => peer.levelX === currentLevel_x && peer.levelY === currentLevel_y)
+        .map(peer => ({
+            ...peer,
+            sprite: player_imgs[peer.facing ?? 2][0]
+        }));
 }
 function renderAutoNameTags(){for(const peer of Object.values(autoPeers))if(peer.levelX===currentLevel_x&&peer.levelY===currentLevel_y)renderAutoNameTag(peer.name,peer.x+16,peer.y-3);renderAutoNameTag(autoPlayerName,player.pos.x+16,player.pos.y-3);}
 function renderAutoNameTag(name,x,y){if(!name)return;push();textFont(player_2);textSize(7);textAlign(CENTER,CENTER);const width=Math.min(150,textWidth(name)+10),tagY=Math.max(7,y);noStroke();fill(31,24,18,210);rectMode(CENTER);rect(x,tagY,width,13,3);fill(255,244,199);stroke(35,24,16);strokeWeight(2);text(name,x,tagY+.5);pop();}
@@ -665,7 +661,9 @@ function decorateAutoLevel(level,chunkX,chunkY) {
         const utilities=[1,12,18,27,28,32,33,36,37,38,43,44,45,46,49,50,...AUTO_COMMAND_IDS];
         const chosen=[]; for(let i=0;i<5;i++) chosen.push(utilities[Math.floor(autoHash(chunkX,chunkY,'stock'+i)*utilities.length)]);
         const commands=[0,1,2].map(i=>AUTO_COMMAND_IDS[Math.floor(autoHash(chunkX,chunkY,'command'+i)*AUTO_COMMAND_IDS.length)]);
-        const stock=[2,5,7,15,17,39,41,3,8,14,16,40,42,33,43,...chosen,...commands].map(num=>({num,amount:5+Math.floor(autoHash(chunkX,chunkY,'amount'+num)*12)}));
+        // Construction should never depend on a lucky rotating market roll.
+        // Every AutoFarm market stocks walls alongside the starter bed.
+        const stock=[2,5,7,15,17,39,41,3,8,14,16,40,42,33,43,44,...chosen,...commands].map(num=>({num,amount:5+Math.floor(autoHash(chunkX,chunkY,'amount'+num)*12)}));
         const shop=new Shop('AutoFarm Market',15,16*32,7*32,stock,2); level.map[7][16]=shop; level.map[9][14]=new_tile_from_num(15,14*32,9*32);
     }
 }
@@ -694,13 +692,14 @@ function openAutoChest(chest) {
 }
 
 function openAutoBackpack(backpack){closeAutoModal();mouse_item=0;player.talking=backpack;}
-function closeAutoContainer(){const container=player.talking;if(!container||!['Chest','Backpack'].includes(container.class))return;if(mouse_item){addAutoItem(item_name_to_num(mouse_item.name),mouse_item.amount);mouse_item=0;}if(container.class==='Chest')syncAutoChest(container);player.talking=0;robotBoomButton.hide();}
+function closeAutoContainer(){const container=player.talking;if(!container||!['Chest','Backpack'].includes(container.class))return;if(mouse_item){addAutoItem(item_name_to_num(mouse_item.name),mouse_item.amount);mouse_item=0;}if(container.class==='Chest')syncAutoChest(container);player.talking=0;}
 function mouseReleased(){if(mouseButton!==LEFT||!autoJoined||paused||autoTextInputActive())return;if(player.talking&&['Chest','Backpack'].includes(player.talking.class)){handleAutoStorageMouse(player.talking);return;}const slot=autoHotbarSlotAt(mouseX,mouseY);if(slot>=0)swapAutoCursor(player.inv,slot);}
 function autoHotbarSlotAt(x,y){const left=canvasWidth/2-256;if(y<canvasHeight-64||y>canvasHeight||x<left||x>=left+512)return-1;return Math.floor((x-left)/64);}
 function autoChestSlotAt(x,y){const left=canvasWidth/4+10,top=canvasHeight/4+40,col=Math.floor((x-left)/90),row=Math.floor((y-top)/90);if(row<0||row>=3||col<0||col>=4||x-left-col*90>74||y-top-row*90>74)return null;return{row,col};}
-function handleAutoStorageMouse(container){const hotbar=autoHotbarSlotAt(mouseX,mouseY),cell=autoChestSlotAt(mouseX,mouseY),transferAll=keyIsDown(special_key);if(hotbar>=0){if(transferAll&&player.inv[hotbar])transferAutoItemToStorage(container,hotbar);else if(!(container.class==='Backpack'&&player.inv[hotbar]&&player.inv[hotbar].class==='Backpack'))swapAutoCursor(player.inv,hotbar);}else if(cell){if(transferAll&&container.inv[cell.row][cell.col]){const item=container.inv[cell.row][cell.col];if(addAutoItem(item_name_to_num(item.name),item.amount))container.inv[cell.row][cell.col]=0;}else if(!(container.class==='Backpack'&&mouse_item&&mouse_item.class==='Backpack'))swapAutoCursor(container.inv[cell.row],cell.col);}if(container.class==='Chest')syncAutoChest(container);}
+function handleAutoStorageMouse(container){const hotbar=autoHotbarSlotAt(mouseX,mouseY),cell=autoChestSlotAt(mouseX,mouseY),transferAll=keyIsDown(special_key);if(hotbar>=0){if(transferAll&&player.inv[hotbar])transferAutoItemToStorage(container,hotbar);else if(!(container.class==='Backpack'&&player.inv[hotbar]&&player.inv[hotbar].class==='Backpack'))swapAutoCursor(player.inv,hotbar);}else if(cell){if(transferAll&&container.inv[cell.row][cell.col])transferAutoItemFromStorage(container,cell.row,cell.col);else if(!(container.class==='Backpack'&&mouse_item&&mouse_item.class==='Backpack'))swapAutoCursor(container.inv[cell.row],cell.col);}if(container.class==='Chest')syncAutoChest(container);}
 function swapAutoCursor(container,index){const target=container[index];if(mouse_item&&target&&mouse_item.class!=='Backpack'&&target.class!=='Backpack'&&mouse_item.name===target.name){target.amount+=mouse_item.amount;mouse_item=0;return;}container[index]=mouse_item||0;mouse_item=target||0;}
 function transferAutoItemToStorage(container,playerIndex){const item=player.inv[playerIndex];if(!item||(container.class==='Backpack'&&item.class==='Backpack'))return;if(item.class!=='Backpack')for(const row of container.inv)for(const stored of row)if(stored&&stored.name===item.name){stored.amount+=item.amount;player.inv[playerIndex]=0;return;}for(const row of container.inv){const empty=row.indexOf(0);if(empty>=0){row[empty]=item;player.inv[playerIndex]=0;return;}}}
+function transferAutoItemFromStorage(container,row,col){const item=container&&container.inv&&container.inv[row]&&container.inv[row][col];if(!item)return false;if(!addAutoItem(item_name_to_num(item.name),item.amount,container))return false;container.inv[row][col]=0;return true;}
 function syncAutoChest(chest){setAutoCell({row:Math.round(chest.pos.y/tileSize),col:Math.round(chest.pos.x/tileSize)},chest);}
 
 function openAutoRobot(robot) {
@@ -709,7 +708,7 @@ function openAutoRobot(robot) {
     const commands=inventoryEntries.filter(v=>v.item.class==='Command');
     const selectors=inventoryEntries.filter(v=>v.item.class!=='Command');
     const cargo=robot.inv.map((item,i)=>({item,i})).filter(v=>v.item);
-    openAutoModal(robot.name,`<p>The shared Cloudy Meadows robot engine executes command disks in order. Put tools/seeds in ROBOT INVENTORY, then place a matching selector immediately after INTERACT or a chest command.</p><h2>PROGRAM</h2><div class="program">${robot.instructions.map((entry,i)=>entry?`<button class="auto-command remove" data-remove="${i}">${entry.name}</button>`:'').join('')}</div><h2>COMMAND DISKS</h2>${commands.map(v=>`<button class="auto-command" data-program="${v.i}">${v.item.name} ×${v.item.amount}</button>`).join('')||'<p>Buy command disks at markets.</p>'}<h2>ITEM SELECTORS</h2>${selectors.map(v=>`<button class="auto-command" data-program="${v.i}">${v.item.name}</button>`).join('')}<h2>ROBOT INVENTORY</h2><div class="auto-grid">${cargo.map(v=>`<div class="auto-row"><span>${v.item.name} ×${v.item.amount}</span><button data-robot-program="${v.i}">SELECTOR</button><button data-unload="${v.i}">TAKE</button></div>`).join('')||'<p>Empty. Load a hoe, shovel, seeds, or crops below.</p>'}</div><h2>LOAD FROM PLAYER</h2>${selectors.map(v=>`<button class="auto-command" data-load="${v.i}">${v.item.name} ×${v.item.amount}</button>`).join('')}<p>Fuel: ${robot.fuel}/${robot.max_fuel} · ${robot.status}</p><button class="auto-command" data-run>${robot.move_bool?'PAUSE':'RUN'}</button>`);
+    openAutoModal(robot.name,`<p>The shared Cloudy Meadows robot engine executes command disks in order. Put tools/seeds in ROBOT INVENTORY, then place a matching selector immediately after INTERACT or a chest command.</p><h2>PROGRAM</h2><div class="program">${robot.instructions.map((entry,i)=>entry?`<button class="auto-command remove" data-remove="${i}">${entry.name}</button>`:'').join('')}</div><h2>COMMAND DISKS</h2>${commands.map(v=>`<button class="auto-command" data-program="${v.i}">${v.item.name} ×${v.item.amount}</button>`).join('')||'<p>Buy command disks at markets.</p>'}<h2>ITEM SELECTORS</h2>${selectors.map(v=>`<button class="auto-command" data-program="${v.i}">${v.item.name}</button>`).join('')}<h2>ROBOT INVENTORY</h2><div class="auto-grid">${cargo.map(v=>`<div class="auto-row"><span>${v.item.name} ×${v.item.amount}</span><button data-robot-program="${v.i}">SELECTOR</button><button data-unload="${v.i}">TAKE</button></div>`).join('')||'<p>Empty. Load a hoe, shovel, seeds, or crops below.</p>'}</div><h2>LOAD FROM PLAYER</h2>${selectors.map(v=>`<button class="auto-command" data-load="${v.i}">${v.item.name} ×${v.item.amount}</button>`).join('')}<h2>CONTROLS</h2><p>Fuel: ${robot.fuel}/${robot.max_fuel} · ${robot.status}</p><button class="auto-command" data-play ${robot.move_bool?'disabled':''}>PLAY</button><button class="auto-command" data-pause ${robot.move_bool?'':'disabled'}>PAUSE</button><button class="auto-command remove" data-pack-up>PACK UP</button>`);
     document.querySelectorAll('[data-program]').forEach(button=>button.onclick=()=>{
         const invIndex=Number(button.dataset.program),empty=robot.instructions.indexOf(0),item=player.inv[invIndex];
         if(empty>=0&&item){robot.instructions[empty]=new_item_from_num(item_name_to_num(item.name),1);if(item.class==='Command'&&--item.amount<=0)player.inv[invIndex]=0;openAutoRobot(robot);}
@@ -728,7 +727,21 @@ function openAutoRobot(robot) {
     document.querySelectorAll('[data-unload]').forEach(button=>button.onclick=()=>{
         const i=Number(button.dataset.unload),item=robot.inv[i];if(item&&addAutoItem(item_name_to_num(item.name),item.amount)){robot.inv[i]=0;openAutoRobot(robot);}
     });
-    document.querySelector('[data-run]').onclick=()=>{robot.move_bool=!robot.move_bool;openAutoRobot(robot);};
+    document.querySelector('[data-play]').onclick=()=>{robot.move_bool=true;openAutoRobot(robot);};
+    document.querySelector('[data-pause]').onclick=()=>{robot.move_bool=false;openAutoRobot(robot);};
+    document.querySelector('[data-pack-up]').onclick=()=>packUpAutoRobot(robot);
+}
+
+function packUpAutoRobot(robot) {
+    if (!robot || robot.class !== 'Robot') return;
+    if (!confirm('Pack up this robot? Its program and stored inventory will be lost.')) return;
+    const robotItem = item_name_to_num(robot.name);
+    if (!addAutoItem(robotItem, 1)) return;
+    const row = Math.round(robot.pos.y / tileSize);
+    const col = Math.round(robot.pos.x / tileSize);
+    const floor = robot.under_tile || new_tile_from_num(2, col * tileSize, row * tileSize);
+    setAutoCell({ row, col }, floor);
+    closeAutoModal();
 }
 
 function openAutoModal(title,html){const modal=document.querySelector('#autofarm-modal');document.querySelector('#modal-title').textContent=title;document.querySelector('#modal-content').innerHTML=html;modal.classList.add('open');modal.setAttribute('aria-hidden','false');}

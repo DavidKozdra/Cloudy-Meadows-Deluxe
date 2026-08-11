@@ -16,7 +16,7 @@ const context = {
     document: {},
     localStorage: { getItem() { return null; } }
 };
-vm.runInNewContext(raycasterSource + '\n' + source + '\nglobalThis.testGenerateMap=generateAutoMap;globalThis.testHash=autoHash;globalThis.testFacingTile=getAutoFacingTile;globalThis.testInitial3DMode=getAutoFarmInitial3DMode;globalThis.testUpdateAuto3D=updateAutoFarm3DMovement;globalThis.testResolvePlaceable=resolveAutoPlaceableTarget;globalThis.testSnapPlayer=snapPlayerTo2DGrid;globalThis.testSerializeTile=serializeAutoTile;globalThis.testUseAutoItem=useAutoItem;globalThis.testActiveCameraYaw=getActiveCameraYawDeg;', context);
+vm.runInNewContext(raycasterSource + '\n' + source + '\nglobalThis.testGenerateMap=generateAutoMap;globalThis.testHash=autoHash;globalThis.testFacingTile=getAutoFacingTile;globalThis.testInitial3DMode=getAutoFarmInitial3DMode;globalThis.testUpdateAuto3D=updateAutoFarm3DMovement;globalThis.testResolvePlaceable=resolveAutoPlaceableTarget;globalThis.testSnapPlayer=snapPlayerTo2DGrid;globalThis.testSerializeTile=serializeAutoTile;globalThis.testUseAutoItem=useAutoItem;globalThis.testActiveCameraYaw=getActiveCameraYawDeg;globalThis.testTransferAutoItemFromStorage=transferAutoItemFromStorage;', context);
 
 function openMovementMap(width = 23, height = 19) {
     return Array.from({ length: height }, () =>
@@ -100,10 +100,26 @@ test('AutoFarm reuses backpacks, inventory warnings, beds, and registry placeabl
 
 test('AutoFarm loads and initializes the shared Three.js 3D renderer', () => {
     assert.match(html, /import \* as THREE from 'https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.184\.0\/build\/three\.module\.min\.js'/);
-    assert.match(html, /classes\/raycaster3d\.js\?v=35/);
+    assert.match(html, /classes\/raycaster3d\.js\?v=36/);
     assert.match(source, /initializeThree3DRenderer\(\)/);
-    assert.match(source, /render3DViewWebgl\(player, level, currentLevel_x, currentLevel_y\)/);
+    assert.match(source, /render3DViewWebgl\(player, level, currentLevel_x, currentLevel_y, true, getAutoPeers3D\(\)\)/);
     assert.doesNotMatch(source, /createGraphics\(canvasWidth, canvasHeight, WEBGL\)/);
+});
+
+test('AutoFarm renders remote multiplayer players and name tags in 3D', () => {
+    assert.match(source, /function getAutoPeers3D\(/);
+    assert.match(source, /render3DViewWebgl\(player, level, currentLevel_x, currentLevel_y, true, getAutoPeers3D\(\)\)/);
+    assert.match(raycasterSource, /function render3DMultiplayerPlayers\(peers\)/);
+    assert.match(raycasterSource, /function createThreeNameTagMaterial\(name\)/);
+    assert.match(raycasterSource, /new THREE\.Sprite\(\)/);
+});
+
+test('AutoFarm uses the same explicit robot controls as the main game', () => {
+    assert.match(source, /data-play/);
+    assert.match(source, /data-pause/);
+    assert.match(source, /data-pack-up/);
+    assert.match(source, /function packUpAutoRobot\(robot\)/);
+    assert.doesNotMatch(source, /function createSharedRobotButtons\(/);
 });
 
 test('AutoFarm starts in 3D without an unsolicited keyboard toggle', () => {
@@ -244,6 +260,28 @@ test('using a wall on desktop places it ahead, preserves its floor, and consumes
     assert.equal(map[4][5].under_tile, floor);
     assert.equal(context.player.inv[0].amount, 1);
     assert.equal(map[4][4].name, 'grass', 'the occupied tile is unchanged');
+});
+
+test('AutoFarm markets always carry walls for construction', () => {
+    assert.match(source, /stock=\[2,5,7,15,17,39,41,3,8,14,16,40,42,33,43,44,/);
+});
+
+test('shift-transfer from a backpack moves the item into the player inventory', () => {
+    const backpack = {
+        class: 'Backpack',
+        inv: [[{ name: 'Wall', class: 'Placeable', amount: 2 }, 0, 0, 0]]
+    };
+    Object.assign(context, {
+        all_items: Object.assign([], { 44: { name: 'Wall', class: 'Placeable' } }),
+        item_name_to_num: name => name === 'Wall' ? 44 : -1,
+        player: {
+            inv: [{ name: 'Wall', class: 'Placeable', amount: 1 }, backpack, 0]
+        }
+    });
+
+    assert.equal(context.testTransferAutoItemFromStorage(backpack, 0, 0), true);
+    assert.equal(context.player.inv[0].amount, 3);
+    assert.equal(backpack.inv[0][0], 0);
 });
 
 test('AutoFarm includes and consumes the main-game mobile control surface', () => {

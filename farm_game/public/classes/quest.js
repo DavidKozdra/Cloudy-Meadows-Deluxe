@@ -437,7 +437,7 @@ class Quest {
         } else if (goal.class === 'HaveGoal') {
             detailsDiv.textContent = `${t('Collect')}: ${goal.amount}x ${tItem(goal.item_name)}`;
         } else if (goal.class === 'FundingGoal') {
-            detailsDiv.textContent = `${t('Earn')}: ${goal.amount} ${t('coins')}`;
+            detailsDiv.textContent = `${t('Earn')}: ${fundingGoalRemainingCoins(goal)} ${t('more coins')}`;
         } else if (goal.class === 'OneTileCheck') {
             detailsDiv.textContent = `${t('Tile')}: ${t(goal.tile_name)}`;
         }
@@ -1300,12 +1300,7 @@ class FundingGoal extends Goal{  //Get _(amount) coins, take those coins
             this.done = true;
             player.coins -= this.amount;
         }
-        if(!this.done){
-            this.name = 'Get ' + (this.amount-player.coins) + ' more coins';
-        }
-        else{
-            this.name = 'Get ' + 0 + ' more coins';
-        }
+        this.name = 'Get ' + fundingGoalRemainingCoins(this) + ' more coins';
     }
 }
 
@@ -1395,8 +1390,6 @@ class OneTileCheck extends Goal{
         }
     }
 }
-
-
 
 
 

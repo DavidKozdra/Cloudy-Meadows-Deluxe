@@ -95,6 +95,16 @@ function tQuestName(name) {
     return t(name);
 }
 
+function fundingGoalRemainingCoins(goal) {
+    if (!goal || goal.done) return 0;
+
+    const target = Number(goal.amount);
+    const available = typeof player !== 'undefined' ? Number(player.coins) : 0;
+    const safeTarget = Number.isFinite(target) ? Math.max(0, target) : 0;
+    const safeAvailable = Number.isFinite(available) ? Math.max(0, available) : 0;
+    return Math.max(0, safeTarget - safeAvailable);
+}
+
 function tGoal(goal) {
     if (!goal) return '';
     if (goal.class === 'TalkingGoal') {
@@ -107,7 +117,7 @@ function tGoal(goal) {
         return t('Talk to') + ' ' + t(goal.npc_name) + requires;
     }
     if (goal.class === 'TellGoal') return t('Tell') + ' ' + t(goal.npc_name) + ': "' + t(goal.reply_phrase) + '"';
-    if (goal.class === 'FundingGoal') return t('Get') + ' ' + goal.amount + ' ' + t('more coins');
+    if (goal.class === 'FundingGoal') return t('Get') + ' ' + fundingGoalRemainingCoins(goal) + ' ' + t('more coins');
     if (goal.class === 'LocationGoal') return t('Go to') + ' ' + t(goal.level_name);
     if (goal.class === 'SellGoal') return t('Sell') + ' ' + goal.amount + ' ' + t('more of') + ' ' + tItem(goal.item_name);
     if (goal.class === 'HaveGoal') return t('Have') + ' ' + goal.amount + ' ' + t('of') + ' ' + tItem(goal.item_name);
