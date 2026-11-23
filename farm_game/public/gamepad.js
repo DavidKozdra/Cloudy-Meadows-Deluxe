@@ -145,11 +145,10 @@ function handleGamepadDiscreteActions(pad) {
     const startJust = gp_justPressed(pad, GP_BUTTON.START);
     const aJust = gp_justPressed(pad, GP_BUTTON.A);
 
-    // Title screen: A / Start begins the game (matches interact-to-start).
+    // Use the same title/world-picker actions as keyboard and touch.
     if (title_screen) {
-        if ((aJust || startJust) && typeof showOptions !== 'undefined' && !showOptions) {
-            title_screen = false;
-        }
+        handleGamepadMenuNav(pad, aJust || startJust,
+            '#world-menu-panel button, #world-menu-panel a, #main-menu-container button, #options-menu button, #credits-menu button');
         return;
     }
 

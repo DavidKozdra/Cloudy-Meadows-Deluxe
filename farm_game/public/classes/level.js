@@ -520,18 +520,20 @@ class Level {
                 }
                 if (tile.age >= 0 && tile.class != 'Plant') {
                     tile.age += 1;
+                    // Day counts come from custom rules (Farming tab); defaults 2 / 5 / 10.
+                    const ruleDays = (key, fallback) => typeof customRule === 'function' ? customRule(key) : fallback;
                     if (tile.name == 'compost_tile') {
-                        if (tile.age >= 2) {
+                        if (tile.age >= ruleDays('compostDays', 2)) {
                             this.map[i][j] = new_tile_from_num(2, (j * tileSize), (i * tileSize));
                         }
                     }
                     if (tile.name == 'plot') {
-                        if (tile.age >= 5) {
+                        if (tile.age >= ruleDays('plotDryDays', 5)) {
                             this.map[i][j] = new_tile_from_num(4, (j * tileSize), (i * tileSize));
                         }
                     }
                     if (tile.name == 'ladybug') {
-                        if (tile.age >= 10) {
+                        if (tile.age >= ruleDays('ladybugDays', 10)) {
                             this.ladybugs -= 1;
                             this.map[i][j] = new_tile_from_num(2, (j * tileSize), (i * tileSize));
                         }

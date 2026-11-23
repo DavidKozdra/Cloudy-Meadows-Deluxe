@@ -89,7 +89,10 @@ function refreshCooperativeContracts(force = false) {
 
     // Accepted work survives a rotation. Unaccepted and finished listings are replaced.
     const accepted = state.contracts.filter(contract => contract.status === 'accepted');
-    const pool = COOP_CONTRACT_TEMPLATES.filter(template => isCooperativeItemEnabled(template.itemName));
+    // Contract list and reward scale can be customized (Economy tab rules).
+    const templates = typeof getCoopContractTemplates === 'function' ? getCoopContractTemplates() : COOP_CONTRACT_TEMPLATES;
+    const rewardScale = typeof customRule === 'function' ? customRule('coopRewardMultiplier') / 100 : 1;
+    const pool = templates.filter(template => isCooperativeItemEnabled(template.itemName));
     const tier = 1 + Math.floor(state.completedContracts / 8);
     const generated = [];
     for (let offset = 0; offset < pool.length && generated.length < 4; offset++) {
@@ -101,7 +104,7 @@ function refreshCooperativeContracts(force = false) {
             title: template.title,
             itemName: template.itemName,
             amount: Math.ceil(template.amount * (1 + (tier - 1) * 0.2)),
-            reward: Math.ceil(template.reward * (1 + (tier - 1) * 0.3)),
+            reward: Math.ceil(template.reward * (1 + (tier - 1) * 0.3) * rewardScale),
             prosperityReward: Math.min(5, 1 + Math.floor(tier / 2)),
             status: 'available',
             postedWeek: week
@@ -205,7 +208,7 @@ function closeCooperativeExchange() {
 function showCooperativeExchange() {
     const state = getCooperativeState();
     if (!state) return;
-    if (hasCompletedMainQuest()) unlockCooperativeExchange();
+    if (hasCompletedMainQuest() || (typeof isCoopUnlockedByRules === 'function' && isCoopUnlockedByRules())) unlockCooperativeExchange();
     refreshCooperativeContracts();
 
     let overlay = document.getElementById('cooperative-exchange-overlay');
@@ -330,4 +333,8 @@ window.addEventListener('questCompleted', event => {
     if (event.detail?.quest?.og_name === 'Save Cloudy Meadows') unlockCooperativeExchange();
 });
 
-window.addEventListener('newDay', () => refreshCooperativeContracts());
+window.addEventListener('newDay', () => {
+    // Custom rules can open the exchange on a set day instead of after the main quest.
+    if (typeof isCoopUnlockedByRules === 'function' && isCoopUnlockedByRules()) unlockCooperativeExchange();
+    refreshCooperativeContracts();
+});

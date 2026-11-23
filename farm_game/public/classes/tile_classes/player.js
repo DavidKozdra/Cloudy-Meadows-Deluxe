@@ -64,6 +64,7 @@ class Player extends MoveableEntity {
         this.hunger_timer = (all_items[this.lastFoodnum] || all_items[2]).hunger_timer;
         this.hunger_counter = 0;
         this.coins = obj.coins;
+        this.livesUsed = obj.livesUsed || 0;
         this.hp = obj.hp;
         this.dead = false;
         this.deaths = obj.deaths;
@@ -105,6 +106,7 @@ class Player extends MoveableEntity {
         this.hunger_timer = (all_items[this.lastFoodnum] || all_items[2]).hunger_timer;
         this.hunger_counter = obj.hunger_counter;
         this.coins = obj.coins;
+        this.livesUsed = obj.livesUsed || 0;
         this.hp = obj.hp;
         if (this.hp < 30){
             this.hp = 30;
@@ -125,9 +127,11 @@ class Player extends MoveableEntity {
             this.hunger_counter = 0;
         }
         if(!paused){
-            this.hunger_timer -= 1;
+            // Hunger Drain Speed rule (100% = 1 per frame, 2 while in bed)
+            const hungerRate = typeof customRule === 'function' ? customRule('hungerRate') / 100 : 1;
+            this.hunger_timer -= hungerRate;
             if(this.touching.name == 'bed'){
-                this.hunger_timer -= 1;
+                this.hunger_timer -= hungerRate;
             }
         }
         if (this.hunger_timer <= 0) {
@@ -140,7 +144,7 @@ class Player extends MoveableEntity {
         let tookHungerDamage = false;
         if (this.hunger <= 0 && millis() - lastHungerMili > 400 && !paused && !this.dead) {
             hit_sound.play();
-            this.hp -= 10;
+            this.hp -= typeof customRule === 'function' ? customRule('starveDamage') : 10;
             if(this.hp < 0){
                 this.hp = 0;
             }
@@ -148,9 +152,10 @@ class Player extends MoveableEntity {
             lastHungerMili = millis();
         }
         else if (this.hunger >= maxHunger && millis() - lastHungerMili > 600 && !paused) {
-            this.hp += 2;
-            if (this.hp > 100){
-                this.hp = 100;
+            this.hp += typeof customRule === 'function' ? customRule('healthRegen') : 2;
+            const maxHp = this.maxHealthLimit();
+            if (this.hp > maxHp){
+                this.hp = maxHp;
             }
             lastHungerMili = millis();
         }
@@ -159,7 +164,7 @@ class Player extends MoveableEntity {
             push();
             imageMode(CENTER);
             noTint();
-            image(player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
+            image(typeof getPlayerSprite === 'function' ? getPlayerSprite(this.facing, this.anim) : player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
             const lookingAt = this.looking(currentLevel_x, currentLevel_y);
             if(lookingAt != undefined && lookingAt != 0 && this.talking == 0){
                 if(((lookingAt.class == 'NPC' || lookingAt.class == 'Shop' || lookingAt.class == 'Chest' || lookingAt.class == 'Robot' || lookingAt.class == 'AirBallon' || lookingAt.name == 'Job Board'))){
@@ -180,7 +185,7 @@ class Player extends MoveableEntity {
             }
             if (tookHungerDamage) {
                 tint(255, 0, 0, 100);
-                image(player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
+                image(typeof getPlayerSprite === 'function' ? getPlayerSprite(this.facing, this.anim) : player_imgs[this.facing][this.anim], this.pos.x + (tileSize / 2), this.pos.y + (tileSize / 2));
             }
             pop();
         }
@@ -208,12 +213,15 @@ class Player extends MoveableEntity {
                     this.a += 5;
                 }
                 if(this.transphase == 1){
-                    if(this.ticks >= 600){
-                        currentLevel_y = 1;
-                        currentLevel_x = 4;
+                    if(this.ticks >= this.getRespawnTicks()){
+                        const spawn = typeof getRespawnPoint === 'function'
+                            ? getRespawnPoint()
+                            : { levelY: 1, levelX: 4, x: 5 * tileSize, y: 5 * tileSize };
+                        currentLevel_y = spawn.levelY;
+                        currentLevel_x = spawn.levelX;
                         this.dead = false;
-                        this.pos.x = (5 * tileSize);
-                        this.pos.y = (5 * tileSize);
+                        this.pos.x = spawn.x;
+                        this.pos.y = spawn.y;
                         this.talking = 0;
                         this.hunger = 4;
                         this.hunger_timer = all_items[2].hunger_timer;
@@ -228,7 +236,7 @@ class Player extends MoveableEntity {
                     this.a -= 5;
                     if(this.ticks >= 51){
                         this.ticks = 0;
-                        this.hp = 100;
+                        this.hp = this.maxHealthLimit();
                         this.transphase = 0;
                     }
                     if (renderVisuals) {
@@ -242,13 +250,35 @@ class Player extends MoveableEntity {
         // Hunger overlay now renders in render_ui() for correct layering above night overlay
     }
 
+    // Respawn delay in frames (Respawn Delay rule; 600 = 10 seconds).
+    getRespawnTicks(){
+        return typeof customRule === 'function' ? customRule('respawnSeconds') * 60 : 600;
+    }
+
+    // Max Health rule (100 by default).
+    maxHealthLimit(){
+        return typeof getMaxHealth === 'function' ? getMaxHealth() : 100;
+    }
+
+    endRunAfterDeath(){
+        title_screen = true;
+        deleteSave();
+        newWorld();
+    }
+
     deathConsequence(dif){
         if(dif == 3 && window.customRules){
             if(window.customRules.permaDeath){
-                title_screen = true;
-                localStorage.clear();
-                newWorld();
+                this.endRunAfterDeath();
                 return;
+            }
+            const maxLives = typeof customRule === 'function' ? customRule('lives') : 0;
+            if(maxLives > 0){
+                this.livesUsed = (this.livesUsed || 0) + 1;
+                if(this.livesUsed >= maxLives){
+                    this.endRunAfterDeath();
+                    return;
+                }
             }
             if(window.customRules.moneyLoss){
                 this.coins -= ceil(this.coins * 0.1);
@@ -286,9 +316,7 @@ class Player extends MoveableEntity {
             }
         }
         else if(dif == 2){
-            title_screen = true;
-            localStorage.clear();
-            newWorld();
+            this.endRunAfterDeath();
         }
     }
 
@@ -529,8 +557,9 @@ class Player extends MoveableEntity {
                     }
 
                     if (seed_obj_num > 0) {
-                        const seed_amount = floor(random(seed_min, seed_max + 1));
-                        if (!addItem(this, seed_obj_num, seed_amount)) {
+                        let seed_amount = floor(random(seed_min, seed_max + 1));
+                        if (typeof scaleSeedAmount === 'function') seed_amount = scaleSeedAmount(seed_amount);
+                        if (seed_amount > 0 && !addItem(this, seed_obj_num, seed_amount)) {
                             console.warn('Food byproduct could not be stored for', food.name, 'item ID', seed_obj_num);
                         }
                     }
@@ -609,7 +638,9 @@ class Player extends MoveableEntity {
                     if(typeof this.touching.getHarvestYield === 'function') {
                          baseYield = this.touching.getHarvestYield();
                     }
-                    addItem(this, this.touching.eat_num, baseYield + round(random((levels[y][x].ladybugs > 4 ? 1:0), levels[y][x].ladybugs)));
+                    const ladybugExtra = round(random((levels[y][x].ladybugs > 4 ? 1:0), levels[y][x].ladybugs));
+                    const harvestAmount = typeof scaleHarvestYield === 'function' ? scaleHarvestYield(baseYield, ladybugExtra) : baseYield + ladybugExtra;
+                    addItem(this, this.touching.eat_num, harvestAmount);
                     levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(3, this.touching.pos.x, this.touching.pos.y);
                     PlantingSound.play()
                 }
@@ -627,7 +658,8 @@ class Player extends MoveableEntity {
                 }
                 
                 // Find the current shop's sell price for this item (25% discount on BASE price)
-                let sellPrice = round(this.inv[this.hand].price * 0.75); // Default fallback
+                const fallbackSellPrice = typeof shopFallbackSellPrice === 'function' ? shopFallbackSellPrice(this.inv[this.hand].price) : round(this.inv[this.hand].price * 0.75);
+                let sellPrice = fallbackSellPrice; // Default fallback
                 const currentLevel = levels[currentLevel_y][currentLevel_x];
                 if(currentLevel && currentLevel.map) {
                     for(let my = 0; my < currentLevel.map.length; my++){
@@ -643,7 +675,7 @@ class Player extends MoveableEntity {
                             }
                         }
                         // Break outer loop if found
-                        if(sellPrice !== round(this.inv[this.hand].price * 0.75)) break;
+                        if(sellPrice !== fallbackSellPrice) break;
                     }
                 }
                 
@@ -897,7 +929,8 @@ class Player extends MoveableEntity {
                             let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
                             let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
                             let seed_amount = floor(random(seed_min, seed_max + 1));
-                            addItem(this, this.inv[this.hand].seed_num, seed_amount);
+                            if (typeof scaleSeedAmount === 'function') seed_amount = scaleSeedAmount(seed_amount);
+                            if (seed_amount > 0) addItem(this, this.inv[this.hand].seed_num, seed_amount);
                             if (this.inv[this.hand].amount == 0) {
                                 this.inv[this.hand] = 0;
                             }
@@ -909,7 +942,8 @@ class Player extends MoveableEntity {
                             let seed_min = (this.inv[this.hand].seed_min || 1) + 1;
                             let seed_max = (this.inv[this.hand].seed_max || 3) + 2;
                             let seed_amount = floor(random(seed_min, seed_max + 1));
-                            addItem(this, this.inv[this.hand].seed_num, seed_amount);
+                            if (typeof scaleSeedAmount === 'function') seed_amount = scaleSeedAmount(seed_amount);
+                            if (seed_amount > 0) addItem(this, this.inv[this.hand].seed_num, seed_amount);
                             if (this.inv[this.hand].amount == 0) {
                                 this.inv[this.hand] = 0;
                             }
@@ -1094,8 +1128,10 @@ function takeInput() {
             saveOptions();
         }
         else if (control_set == 0){
-            if ((keyIsDown(interact_button) || virtualInput.interact) && !showOptions) {
-                title_screen = false;
+            if ((keyIsDown(interact_button) || virtualInput.interact) && !paused && !creditsOn &&
+                typeof continueWorldGame === 'function' && !worldMenuPanel && millis() - lastMili > 300) {
+                lastMili = millis();
+                continueWorldGame();
             }
         }
     }

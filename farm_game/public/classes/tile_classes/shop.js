@@ -60,7 +60,8 @@ class Shop extends Entity {
                 if (typeof this.inv[i].maxPrice === 'number') {
                     price = Math.min(price, this.inv[i].maxPrice);
                 }
-                return price;
+                // Shop Buy Prices rule (Economy tab)
+                return typeof scaleBuyPrice === 'function' ? scaleBuyPrice(price) : price;
             }
         }
         return 0;
@@ -72,14 +73,15 @@ class Shop extends Entity {
         for(let i = 0; i < this.inv.length; i++){
             if(this.inv[i] != 0 && this.inv[i].name == itemName){
                 let basePrice = this.originalPrices[i] || this.inv[i].price;
-                return round(basePrice * 0.75);
+                return typeof scaleSellPrice === 'function' ? scaleSellPrice(round(basePrice * 0.75)) : round(basePrice * 0.75);
             }
         }
         // If not in shop inv, check all_items for the price (including custom prices)
         if (typeof item_name_to_num === 'function' && typeof all_items !== 'undefined') {
             const itemNum = item_name_to_num(itemName);
             if (itemNum >= 0 && all_items[itemNum] && all_items[itemNum].price) {
-                return round(all_items[itemNum].price * 0.75);
+                const fallback = round(all_items[itemNum].price * 0.75);
+                return typeof scaleSellPrice === 'function' ? scaleSellPrice(fallback) : fallback;
             }
         }
         return 0;
@@ -265,6 +267,7 @@ class Shop extends Entity {
                     adjustment = round(random(-5, -3));
                 }
                 
+                if (!this.priceSwingsEnabled()) adjustment = 0;
                 this.inv[i].price = max(1, round((basePrice + adjustment) * this.priceModifier(itemName)));
                 break;
             }
@@ -302,6 +305,7 @@ class Shop extends Entity {
                     adjustment = round(random(-5, -3));
                 }
                 
+                if (!this.priceSwingsEnabled()) adjustment = 0;
                 this.inv[i].price = max(1, round((basePrice + adjustment) * this.priceModifier(this.inv[i].name)));
             }
         }
@@ -310,7 +314,14 @@ class Shop extends Entity {
     // Day-of-week and weather price multiplier for one item. Applied inside every
     // price recalculation (daily and after each purchase) so the effect lasts all
     // day instead of being wiped by the next supply-based reprice.
+    // Supply & demand price swings (Economy tab rule; on by default).
+    priceSwingsEnabled() {
+        return typeof customRule !== 'function' || customRule('priceSwings');
+    }
+
     priceModifier(itemName) {
+        // Weather and weekday deals can be switched off in the Economy tab.
+        if (typeof customRule === 'function' && !customRule('priceEvents')) return 1;
         const today = typeof days === 'number' ? days : 0;
         let multiplier = 1;
 

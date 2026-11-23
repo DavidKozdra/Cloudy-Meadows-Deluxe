@@ -78,7 +78,8 @@ var all_items = [];
 var Dialouge_JSON = 0;
 var paused = false;
 var mouse_item = 0;
-var localData = localDataStorage( 'passphrase.life' )
+var worldSaves = CloudyWorldSaves.create(localDataStorage('passphrase.life'));
+var localData = worldSaves.store;
 var musicplayer = {};
 
 // Check if a hotbar slot has an enabled item (not disabled in custom rules)
@@ -1230,7 +1231,7 @@ var heatwaveStartDay = -999, heatwaveEndDay = -999; // Current/last heatwave spa
 
 // Weather system
 var currentWeather = 'clear'; // 'clear', 'overcast', 'rain'
-var weatherLog = []; // Log of weather for each day
+var weatherLog = []; // Saved weather calendar: one record per visited day, retained across rewinds
 
 // Rain particle system
 var rainDroplets = []; // Array of individual rain particles
@@ -1985,7 +1986,8 @@ function draw() {
         applyWeatherEffects();
 
         // Night darkness overlay in screen space — covers everything including tree tops
-        if(!player.dead && time > 0 && currentLvl && typeof currentLvl.renderLights === 'function'){
+        const neverDark = typeof customRule === 'function' && customRule('alwaysDay');
+        if(!player.dead && time > 0 && !neverDark && currentLvl && typeof currentLvl.renderLights === 'function'){
             currentLvl.renderLights();
         }
         
@@ -2003,14 +2005,21 @@ function draw() {
             textFont(player_2);
             text(t('YOU DIED'), canvasWidth/2, canvasHeight/4);
             textSize(20);
+            const respawnTicks = player.getRespawnTicks();
             if(player.transphase == 0){
-                text(t('Respawn in') + ' 10', canvasWidth/2, (3*canvasHeight)/4);
+                text(t('Respawn in') + ' ' + floor(respawnTicks/60), canvasWidth/2, (3*canvasHeight)/4);
             }
             else if(player.transphase == 1){
-                text(t('Respawn in') + ' ' + floor((600-player.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
+                text(t('Respawn in') + ' ' + floor((respawnTicks-player.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
             }
             else if(player.transphase == 2){
                 text(t('Respawn in') + ' 0', canvasWidth/2, (3*canvasHeight)/4);
+            }
+            // Lives rule: show how many are left after this death.
+            const maxLives = typeof customRule === 'function' ? customRule('lives') : 0;
+            if (dificulty == 3 && maxLives > 0) {
+                const livesLeft = Math.max(0, maxLives - (player.livesUsed || 0) - (player.transphase < 2 ? 1 : 0));
+                text(livesLeft > 0 ? t('Lives left') + ': ' + livesLeft : t('No lives left'), canvasWidth/2, (3*canvasHeight)/4 + 30);
             }
             pop();
         }
@@ -2029,7 +2038,8 @@ function draw() {
                     player.quests[i].checkGoalCompletions();
                 }
             }
-            if (millis() - lastTimeMili > 300) { //300 for 2 min 1 day, 150 for 1 min 1 day
+            // 300ms per tick = 2 min per day by default; Day Length rule can change it.
+            if (millis() - lastTimeMili > (typeof getDayTickMs === 'function' ? getDayTickMs() : 300)) {
                 if (timeSpeed < 0) {
                     time += timeSpeed;
                     if (time < 100 && timephase == 1) { timephase = 0; }
@@ -2046,6 +2056,11 @@ function draw() {
                             if (typeof restoreDaySnapshot === 'function' && hasDaySnapshot(days)) {
                                 restoreDaySnapshot(days);
                             }
+                            // Weather remains available even after the day's
+                            // full world snapshot has expired.
+                            if (typeof CloudyWeather !== 'undefined') {
+                                CloudyWeather.restoreDay(days);
+                            }
                         } else {
                             time = 0;
                             timephase = 0;
@@ -2058,7 +2073,9 @@ function draw() {
                     const bedBonus = player.touching.name == 'bed' ? 2 : 0;
                     time -= timeSpeed + bedBonus;
                 }
-                if (time >= 200) {
+                // Rewind also lands at 200 when crossing into the previous day.
+                // Only forward time may advance the day and trigger its auto-save.
+                if (time >= 200 && timeSpeed >= 0) {
                     time = 200;
                     timephase = 1;
                     days += 1;
@@ -2477,7 +2494,8 @@ function render_ui() {
             if (player.inv[player.hand].price > 0) {
                 fill(255);
                 // Find shop and calculate actual sell price
-                let sellPrice = round(player.inv[player.hand].price * 0.75); // Default fallback
+                const fallbackSellPrice = typeof shopFallbackSellPrice === 'function' ? shopFallbackSellPrice(player.inv[player.hand].price) : round(player.inv[player.hand].price * 0.75);
+                let sellPrice = fallbackSellPrice; // Default fallback
                 const currentLevel = levels[currentLevel_y][currentLevel_x];
                 if(currentLevel && currentLevel.map) {
                     for(let my = 0; my < currentLevel.map.length; my++){
@@ -2491,7 +2509,7 @@ function render_ui() {
                                 }
                             }
                         }
-                        if(sellPrice !== round(player.inv[player.hand].price * 0.75)) break;
+                        if(sellPrice !== fallbackSellPrice) break;
                     }
                 }
                 text(sellPrice, player.looking(currentLevel_x, currentLevel_y).pos.x + (tileSize), player.looking(currentLevel_x, currentLevel_y).pos.y - (tileSize / 2));

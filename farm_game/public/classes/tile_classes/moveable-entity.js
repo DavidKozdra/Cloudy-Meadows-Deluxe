@@ -53,7 +53,10 @@ class MoveableEntity extends Entity {
                     const baseYield = typeof this.under_tile.getHarvestYield === 'function'
                         ? this.under_tile.getHarvestYield()
                         : 1;
-                    addItem(this, this.under_tile.eat_num, baseYield + levels[y][x].ladybugs);
+                    const harvestAmount = typeof scaleHarvestYield === 'function'
+                        ? scaleHarvestYield(baseYield, levels[y][x].ladybugs)
+                        : baseYield + levels[y][x].ladybugs;
+                    addItem(this, this.under_tile.eat_num, harvestAmount);
                     this.under_tile = new_tile_from_num(3, this.under_tile.pos.x, this.under_tile.pos.y);
                 }
             }
@@ -63,7 +66,7 @@ class MoveableEntity extends Entity {
         }
         if (this.looking(x, y) != undefined && this.looking(x, y).name == 'cart_s') {
             if (this.inv[this.hand].price != 0 && this.inv[this.hand] != 0) {
-                addMoney(this.inv[this.hand].price);
+                addMoney(typeof scaleSellPrice === 'function' ? scaleSellPrice(this.inv[this.hand].price) : this.inv[this.hand].price);
                 moneySound.play();
                 // Automated sales count toward the player's active sell goal.
                 if (player && player.quests && player.current_quest !== undefined) {
@@ -185,10 +188,11 @@ class MoveableEntity extends Entity {
                 const seedMin = (itemDefinition.seed_min || 1) + 1;
                 const seedMax = (itemDefinition.seed_max || 3) + 2;
                 if(checkForSpace(this, held.seed_num)){
-                    const seedAmount = floor(random(seedMin, seedMax + 1));
+                    let seedAmount = floor(random(seedMin, seedMax + 1));
+                    if (typeof scaleSeedAmount === 'function') seedAmount = scaleSeedAmount(seedAmount);
                     held.amount -= 1;
                     if (held.amount == 0) this.inv[this.hand] = 0;
-                    addItem(this, held.seed_num, seedAmount);
+                    if (seedAmount > 0) addItem(this, held.seed_num, seedAmount);
                 }
             }
         }

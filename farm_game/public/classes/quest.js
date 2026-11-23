@@ -101,6 +101,11 @@ class Quest {
                         this.goals[i].done = savedGoal.done;
                     }
                 }
+                else if (typeof rebuildCustomRuleGoal === 'function') {
+                    // Win-condition goals from custom rules (custom-rules.js)
+                    const rebuilt = rebuildCustomRuleGoal(this.goals[i]);
+                    if (rebuilt) this.goals[i] = rebuilt;
+                }
             }
         }
     }

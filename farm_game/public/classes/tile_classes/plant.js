@@ -53,23 +53,26 @@ class Plant extends Tile {
     }
 
     grow(x, y) {
-        this.growTimer++;
-        
-        // Apply weather modifiers to growth rate
+        // Custom rules (custom-rules.js); defaults reproduce the original numbers.
+        const rule = (key, fallback) => typeof customRule === 'function' ? customRule(key) : fallback;
+
+        // Growth per frame is 1, adjusted by weather/bed modifiers (fractions of
+        // that base), then scaled by the Crop Growth Speed rules below.
+        let growthRate = 1;
         if (typeof currentWeather !== 'undefined') {
             if (currentWeather === 'rain' || currentWeather === 'thunderstorm' || currentWeather === 'sunshower') {
-                // Any rainy weather makes plants grow faster (80 ticks instead of 100)
-                this.growTimer += 0.25;
+                // Any rainy weather makes plants grow faster (+25% by default)
+                growthRate += rule('rainGrowthBonus', 25) / 100;
             } else if (currentWeather === 'overcast') {
-                // Overcast makes plants grow slower (125 ticks instead of 100)
-                this.growTimer -= 0.2;
+                // Overcast makes plants grow slower (-20% by default)
+                growthRate -= rule('overcastGrowthPenalty', 20) / 100;
             }
             // Clear weather has no modifier (normal growth)
         }
         
-        // Bonus growth rate when planted on beds
+        // Bonus growth rate while the player sleeps in a bed (+200% by default)
         if (player && player.touching && player.touching.name == 'bed') {
-            this.growTimer += 2;
+            growthRate += rule('bedGrowthBonus', 200) / 100;
         }
         
         // Check for water every frame so texture updates immediately
@@ -102,8 +105,10 @@ class Plant extends Tile {
         // Heatwave: crops without a sprinkler in range grow at half speed
         // (hand-watering keeps them alive but doesn't shield them from the heat).
         if (typeof currentWeather !== 'undefined' && currentWeather === 'heatwave' && water_found === 0) {
-            this.growTimer -= 0.5;
+            growthRate -= rule('heatwaveGrowthPenalty', 50) / 100;
         }
+        const growthScale = typeof getCropGrowthScale === 'function' ? getCropGrowthScale(this.name) : 1;
+        this.growTimer += Math.max(0, growthRate) * growthScale;
 
         // Rain counts as water source for all plants
         if (typeof currentWeather !== 'undefined' && 
@@ -111,7 +116,7 @@ class Plant extends Tile {
             water_found += this.waterneeded; // Rain satisfies all water needs
         }
         
-        this.watermet = (water_found >= this.waterneeded) || this.wateredDay === days;
+        this.watermet = !rule('cropsNeedWater', true) || (water_found >= this.waterneeded) || this.wateredDay === days;
         this.waterChecked = true; // Mark that we've checked water at least once
         
         // Only grow when it's time to grow
@@ -128,9 +133,14 @@ class Plant extends Tile {
                 }
                 
                 // Plant overcrowding - cap age and start losing attempts
-                if (this.age > all_imgs[this.png].length - 2 && this.deathAttempts > 0) {
-                    this.age = all_imgs[this.png].length - 2;
-                    this.deathAttempts -= 1;
+                if (this.age > all_imgs[this.png].length - 2) {
+                    if (!rule('overripeCropsDie', true)) {
+                        // Rotting disabled: ripe crops wait forever
+                        this.age = all_imgs[this.png].length - 2;
+                    } else if (this.deathAttempts > 0) {
+                        this.age = all_imgs[this.png].length - 2;
+                        this.deathAttempts -= 1;
+                    }
                 }
                 
                 // Plant died from overcrowding (stayed ripe too long without harvest)
@@ -139,7 +149,7 @@ class Plant extends Tile {
                     levels[y][x].map[plant_grid_y][plant_grid_x] = new_tile_from_num(5, this.pos.x, this.pos.y);
                 }
             }
-            else {
+            else if (rule('dryCropsDie', true)) {
                 // No water - lose an attempt
                 this.deathAttempts -= 1;
                 if (this.deathAttempts <= 0) {

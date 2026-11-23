@@ -1,3 +1,7 @@
+:root {
+    --title-menu-background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+}
+
 @font-face {
     font-family: pixelFont;
     src: url('pixelFont.ttf');
@@ -1012,7 +1016,7 @@ button {
     left: 0;
     height: 100dvh;
     width: 100dvw;
-    background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+    background: var(--title-menu-background);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1132,7 +1136,7 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+    background: var(--title-menu-background);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1298,23 +1302,26 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    height: 100dvh;
+    box-sizing: border-box;
+    background: var(--title-menu-background);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: safe center;
     z-index: 999;
     pointer-events: auto;
     gap: 20px;
     overflow-y: auto;
+    touch-action: pan-y;
     padding: 20px;
 }
 
 .options-title {
     font-family: pixelFont, monospace;
     font-size: 32px;
-    color: rgb(255, 255, 255);
-    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+    color: #203f43;
+    text-shadow: none;
     margin: 0;
     padding: 0;
     text-align: center;
@@ -2056,7 +2063,12 @@ button {
     transition: width 0.18s ease, max-width 0.18s ease;
 }
 
-#config-overlay[data-active-tab="items"] .config-modal {
+#config-overlay[data-active-tab="items"] .config-modal,
+#config-overlay[data-active-tab="start"] .config-modal,
+#config-overlay[data-active-tab="economy"] .config-modal,
+#config-overlay[data-active-tab="goals"] .config-modal,
+#config-overlay[data-active-tab="people"] .config-modal,
+#config-overlay[data-active-tab="map"] .config-modal {
     width: min(96vw, 1120px);
     max-width: 1120px;
 }
@@ -2117,16 +2129,6 @@ button {
     display: flex;
 }
 
-.config-panel-help {
-    font-family: pixelFont, monospace;
-    font-size: 12px;
-    color: rgba(255,255,255,0.85);
-    padding: 10px 12px;
-    background: rgba(55,32,16,0.35);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 6px;
-}
-
 .config-section {
     display: flex;
     flex-direction: column;
@@ -2154,16 +2156,94 @@ button {
 .config-input {
     flex: 1;
     min-width: 140px;
-    padding: 8px 10px;
-    border-radius: 4px;
-    border: 2px solid rgb(149,108,65);
-    font-size: 16px;
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    font-family: pixelFont, monospace;
+    font-size: 15px;
+    color: #fff7d6;
+    background: rgba(30, 16, 8, 0.72);
+    border: 2px solid rgba(95, 62, 30, 0.9);
+    border-radius: 8px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.25);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.config-checkbox {
-    width: 24px;
-    height: 24px;
-    accent-color: rgb(255,255,0);
+.config-input::placeholder {
+    color: rgba(255,247,214,0.5);
+}
+
+.config-input:hover {
+    border-color: rgba(150, 105, 60, 0.95);
+}
+
+.config-input:focus {
+    outline: none;
+    border-color: rgba(255, 221, 114, 0.9);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.25), 0 0 0 2px rgba(255, 221, 114, 0.18);
+}
+
+/* Number fields in label/value rows: compact, right-aligned, no spinners */
+.config-row .config-input[type="number"] {
+    flex: 0 0 180px;
+    min-width: 0;
+    text-align: right;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.config-row .config-input[type="number"]::-webkit-outer-spin-button,
+.config-row .config-input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* On/off switch for boolean settings (a styled checkbox). */
+.config-switch {
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    flex: 0 0 auto;
+    width: 48px;
+    height: 26px;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.config-switch::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.55);
+    border-radius: 2px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.config-switch:hover {
+    border-color: rgba(0, 0, 0, 0.7);
+}
+
+.config-switch:checked {
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
+}
+
+.config-switch:checked::before {
+    transform: translateX(22px);
+    background: rgb(255, 255, 0);
+}
+
+.config-switch:focus-visible {
+    outline: 2px solid rgb(255, 255, 0);
+    outline-offset: 2px;
 }
 
 .config-help {
@@ -2205,6 +2285,12 @@ button {
     color: #fff;
     margin-top: 8px;
     text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+}
+
+.config-section > .config-subtitle:first-child {
+    margin-top: 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2);
 }
 
 .config-slider {
@@ -2630,6 +2716,912 @@ button {
     border-radius: 6px;
 }
 
+/* Starting inventory tab */
+.config-start-slots {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.config-start-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 6px;
+    background: rgba(43, 24, 12, 0.7);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+}
+
+.config-start-slot.empty {
+    border-style: dashed;
+    background: rgba(43, 24, 12, 0.4);
+}
+
+.config-start-slot.selected {
+    border-color: rgba(255, 221, 114, 0.95);
+    box-shadow: 0 0 0 2px rgba(255, 221, 114, 0.25);
+}
+
+.config-start-slot-btn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 72px;
+    padding: 14px 4px 6px;
+    font-family: pixelFont, monospace;
+    color: #fff;
+    background: rgba(255,255,255,0.06);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.config-start-slot.empty .config-start-slot-btn .config-sprite-label {
+    color: rgba(255,255,255,0.5);
+}
+
+.config-start-slot-num {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+}
+
+.config-start-slot-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px;
+}
+
+.config-start-amount {
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    box-sizing: border-box;
+    padding: 0 6px;
+    font-family: pixelFont, monospace;
+    font-size: 13px;
+    color: #fff;
+    text-align: right;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.config-start-amount::-webkit-outer-spin-button,
+.config-start-amount::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.config-start-remove {
+    min-width: 30px;
+    min-height: 30px;
+    font-size: 16px;
+    line-height: 1;
+    color: #fff;
+    background: rgba(160, 50, 40, 0.75);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.config-start-picker {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+/* Picker buttons carry .active only to skip the disabled greyscale; give them
+   a neutral look instead of the "enabled" green. */
+.config-grid-item.config-start-pick {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.18);
+}
+
+.config-grid-item.config-start-pick:hover {
+    background: rgba(31,122,31,0.75);
+    border-color: #2aa12a;
+}
+
+.config-start-pick[hidden] {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .config-start-slots {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* Presets & sharing tab */
+.config-status {
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    color: #fff;
+    padding: 10px 12px;
+    background: rgba(31,122,31,0.75);
+    border: 1px solid rgba(188,255,167,0.4);
+    border-radius: 6px;
+}
+
+.config-status.error {
+    background: rgba(160, 50, 40, 0.8);
+    border-color: rgba(255, 180, 170, 0.45);
+}
+
+.config-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.config-preset-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px;
+    text-align: left;
+    color: #fff;
+    background: rgba(43, 24, 12, 0.7);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
+}
+
+.config-preset-card:hover {
+    background: rgba(31,122,31,0.75);
+    border-color: #2aa12a;
+}
+
+.config-preset-card:active {
+    transform: translateY(1px);
+}
+
+.config-preset-name {
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+    word-break: break-word;
+}
+
+.config-preset-desc {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    color: rgba(255,255,255,0.78);
+}
+
+.config-preset-save-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.config-preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.config-preset-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    background: rgba(43, 24, 12, 0.6);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+}
+
+.config-preset-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.config-preset-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.config-preset-actions .config-btn,
+.config-btn.config-btn-small {
+    width: auto;
+    font-size: 12px;
+    padding: 6px 10px;
+}
+
+.config-btn.config-btn-danger {
+    background-color: rgb(130, 45, 35);
+    border-color: rgb(175, 80, 65);
+}
+
+.config-btn.config-btn-danger:hover {
+    background-color: rgb(160, 55, 42);
+}
+
+.config-share-code {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #fff7d6;
+    background: rgba(30, 16, 8, 0.72);
+    border: 2px solid rgba(95, 62, 30, 0.9);
+    border-radius: 8px;
+    resize: vertical;
+    word-break: break-all;
+}
+
+.config-share-code:focus {
+    outline: none;
+    border-color: rgba(255, 221, 114, 0.9);
+}
+
+/* Extended rule tabs (custom-rules.js) */
+.config-row[hidden],
+.config-field[hidden],
+.config-map-tile[hidden] {
+    display: none;
+}
+
+/* Settings rows: label + help on the left, controls in a fixed-width column
+   on the right so every row's control lines up. */
+.config-row.config-rule-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    align-items: center;
+    column-gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.config-row.config-rule-row[hidden] {
+    display: none;
+}
+
+.config-row.config-rule-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.config-section > .config-subtitle + .config-rule-row,
+.config-section > .config-help + .config-rule-row {
+    padding-top: 2px;
+}
+
+.config-rule-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.config-rule-control {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+.config-rule-row .config-rule-control .config-input.config-rule-number {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    text-align: right;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.config-rule-number::-webkit-outer-spin-button,
+.config-rule-number::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.config-rule-control .config-unit {
+    flex: 0 0 44px;
+    min-width: 0;
+}
+
+.config-rule-control .config-select {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+}
+
+.config-rule-help {
+    font-family: pixelFont, monospace;
+    font-size: 10px;
+    line-height: 1.35;
+    color: rgba(255,255,255,0.65);
+}
+
+.config-number-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.config-number {
+    width: 110px;
+    min-width: 0;
+    flex: 0 0 auto;
+    text-align: right;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.config-number::-webkit-outer-spin-button,
+.config-number::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.config-unit {
+    min-width: 34px;
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+}
+
+.config-select {
+    flex: 0 1 260px;
+    min-width: 0;
+    max-width: 100%;
+    cursor: pointer;
+}
+
+.config-select option {
+    background: #2a160a;
+    color: #fff7d6;
+}
+
+.config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.config-field-label {
+    font-family: pixelFont, monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.config-field .config-input,
+.config-field .config-select {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+.config-inline-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.config-inline-row .config-field {
+    flex: 1 1 200px;
+}
+
+.config-crop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+}
+
+.config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.config-list-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(43, 24, 12, 0.6);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+}
+
+.config-list-row .config-field {
+    flex: 1 1 120px;
+}
+
+/* Co-op contracts editor: district groups of contract cards */
+.coop-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.coop-editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.coop-editor-count {
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    color: #fff;
+}
+
+.coop-district {
+    --accent: #ffe58a;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 12px;
+    background: rgba(43, 24, 12, 0.45);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+}
+
+.coop-district[data-district="Cloudy Meadows"] { --accent: #79c94f; }
+.coop-district[data-district="Poly Park"] { --accent: #44c2ad; }
+.coop-district[data-district="Auto Farms"] { --accent: #9fb3c8; }
+.coop-district[data-district="Swiggy Swamps"] { --accent: #a4b545; }
+.coop-district[data-district="The Big City"] { --accent: #a98be0; }
+.coop-district[data-district="Beach"] { --accent: #e8bb62; }
+
+.coop-district-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.coop-district-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.25);
+}
+
+.coop-district-name {
+    font-family: pixelFont, monospace;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+}
+
+.coop-district-count {
+    min-width: 20px;
+    padding: 2px 7px;
+    font-family: pixelFont, monospace;
+    font-size: 10px;
+    text-align: center;
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.1);
+    border-radius: 999px;
+}
+
+.coop-district-add {
+    margin-left: auto;
+    padding: 5px 10px;
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.coop-district-add:hover:not(:disabled) {
+    color: #1e1008;
+    background: var(--accent);
+}
+
+.coop-district-add:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.coop-district-empty {
+    padding: 10px;
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: 8px;
+}
+
+.coop-district-empty[hidden] {
+    display: none;
+}
+
+.coop-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 8px;
+}
+
+.coop-card-grid:empty {
+    display: none;
+}
+
+.coop-card {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+    padding: 10px;
+    background: linear-gradient(180deg, rgba(62, 35, 16, 0.85) 0%, rgba(43, 24, 12, 0.85) 100%);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    transition: border-color 0.15s ease;
+}
+
+.coop-card:hover,
+.coop-card:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.coop-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+}
+
+.coop-card-icon img {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+}
+
+.coop-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.coop-card-title {
+    width: 100%;
+    min-width: 0;
+    padding: 2px 0;
+    font-family: pixelFont, monospace;
+    font-size: 13px;
+    color: #fff;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed transparent;
+    border-radius: 0;
+    transition: border-color 0.15s ease;
+}
+
+.coop-card-title:hover {
+    border-bottom-color: rgba(255,255,255,0.3);
+}
+
+.coop-card-title:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+}
+
+.coop-card-terms {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.coop-card-word {
+    font-family: pixelFont, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    white-space: nowrap;
+}
+
+.coop-card .config-input {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
+    border-width: 1px;
+    border-radius: 6px;
+}
+
+.coop-card .coop-card-number {
+    flex: 0 0 64px;
+    width: 64px;
+    text-align: right;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.coop-card .coop-card-number::-webkit-outer-spin-button,
+.coop-card .coop-card-number::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.coop-card .coop-card-item {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.coop-card-reward .coop-card-number {
+    flex-basis: 80px;
+    width: 80px;
+    color: #ffe58a;
+}
+
+.coop-card-coin {
+    width: 16px;
+    height: 16px;
+    image-rendering: pixelated;
+}
+
+.coop-card-remove {
+    align-self: start;
+}
+
+@media (max-width: 768px) {
+    .coop-card-grid {
+        grid-template-columns: 1fr;
+    }
+    .coop-card .config-input {
+        font-size: 16px;
+    }
+}
+
+.config-list-name {
+    flex: 1 1 160px;
+    align-self: center;
+    font-family: pixelFont, monospace;
+    font-size: 13px;
+    color: #fff;
+}
+
+.config-quest-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    text-align: left;
+}
+
+.config-quest-name {
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.config-quest-npc {
+    font-size: 10px;
+    opacity: 0.75;
+}
+
+.config-quest-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.config-quest-card {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+    align-items: end;
+    padding: 12px;
+    background: rgba(43, 24, 12, 0.65);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px;
+}
+
+.config-dialogue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.config-dialogue-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    background: rgba(43, 24, 12, 0.6);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+}
+
+.config-dialogue-text {
+    font-family: pixelFont, monospace;
+    word-break: normal;
+}
+
+.config-dialogue-reply {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 12px;
+}
+
+.config-dialogue-arrow {
+    color: #ffe58a;
+    font-size: 14px;
+    width: 14px;
+}
+
+.config-dialogue-text.edited,
+.config-dialogue-reply .config-input.edited {
+    border-color: rgba(255, 221, 114, 0.85);
+}
+
+.config-map-toolbar .config-chip-bar {
+    align-self: center;
+}
+
+.config-map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.config-map-canvas-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.config-map-canvas {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 23 / 19;
+    image-rendering: pixelated;
+    border: 2px solid rgba(95, 62, 30, 0.9);
+    border-radius: 6px;
+    background: #1e1008;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.config-map-palette-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.config-map-selected {
+    font-family: pixelFont, monospace;
+    font-size: 12px;
+    color: #ffe58a;
+}
+
+.config-map-palette {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    grid-auto-rows: 84px;
+    gap: 6px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding: 2px 4px 2px 2px;
+}
+
+/* Uniform tile buttons: fixed cell size, framed thumbnail, two-line name. */
+.config-map-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    height: 100%;
+    min-width: 0;
+    padding: 6px 4px 5px;
+    font-family: pixelFont, monospace;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
+}
+
+.config-map-tile:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+.config-map-tile:active {
+    transform: translateY(2px);
+    box-shadow: none;
+}
+
+.config-map-tile:focus-visible {
+    outline: 2px solid rgb(255, 255, 0);
+    outline-offset: 1px;
+}
+
+.config-map-tile.active {
+    color: #fff;
+    background: rgba(255, 255, 0, 0.3);
+    border-color: rgb(255, 255, 0);
+}
+
+.config-map-thumb {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 3px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
+    image-rendering: pixelated;
+}
+
+.config-map-tile.active .config-map-thumb {
+    border-color: rgba(255, 255, 0, 0.6);
+}
+
+.config-map-tile-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    width: 100%;
+    font-size: 9px;
+    line-height: 1.25;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+    .config-row.config-rule-row {
+        grid-template-columns: minmax(0, 1fr) 160px;
+        column-gap: 10px;
+    }
+    .config-map-layout {
+        grid-template-columns: 1fr;
+    }
+    .config-number {
+        width: 90px;
+    }
+}
+
 @media (max-width: 768px) {
     .tutorial-overlay {
         padding: 12px;
@@ -2737,7 +3729,8 @@ button {
     }
     .config-subtitle { font-size: 14px; }
     .config-label { font-size: 12px; }
-    .config-input { font-size: 16px; padding: 6px 8px; }
+    .config-input { font-size: 16px; padding: 0 10px; min-height: 40px; }
+    .config-row .config-input[type="number"] { flex-basis: 130px; }
     .config-btn { width: 100%; padding: 10px; }
     .config-actions { flex-direction: column; gap: 8px; }
     .config-grid { 
@@ -2797,7 +3790,7 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+    background: var(--title-menu-background);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2847,7 +3840,7 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+    background: var(--title-menu-background);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2979,23 +3972,26 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    height: 100dvh;
+    box-sizing: border-box;
+    background: var(--title-menu-background);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: safe center;
     z-index: 999;
     pointer-events: auto;
     gap: 20px;
     overflow-y: auto;
+    touch-action: pan-y;
     padding: 20px;
 }
 
 .options-title {
     font-family: pixelFont, monospace;
     font-size: 32px;
-    color: rgb(255, 255, 255);
-    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+    color: #203f43;
+    text-shadow: none;
     margin: 0;
     padding: 0;
     text-align: center;
@@ -3225,8 +4221,13 @@ button {
     }
 }
 
-/* Credits Menu Styles */
+/* Credits Menu Styles
+   Sizes are multiples of --credits-unit: 1.4px at full size (40% larger than
+   the original), shrinking on short or narrow screens but never below the
+   original 1px. The stack is ~480 units tall; overflow scrolls inside
+   .credits-content. */
 .credits-menu {
+    --credits-unit: max(1px, min(calc(1.4px * var(--ui-scale)), calc((100dvh - max(24px, 8vh)) / 480), calc(100vw / 400)));
     position: fixed;
     top: 0;
     left: 0;
@@ -3234,14 +4235,14 @@ button {
     height: 100%;
     height: 100dvh;
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.85);
+    background: var(--title-menu-background);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 999;
     pointer-events: auto;
-    gap: clamp(8px, 2vh, 20px);
+    gap: max(8px, calc(20 * var(--credits-unit)));
     overflow: hidden;
     padding: max(12px, 4vh, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
              max(12px, 4vh, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
@@ -3250,9 +4251,9 @@ button {
 .credits-title {
     flex-shrink: 0;
     font-family: pixelFont, monospace;
-    font-size: 36px;
-    color: rgb(255, 255, 255);
-    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+    font-size: calc(36 * var(--credits-unit) * var(--acc-text-scale));
+    color: #203f43;
+    text-shadow: none;
     margin: 0;
     padding: 0;
     text-align: center;
@@ -3260,21 +4261,21 @@ button {
 
 .credits-content {
     box-sizing: border-box;
-    width: min(100%, 680px);
+    width: min(100%, calc(680 * var(--credits-unit)));
     min-height: 0;
     flex: 0 1 auto;
     background-color: rgba(187, 132, 75, 0.9);
     border: 5px solid rgb(149, 108, 65);
     border-radius: 4px;
-    padding: 35px;
-    max-height: 480px;
+    padding: calc(35 * var(--credits-unit));
+    max-height: calc(480 * var(--credits-unit));
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     touch-action: pan-y;
     color: rgb(255, 255, 255);
     font-family: pixelFont, monospace;
-    font-size: .8rem;
+    font-size: calc(12.8 * var(--credits-unit) * var(--acc-text-scale));
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
     line-height: 2;
 }
@@ -3283,12 +4284,12 @@ button {
     flex-shrink: 0;
     min-height: 44px;
     font-family: pixelFont, monospace;
-    font-size: 18px;
+    font-size: calc(18 * var(--credits-unit) * var(--acc-text-scale));
     color: rgb(255, 255, 255);
     background-color: rgb(100, 70, 40);
     border: 3px solid rgb(149, 108, 65);
     border-radius: 4px;
-    padding: 12px 40px;
+    padding: calc(12 * var(--credits-unit)) calc(40 * var(--credits-unit));
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.05s ease;
     text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
@@ -3312,7 +4313,7 @@ button {
 .credits-line {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: calc(12 * var(--credits-unit));
     animation: fly-in-credits .5s ease-in both;
     transform: scale(1);
 }
@@ -3337,8 +4338,9 @@ button {
 }
 
 .credits-portrait {
-    width: 32px;
-    height: 32px;
+    /* 32px art: 64px (crisp 2x) at full size. */
+    width: round(calc(32 * var(--credits-unit) / 0.7), 1px);
+    height: round(calc(32 * var(--credits-unit) / 0.7), 1px);
     flex-shrink: 0;
     object-fit: contain;
     image-rendering: pixelated;
@@ -5045,6 +6047,8 @@ body.acc-high-contrast #mobile-inventory-overlay {
 
 html.acc-high-contrast .options-title,
 body.acc-high-contrast .options-title,
+html.acc-high-contrast .credits-title,
+body.acc-high-contrast .credits-title,
 html.acc-high-contrast .options-section-title,
 body.acc-high-contrast .options-section-title,
 html.acc-high-contrast .slider-row label,
@@ -5266,6 +6270,120 @@ body.acc-high-contrast .mobile-inv-slot.selected {
         padding: 12px 16px !important;
     }
 }
+
+/* Three-world title menu. Every size is a multiple of --title-menu-unit:
+   1.4px at full size (40% larger than the original menu), shrinking on
+   shorter screens so the logo and all five actions fit without scrolling.
+   The whole stack is ~860 units tall; 48px covers the container padding. */
+:root {
+    --title-menu-unit: min(calc(1.4px * var(--ui-scale)), calc((100dvh - 48px) / 860));
+}
+#main-menu-container {
+    box-sizing: border-box;
+    min-height: 100dvh;
+    height: 100dvh;
+    gap: max(8px, calc(20 * var(--title-menu-unit)));
+    padding: max(18px, env(safe-area-inset-top)) 20px max(18px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+    justify-content: safe center;
+}
+#main-menu-container .main-menu-title-image {
+    width: min(calc(400 * var(--title-menu-unit)), 80vw) !important;
+    margin: 0;
+    flex-shrink: 0;
+}
+#main-menu-container .deluxe-text {
+    font-size: max(18px, min(calc(42 * var(--title-menu-unit) * var(--acc-text-scale)), 9vw)) !important;
+    letter-spacing: max(3px, min(calc(8 * var(--title-menu-unit)), 1.5vw));
+    margin: 0;
+}
+.main-menu-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: max(6px, calc(12 * var(--title-menu-unit)));
+    width: min(calc(340 * var(--title-menu-unit) * var(--acc-control-scale)), 100%);
+    flex-shrink: 0;
+}
+.main-menu-actions .main-menu-button {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-height: 44px;
+    padding: max(8px, calc(15 * var(--title-menu-unit))) max(12px, calc(18 * var(--title-menu-unit))) !important;
+    font-size: max(14px, calc(18 * var(--title-menu-unit) * var(--acc-text-scale)));
+    text-align: center;
+    text-decoration: none;
+}
+.main-menu-actions [hidden] { display: none !important; }
+#main-menu-container .main-menu-language-control { flex-shrink: 0; margin: 0; }
+.world-menu-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    overflow-y: auto;
+    padding: max(30px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    background: var(--title-menu-background);
+    color: #203f43;
+    font-family: pixelFont, monospace;
+}
+.world-menu-panel h1 { margin: 0; font-size: clamp(24px, 4vw, 36px); text-align: center; }
+.world-menu-intro { max-width: 800px; margin: 0; text-align: center; font-size: 16px; line-height: 1.6; }
+.world-slot-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; width: min(1080px, 100%); }
+.world-slot-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px;
+    border: 3px solid #577f66;
+    border-radius: 8px;
+    background: #f3fff1;
+    box-shadow: 0 5px 0 #3d66572b;
+    min-width: 0;
+}
+.world-slot-card h2 { margin: 0; font-size: 23px; }
+.world-slot-difficulty { margin: 0; color: #345e35; font-size: 16px; }
+.world-slot-empty { border-style: dashed; background: #f3fff1a6; }
+.world-slot-hint { font-size: 16px; line-height: 1.6; }
+.world-slot-stats { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; margin: 8px 0 18px; font-size: 12px; line-height: 1.6; }
+.world-slot-stats dt { color: #4d6663; }
+.world-slot-stats dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.world-slot-stats .world-slot-detail-label { grid-column: 1 / -1; margin-top: 4px; }
+.world-slot-stats .world-slot-detail-value { grid-column: 1 / -1; margin-top: -8px; text-align: left; }
+.world-slot-actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+.world-slot-play, .world-slot-delete, .world-menu-back {
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    min-height: 44px;
+    padding: 12px 16px;
+    border: 2px solid #315a3d;
+    border-radius: 4px;
+    color: white;
+    background: #3b6949;
+}
+.world-slot-play:hover, .world-menu-back:hover { background: #2c5639; }
+.world-slot-delete { background: transparent; color: #8c3029; border-color: #ba776c; }
+.world-slot-delete:hover { background: #ffe6df; }
+.world-menu-back { min-width: 180px; flex-shrink: 0; }
+@media (max-width: 760px) {
+    .world-slot-grid { grid-template-columns: 1fr; max-width: 440px; }
+    .world-menu-panel { padding-left: 16px; padding-right: 16px; }
+    .world-slot-card { padding: 18px; }
+}
+@media (max-height: 500px) {
+    #main-menu-container { gap: 8px; }
+    #main-menu-container .main-menu-title-image { width: 65px !important; }
+    #main-menu-container .main-menu-actions { gap: 6px; }
+}
+html.acc-high-contrast .world-menu-panel { background: #111; color: #fff; }
+html.acc-high-contrast .world-slot-card { background: #222; border-color: #fff; color: #fff; }
+html.acc-high-contrast .world-slot-difficulty,
+html.acc-high-contrast .world-slot-stats dt { color: #ffe56d; }
 
 /* Gamepad/controller focus highlight for DOM menu buttons */
 .gp-focus {
@@ -5500,7 +6618,6 @@ body.acc-high-contrast .mobile-inv-slot.selected {
     border-color: rgba(0, 0, 0, 0.3);
 }
 
-.config-panel-help,
 .config-section,
 .config-items-toolbar,
 .config-item-row,

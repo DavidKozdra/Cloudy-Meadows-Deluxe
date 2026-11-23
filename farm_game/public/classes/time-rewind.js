@@ -96,7 +96,9 @@ function captureDaySnapshot(dayNumber) {
     const keys = Object.keys(timeRewindSnapshots)
         .map(Number)
         .sort((a, b) => a - b);
-    while (keys.length > MAX_SNAPSHOTS) {
+    // Rewind depth can be changed by the Time Watch custom rule (Powers tab).
+    const maxSnapshots = typeof customRule === 'function' ? customRule('timeWatchDays') : MAX_SNAPSHOTS;
+    while (keys.length > maxSnapshots) {
         const oldest = keys.shift();
         delete timeRewindSnapshots[oldest];
     }

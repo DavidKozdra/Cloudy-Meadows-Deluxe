@@ -130,6 +130,9 @@ function syncAccessibilityControls(sourceOptions) {
 
 function applyAccessibilityPrefs(sourceOptions) {
     const accessibilityOptions = getAccessibilityOptions(sourceOptions || getStoredOptions() || {});
+    // A custom game can force 2D or 3D (Powers tab); the player's own setting is kept.
+    const forcedView = typeof getForcedViewMode === 'function' ? getForcedViewMode() : null;
+    if (forcedView !== null) accessibilityOptions.is3DMode = forcedView;
     cachedAccessibilityOptions = accessibilityOptions;
     const was3DMode = typeof is3DMode !== 'undefined' && is3DMode;
     if (typeof is3DMode !== 'undefined') {
@@ -268,19 +271,14 @@ function updateCanvasPointerEvents() {
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
 
-    const mainMenuVisible = document.getElementById('main-menu-container')?.style.display !== 'none';
-    const difficultyMenuVisible = document.getElementById('difficulty-menu')?.style.display !== 'none';
-    const optionsMenuVisible = document.getElementById('options-menu')?.style.display !== 'none';
-    const creditsMenuVisible = document.getElementById('credits-menu')?.style.display !== 'none';
-    const pauseMenuVisible = document.getElementById('pause-menu')?.style.display !== 'none';
-    const questsVisible = document.querySelector('.quests-container')?.style.display !== 'none';
-    const loseScreenVisible = document.getElementById('lose-screen')?.style.display !== 'none';
-    const configModalVisible = document.getElementById('config-overlay')?.style.display !== 'none';
-    const tutorialVisible = document.getElementById('tutorial-overlay')?.style.display !== 'none';
-    const cooperativeExchangeOverlay = document.getElementById('cooperative-exchange-overlay');
-    const cooperativeExchangeVisible = !!cooperativeExchangeOverlay && cooperativeExchangeOverlay.style.display !== 'none';
-
-    const anyMenuVisible = mainMenuVisible || difficultyMenuVisible || optionsMenuVisible || creditsMenuVisible || pauseMenuVisible || questsVisible || loseScreenVisible || configModalVisible || tutorialVisible || cooperativeExchangeVisible;
+    const anyMenuVisible = [
+        '#main-menu-container', '#world-menu-panel', '#difficulty-menu', '#options-menu',
+        '#credits-menu', '#pause-menu', '.quests-container', '#lose-screen',
+        '#config-overlay', '#tutorial-overlay', '#cooperative-exchange-overlay'
+    ].some(selector => {
+        const element = document.querySelector(selector);
+        return element && element.style.display !== 'none';
+    });
     canvas.style.pointerEvents = anyMenuVisible ? 'none' : 'auto';
 }
 
@@ -321,36 +319,13 @@ function updateQuestContent(){
 }
 
 function start(){
-    triggerMenuFadeOut(() => {
-        startButton.hide();
-        optionsButton.hide();
-        creditsButton.hide();
-        const languageControl = document.getElementById('main-menu-language-control');
-        if (languageControl) languageControl.style.display = 'none';
-        resetControlsButton.hide();
-        clearButton.hide();
-        hideControls();
-        hidePaused();
-        title_screen = false;
-        if(localData.get('Day_curLvl_Dif') == null){
-            dificulty_screen = true;
-        }
-        paused = false;
-        levels[currentLevel_y][currentLevel_x].level_name_popup = true;
-
-        //turn off the title screen
-        title_screen = false;
-        hideMainMenu();
-
-        if (!dificulty_screen) {
-            scheduleContextualTutorials(250);
-        }
-    });
+    continueWorldGame();
 }
 
 function hasGameSave(){
     // Check only the keys that represent an actual world state, not options
     try {
+        if (typeof worldSaves !== 'undefined') return worldSaves.summary(worldSaves.activeId).valid;
         return localData.get('player') != null || localData.get('Day_curLvl_Dif') != null || localData.get('extralvlStuff') != null;
     } catch (err) {
         console.warn('Save detection failed, assuming no save', err);
@@ -573,6 +548,13 @@ function refreshSaveTransferButtons() {
 
 function getSavedLevelsForExport() {
     const savedLevels = {};
+    if (typeof localData.worldKeys === 'function') {
+        for (const key of localData.worldKeys()) {
+            const value = localData.get(key);
+            if (value && typeof value.name === 'string' && Array.isArray(value.map)) savedLevels[key] = value;
+        }
+        return savedLevels;
+    }
     for (let y = 0; y < levels.length; y++) {
         for (let x = 0; x < levels[y].length; x++) {
             const level = levels[y][x];
@@ -823,7 +805,7 @@ async function importSaveDataFromEditor() {
         return;
     }
 
-    if (!confirm('Importing save data will overwrite the current save and local settings. Continue?')) {
+    if (!confirm('Importing save data will overwrite the selected world and local settings. Your other worlds will be kept. Continue?')) {
         return;
     }
 
@@ -2230,78 +2212,7 @@ function showTitle(){
 }
 
 function showMainMenu(){
-    let container = document.getElementById('main-menu-container');
-    let startBtn = document.getElementById('start-btn');
-    if (!container) {
-        // Create structure =J BN,/
-        container = document.createElement('div');
-        container.id = 'main-menu-container';
-        container.className = 'main-menu';
-        document.body.appendChild(container);
-        
-        const titleImg = document.createElement('img');
-        titleImg.src = 'images/ui/Title_Screen.gif';
-        titleImg.alt = 'Title';
-        titleImg.className = 'main-menu-title-image';
-        container.appendChild(titleImg);
-
-        const deluxeText = document.createElement('div');
-        deluxeText.className = 'deluxe-text';
-        deluxeText.textContent = 'DELUXE';
-        container.appendChild(deluxeText);
-
-        const languageWrap = document.createElement('div');
-        languageWrap.className = 'main-menu-language-control';
-        const languageLabel = document.createElement('label');
-        languageLabel.className = 'main-menu-language-label';
-        languageLabel.htmlFor = 'dom-main-menu-language-select';
-        languageLabel.textContent = '🌐 ' + t('Language');
-        languageLabel.setAttribute('data-i18n-prefix', '🌐 ');
-        languageLabel.setAttribute('data-i18n', 'Language');
-        const languageSelect = createLanguageSelect('language-select main-menu-language-select');
-        languageSelect.id = 'dom-main-menu-language-select';
-        languageWrap.appendChild(languageLabel);
-        languageWrap.appendChild(languageSelect);
-        container.appendChild(languageWrap);
-
-        startBtn = document.createElement('button');
-        startBtn.id = 'start-btn';
-        startBtn.className = 'main-menu-button';
-        startBtn.textContent = t('Start'); // Default label in case save check fails early
-        startBtn.addEventListener('click', start);
-        container.appendChild(startBtn);
-
-        const optionsBtn = document.createElement('button');
-        optionsBtn.id = 'options-btn';
-        optionsBtn.className = 'main-menu-button';
-        optionsBtn.textContent = t('Options');
-        optionsBtn.setAttribute('data-i18n', 'Options');
-        optionsBtn.addEventListener('click', () => {
-            paused = !paused;
-            creditsOn = false;
-        });
-        container.appendChild(optionsBtn);
-
-        const creditsBtn = document.createElement('button');
-        creditsBtn.id = 'credits-btn';
-        creditsBtn.className = 'main-menu-button';
-        creditsBtn.textContent = t('Credits');
-        creditsBtn.setAttribute('data-i18n', 'Credits');
-        creditsBtn.addEventListener('click', () => {
-            creditsOn = !creditsOn;
-            paused = false;
-        });
-        container.appendChild(creditsBtn);
-    }
-    // Refresh label every time in case save data was added or cleared
-    const hasSavedGame = hasGameSave();
-    if (startBtn) {
-        startBtn.textContent = hasSavedGame ? t('Continue') : t('Start');
-    } else {
-        console.warn('Main menu start button missing');
-    }
-    container.style.display = 'flex';
-    updateCanvasPointerEvents();
+    showWorldMainMenu();
 }
 
 function hideMainMenu(){
@@ -2488,6 +2399,10 @@ function showDifficultyMenu(){
         backBtn.className = 'difficulty-back-btn';
         backBtn.textContent = 'Back';
         backBtn.addEventListener('click', () => {
+            if (typeof cancelNewWorld === 'function') {
+                cancelNewWorld();
+                return;
+            }
             dificulty_screen = false;
             title_screen = true;
             hideDifficultyMenu();
@@ -2547,6 +2462,10 @@ function showLoseScreen() {
 }
 
 function deleteSave() {
+    if (typeof localData.worldKeys === 'function') {
+        localData.clear();
+        return;
+    }
     localData.remove('player');
     localData.remove('Day_curLvl_Dif');
     localData.remove('extralvlStuff');
@@ -2563,11 +2482,13 @@ function deleteSave() {
 function selectDifficulty(difficulty){
     dificulty = difficulty;
     window.customRules = null;
+    if (typeof applyCustomRuleRuntime === 'function') applyCustomRuleRuntime();
     days = 0;
     dayOfWeek = 0;
     time = 0;
     timephase = 0;
     currentWeather = 'clear';
+    weatherLog = [];
     if (typeof lastRainDay !== 'undefined') {
         lastRainDay = -999;
     }
@@ -2602,6 +2523,7 @@ function selectDifficulty(difficulty){
             currentLevel_x,
             dificulty,
             currentWeather,
+            weatherLog,
             lastRainDay,
             lastFrogRainDay,
             heatwaveStartDay,
@@ -2617,6 +2539,7 @@ function selectDifficulty(difficulty){
     }
 
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+    if (typeof finishNewWorldSave === 'function') finishNewWorldSave();
     scheduleContextualTutorials(250);
 }
 
@@ -2627,6 +2550,7 @@ function selectCustomDifficulty(features){
     time = 0;
     timephase = 0;
     currentWeather = 'clear';
+    weatherLog = [];
     if (typeof lastRainDay !== 'undefined') {
         lastRainDay = -999;
     }
@@ -2659,6 +2583,8 @@ function selectCustomDifficulty(features){
         crittersEnabled: modalRules.crittersEnabled || null,
         areasEnabled: modalRules.areasEnabled || null,
         itemsEnabled: modalRules.itemsEnabled || null,
+        itemPrices: modalRules.itemPrices || {},
+        startingInventory: modalRules.startingInventory || null,
         itemPriceMultiplier: modalRules.itemPriceMultiplier ?? 100
     } : {
         moneyLoss: features[0].enabled,
@@ -2675,6 +2601,10 @@ function selectCustomDifficulty(features){
         itemPriceMultiplier: 100
     };
     window.customRules = rules;
+    // Keep every extended rule from the modal (Survival, Farming, Goals, map edits...).
+    if (modalRules && typeof normalizeExtendedRules === 'function') {
+        Object.assign(window.customRules, normalizeExtendedRules(modalRules));
+    }
     console.log('selectCustomDifficulty: Final rules with weatherWeights:', rules.weatherWeights);
     
     // Proceed directly into the game
@@ -2696,6 +2626,7 @@ function selectCustomDifficulty(features){
             currentLevel_x,
             dificulty,
             currentWeather,
+            weatherLog,
             lastRainDay,
             lastFrogRainDay,
             heatwaveStartDay,
@@ -2727,11 +2658,14 @@ function selectCustomDifficulty(features){
                 }
             }
         }
-        // Apply starting coins immediately on new games (no saved player yet)
+        // Apply starting coins/inventory immediately on new games (no saved player yet)
         try {
             const hasSavedPlayer = localData.get('player') != null;
             if (!hasSavedPlayer && typeof window.customRules?.startingCoins === 'number') {
                 player.coins = window.customRules.startingCoins;
+            }
+            if (!hasSavedPlayer) {
+                applyStartingInventory(player, window.customRules);
             }
         } catch (e) {
             // If localData is unavailable, fall back to applying when coins are zero
@@ -2741,14 +2675,26 @@ function selectCustomDifficulty(features){
         }
     }
 
+    // Extended custom rules: map edits, shop stock, dialogue, quests, win
+    // condition, health/hunger, time of day (custom-rules.js). New games only.
+    let isFreshCustomGame = true;
+    try { isFreshCustomGame = localData.get('player') == null; } catch (e) { /* assume new */ }
+    if (isFreshCustomGame && typeof applyNewGameCustomRules === 'function') {
+        applyNewGameCustomRules(player, window.customRules);
+    }
+
     // Apply NPC/critter filter rules immediately when starting with custom difficulty
     applyNPCFilterRules();
     applyCritterFilterRules();
     applyAreaRules();
     applyItemPrices();
     removeDisabledItemsFromInventory();
+    if (isFreshCustomGame && typeof applyCustomStartArea === 'function') {
+        applyCustomStartArea(player, window.customRules);
+    }
 
     levels[currentLevel_y][currentLevel_x].level_name_popup = true;
+    if (typeof finishNewWorldSave === 'function') finishNewWorldSave();
     scheduleContextualTutorials(250);
 }
 
@@ -3327,7 +3273,7 @@ function showTitleOptions(){
         dataSection.appendChild(dataTitle);
         const dataDescription = document.createElement('p');
         dataDescription.className = 'options-section-description';
-        dataDescription.textContent = 'Permanently remove saves and local settings.';
+        dataDescription.textContent = 'Copy or import the selected world. Clear All removes all three worlds and local settings.';
         dataSection.appendChild(dataDescription);
         const dataActions = document.createElement('div');
         dataActions.className = 'options-button-group';
@@ -3350,7 +3296,8 @@ function showTitleOptions(){
             if (confirm('Are you sure you want to clear all saved data and local settings? This cannot be undone.')) {
                 clear_anim = true;
                 try {
-                    localData.clear();
+                    if (typeof worldSaves !== 'undefined') worldSaves.clearAll();
+                    else localData.clear();
                     console.log('Data cleared from IndexedDB');
                     setTimeout(() => {
                         console.log('Reloading window...');
@@ -3479,6 +3426,764 @@ function hideTitleOptions(){
 }
 
 // ==================== CONFIG MODAL ====================
+// --- Starting inventory (custom rules) ---------------------------------------
+// customRules.startingInventory is an 8-slot hotbar stored by item *name*
+// (survives registry renumbering): each slot is {name, amount} or 0 for empty.
+// null/absent means "use the Player constructor's default kit".
+const STARTING_INVENTORY_SLOTS = 8;
+const STARTING_INVENTORY_MAX_AMOUNT = 9999;
+const DEFAULT_STARTING_INVENTORY = [
+    { name: 'Hoe', amount: 1 },
+    { name: 'Corn', amount: 5 },
+    { name: 'Corn Seed', amount: 5 }
+];
+
+// Coerce any stored/drafted value into exactly STARTING_INVENTORY_SLOTS slots,
+// dropping unknown item names and clamping amounts.
+function normalizeStartingInventory(entries) {
+    const out = [];
+    for (let i = 0; i < STARTING_INVENTORY_SLOTS; i++) {
+        const entry = Array.isArray(entries) ? entries[i] : 0;
+        if (!entry || typeof entry.name !== 'string') {
+            out.push(0);
+            continue;
+        }
+        const known = typeof all_items !== 'undefined' && all_items.some(def => def && def.name === entry.name);
+        if (!known) {
+            out.push(0);
+            continue;
+        }
+        const amount = Math.max(1, Math.min(STARTING_INVENTORY_MAX_AMOUNT, Math.floor(Number(entry.amount)) || 1));
+        out.push({ name: entry.name, amount });
+    }
+    return out;
+}
+
+// Turn a stored starting inventory into live Item instances for player.inv.
+function buildStartingInventory(entries) {
+    return normalizeStartingInventory(entries).map(entry => {
+        if (!entry) return 0;
+        return new_item_from_num(item_name_to_num(entry.name), entry.amount) || 0;
+    });
+}
+
+// Replace a fresh player's hotbar with the configured starting inventory.
+// Only call for new games: it overwrites whatever the player is holding.
+function applyStartingInventory(target, rules) {
+    if (!target || !rules || !Array.isArray(rules.startingInventory)) return false;
+    target.inv = buildStartingInventory(rules.startingInventory);
+    target.hand = 0;
+    return true;
+}
+
+// Draft state edited by the "Starting Inventory" config tab; populated from
+// customRules (or the default kit) each time the modal opens.
+let startingInventoryDraft = [];
+let startingInventorySelectedSlot = 0;
+
+function resetStartingInventoryDraft(entries) {
+    startingInventoryDraft = normalizeStartingInventory(entries || DEFAULT_STARTING_INVENTORY);
+    const firstEmpty = firstEmptyStartingSlot(0);
+    startingInventorySelectedSlot = firstEmpty === -1 ? 0 : firstEmpty;
+    renderStartingInventorySlots();
+}
+
+function firstEmptyStartingSlot(fromIndex = 0) {
+    for (let step = 0; step < STARTING_INVENTORY_SLOTS; step++) {
+        const i = (fromIndex + step) % STARTING_INVENTORY_SLOTS;
+        if (!startingInventoryDraft[i]) return i;
+    }
+    return -1;
+}
+
+function selectStartingInventorySlot(index) {
+    startingInventorySelectedSlot = index;
+    renderStartingInventorySlots();
+}
+
+// Clicking an item in the picker: bump its stack if already in the hotbar,
+// otherwise drop it into the selected slot and advance to the next empty one.
+function pickStartingInventoryItem(name) {
+    const existing = startingInventoryDraft.findIndex(entry => entry && entry.name === name);
+    if (existing !== -1) {
+        const entry = startingInventoryDraft[existing];
+        // Leave the selection alone so the next new item doesn't overwrite this stack.
+        entry.amount = Math.min(STARTING_INVENTORY_MAX_AMOUNT, entry.amount + 1);
+    } else {
+        startingInventoryDraft[startingInventorySelectedSlot] = { name, amount: 1 };
+        const next = firstEmptyStartingSlot(startingInventorySelectedSlot + 1);
+        if (next !== -1) startingInventorySelectedSlot = next;
+    }
+    renderStartingInventorySlots();
+}
+
+function renderStartingInventorySlots() {
+    const container = document.getElementById('cfg-start-slots');
+    if (!container) return;
+    container.innerHTML = '';
+
+    startingInventoryDraft.forEach((entry, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'config-start-slot' + (entry ? '' : ' empty') + (i === startingInventorySelectedSlot ? ' selected' : '');
+        slot.dataset.slot = String(i);
+
+        const slotBtn = document.createElement('button');
+        slotBtn.type = 'button';
+        slotBtn.className = 'config-start-slot-btn';
+        slotBtn.title = entry ? ('Slot ' + (i + 1) + ': ' + entry.name) : ('Slot ' + (i + 1) + ': empty');
+        slotBtn.addEventListener('click', () => selectStartingInventorySlot(i));
+
+        const num = document.createElement('span');
+        num.className = 'config-start-slot-num';
+        num.textContent = String(i + 1);
+        slotBtn.appendChild(num);
+
+        if (entry) {
+            const img = document.createElement('img');
+            img.className = 'config-sprite-img';
+            img.width = 32;
+            img.height = 32;
+            img.src = CONFIG_ITEM_SPRITE_MAP[entry.name] || 'images/items/junk.png';
+            img.alt = entry.name;
+            slotBtn.appendChild(img);
+        }
+
+        const label = document.createElement('span');
+        label.className = 'config-sprite-label';
+        label.textContent = entry ? entry.name : 'Empty';
+        slotBtn.appendChild(label);
+        slot.appendChild(slotBtn);
+
+        if (entry) {
+            const controls = document.createElement('div');
+            controls.className = 'config-start-slot-controls';
+
+            const amountInput = document.createElement('input');
+            amountInput.type = 'number';
+            amountInput.className = 'config-start-amount';
+            amountInput.min = '1';
+            amountInput.max = String(STARTING_INVENTORY_MAX_AMOUNT);
+            amountInput.value = String(entry.amount);
+            amountInput.title = 'Amount of ' + entry.name;
+            amountInput.addEventListener('input', () => {
+                const n = parseInt(amountInput.value);
+                if (!isNaN(n)) entry.amount = Math.max(1, Math.min(STARTING_INVENTORY_MAX_AMOUNT, n));
+            });
+            amountInput.addEventListener('change', () => {
+                amountInput.value = String(entry.amount);
+            });
+            controls.appendChild(amountInput);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'config-start-remove';
+            removeBtn.textContent = '×';
+            removeBtn.title = 'Remove ' + entry.name;
+            removeBtn.addEventListener('click', () => {
+                startingInventoryDraft[i] = 0;
+                startingInventorySelectedSlot = i;
+                renderStartingInventorySlots();
+            });
+            controls.appendChild(removeBtn);
+            slot.appendChild(controls);
+        }
+
+        container.appendChild(slot);
+    });
+
+    const hint = document.getElementById('cfg-start-hint');
+    if (hint) {
+        const selected = startingInventoryDraft[startingInventorySelectedSlot];
+        hint.textContent = selected
+            ? 'Slot ' + (startingInventorySelectedSlot + 1) + ' selected: picking a new item replaces ' + selected.name + '.'
+            : 'Slot ' + (startingInventorySelectedSlot + 1) + ' selected: click an item below to place it.';
+    }
+}
+
+function applyStartingInventoryPickerFilter() {
+    const grid = document.getElementById('cfg-start-picker');
+    if (!grid) return;
+    const query = (document.getElementById('cfg-start-search')?.value || '').trim().toLowerCase();
+    let visible = 0;
+    Array.from(grid.querySelectorAll('.config-start-pick')).forEach(btn => {
+        const show = !query || (btn.dataset.searchText || '').includes(query);
+        btn.hidden = !show;
+        if (show) visible++;
+    });
+    const empty = document.getElementById('cfg-start-empty');
+    if (empty) empty.hidden = visible !== 0;
+}
+
+// Item name to sprite path for config UI grids.
+const CONFIG_ITEM_SPRITE_MAP = {
+    'Hoe': 'images/items/Hoe.png',
+    'Corn': 'images/items/Corn_item.png',
+    'Corn Seed': 'images/items/Corn_Seed_bag.png',
+    'Junk': 'images/items/junk.png',
+    'Sweet Potatoes': 'images/items/SweetPotato.png',
+    'Sweet Potato Seed': 'images/items/seedbag_sp.png',
+    'Strawberries': 'images/items/Stawberry.png',
+    'Strawberry Seed': 'images/items/SeedBag_Stawberry.png',
+    'Compost': 'images/items/Compost.png',
+    'Ladybugs': 'images/items/Lady_Bug_bag.png',
+    'Flower Seed': 'images/items/SeedBagFlower.png',
+    'Sprinkler': 'images/items/Sprinkler.png',
+    'Full Course': 'images/items/FullCourse.png',
+    'Tomato Seed': 'images/items/tomato_bag.png',
+    'Tomato': 'images/items/tomato.png',
+    'Watermelon Seed': 'images/items/seedbagwatermelon.png',
+    'Watermelon': 'images/items/watermelon2.png',
+    'Robot3': 'images/items/robot.png',
+    'Up Command': 'images/items/floppy_up.png',
+    'Right Command': 'images/items/floppy_right.png',
+    'Down Command': 'images/items/floppy_down.png',
+    'Left Command': 'images/items/floppy_left.png',
+    'Interact Command': 'images/items/floppy_interact.png',
+    'Hemp Seed': 'images/items/hemp_seeds.png',
+    'Hemp Flower': 'images/items/hemp.png',
+    'Restart Command': 'images/items/floppy_restart.png',
+    'Robot1': 'images/items/robot.png',
+    'Robot2': 'images/items/robot2.png',
+    'Add to Chest Command': 'images/items/Floppy_addChestt.png',
+    'Add from Chest Command': 'images/items/floppy_removechest.png',
+    'Veggie Oil': 'images/items/veg_oil.png',
+    'Shovel': 'images/items/shovel.png',
+    'Backpack': 'images/items/backPack.png',
+    '1 Day Pause Command': 'images/items/Floppy_Pause.png',
+    'Hotdog': 'images/items/HotDog.png',
+    'Chest': 'images/items/Chest.png',
+    'Grinder': 'images/items/Grinder.png',
+    'Veggie Press': 'images/items/veg_oil_maker.png',
+    'Carrot': 'images/items/carrot.png',
+    'Carrot Seed': 'images/items/seedbag_carrot.png',
+    'Pumpkin': 'images/items/Pumpkin.png',
+    'Pumpkin Seed': 'images/items/Pumpkin_seedBag.png',
+    'Bed': 'images/tiles/Bed.png',
+    'Wall': 'images/tiles/Wood.png',
+    'Axe': 'images/items/Axe.png',
+    'Composter': 'images/tiles/Worm_Bucket.png',
+    'Time Watch': 'images/items/stop_watch.png',
+    'Hemp Oil': 'images/items/veg_oil.png',
+    'Fruit Juice': 'images/items/veg_oil.png',
+    'Flashlight': 'images/items/flashLight.png'
+};
+
+// --- Custom rules: defaults, validation, share codes, presets ----------------
+// Every rule's default lives in getDefaultCustomRules(); normalizeCustomRules()
+// turns anything (old saves, share codes, presets, form input) into a complete,
+// validated rules object. Bump CUSTOM_RULES_VERSION (and the share-code prefix)
+// when the shape changes so old codes can be migrated.
+const CUSTOM_RULES_VERSION = 1;
+const SHARE_CODE_PREFIX = 'CM1-';
+const CONFIG_PRESETS_STORAGE_KEY = 'customRulePresets';
+const MAX_USER_PRESETS = 30;
+const MAX_PRESET_NAME_LENGTH = 40;
+
+const CONFIG_AREA_DEFINITIONS = [
+    { name: 'Cloudy Meadows', prefix: 'Cloudy Meadows' },
+    { name: 'Poly Park', prefix: 'Poly Park' },
+    { name: 'Swiggy Swamps', prefix: 'Swiggy Swamps' },
+    { name: 'The Big City', prefix: 'The Big City' },
+    { name: 'Beach', prefix: 'Beach' }
+];
+
+const CONFIG_CRITTER_DEFINITIONS = [
+    { name: 'Frog', sprite: 'images/npc/frog_front.png' },
+    { name: 'LightBug', sprite: 'images/tiles/FireFlys.gif' },
+    { name: 'Bees', sprite: 'images/tiles/Bees.gif' },
+    { name: 'ladybug', sprite: 'images/tiles/LadyBugs.gif' }
+];
+
+// Non-clear weather weights (percent); Clear takes whatever is left of 100.
+const WEATHER_WEIGHT_KEYS = ['partly-cloudy', 'overcast', 'fog', 'sunshower', 'rain', 'thunderstorm', 'heatwave', 'frog-rain'];
+const DEFAULT_WEATHER_WEIGHTS = {
+    'clear': 48.4,
+    'partly-cloudy': 15,
+    'overcast': 10,
+    'fog': 7,
+    'sunshower': 8,
+    'rain': 8,
+    'thunderstorm': 2,
+    'heatwave': 1.5,
+    'frog-rain': 0.1
+};
+
+function isPlainObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function configItemDefinitions() {
+    if (typeof all_items !== 'undefined' && Array.isArray(all_items)) return all_items;
+    if (typeof ITEM_DEFINITIONS !== 'undefined') return ITEM_DEFINITIONS;
+    return [];
+}
+
+function configNpcNames() {
+    return Object.keys(typeof Dialouge_JSON !== 'undefined' && Dialouge_JSON ? Dialouge_JSON : {});
+}
+
+function allEnabledMap(keys) {
+    const out = {};
+    keys.forEach(key => { out[key] = true; });
+    return out;
+}
+
+function getDefaultCustomRules() {
+    const itemKeys = [];
+    configItemDefinitions().forEach((def, idx) => {
+        if (idx > 0 && def && def.name) itemKeys.push(String(idx));
+    });
+    return {
+        version: CUSTOM_RULES_VERSION,
+        mainQuestCoins: 10000,
+        mainQuestDays: 100,
+        startingCoins: 0,
+        moneyLoss: true,
+        foodRot: true,
+        permaDeath: false,
+        npcEnabled: allEnabledMap(configNpcNames()),
+        crittersEnabled: allEnabledMap(CONFIG_CRITTER_DEFINITIONS.map(c => c.name)),
+        areasEnabled: allEnabledMap(CONFIG_AREA_DEFINITIONS.map(a => a.name)),
+        itemsEnabled: allEnabledMap(itemKeys),
+        weatherWeights: { ...DEFAULT_WEATHER_WEIGHTS },
+        itemPrices: {},
+        startingInventory: normalizeStartingInventory(DEFAULT_STARTING_INVENTORY),
+        // Survival, Farming, Economy, Goals, Powers, map edits... (custom-rules.js)
+        ...(typeof getExtendedRuleDefaults === 'function' ? getExtendedRuleDefaults() : {})
+    };
+}
+
+function normalizeCustomRules(raw) {
+    const defaults = getDefaultCustomRules();
+    const src = isPlainObject(raw) ? raw : {};
+
+    const int = (value, min, max, fallback) => {
+        const n = Math.round(Number(value));
+        if (value === null || value === '' || !Number.isFinite(n)) return fallback;
+        return Math.max(min, Math.min(max, n));
+    };
+    const bool = (value, fallback) => typeof value === 'boolean' ? value : fallback;
+    // Known keys default to enabled; any boolean the source sets is kept
+    // (including names this build doesn't know, so they survive a round-trip).
+    const enabledMap = (value, base) => {
+        const out = { ...base };
+        if (isPlainObject(value)) {
+            Object.keys(value).slice(0, 1000).forEach(key => {
+                if (typeof value[key] === 'boolean' && key.length <= 64) out[key] = value[key];
+            });
+        }
+        return out;
+    };
+
+    const srcWeights = isPlainObject(src.weatherWeights) ? src.weatherWeights : {};
+    const weatherWeights = {};
+    let used = 0;
+    WEATHER_WEIGHT_KEYS.forEach(key => {
+        const n = Number(srcWeights[key]);
+        weatherWeights[key] = (srcWeights[key] !== null && srcWeights[key] !== undefined && Number.isFinite(n))
+            ? Math.max(0, Math.min(100, n))
+            : DEFAULT_WEATHER_WEIGHTS[key];
+        used += weatherWeights[key];
+    });
+    // Keep 0.1% precision. If the total is over 100%, scale everything down
+    // proportionally (rounding down so it can't creep back over).
+    const scale = used > 100 ? 100 / used : 1;
+    const round = scale < 1 ? Math.floor : Math.round;
+    used = 0;
+    WEATHER_WEIGHT_KEYS.forEach(key => {
+        weatherWeights[key] = round(weatherWeights[key] * scale * 10 + (scale < 1 ? 1e-9 : 0)) / 10;
+        used += weatherWeights[key];
+    });
+    weatherWeights.clear = Math.max(0, Math.round((100 - used) * 10) / 10);
+
+    const itemDefs = configItemDefinitions();
+    const itemPrices = {};
+    if (isPlainObject(src.itemPrices)) {
+        Object.keys(src.itemPrices).forEach(key => {
+            const def = itemDefs[parseInt(key)];
+            const price = int(src.itemPrices[key], 1, 999999, null);
+            if (def && def.price > 0 && price !== null && price !== def.price) itemPrices[String(parseInt(key))] = price;
+        });
+    }
+
+    return {
+        version: CUSTOM_RULES_VERSION,
+        mainQuestCoins: int(src.mainQuestCoins, 0, 100000000, defaults.mainQuestCoins),
+        mainQuestDays: int(src.mainQuestDays, 0, 100000, defaults.mainQuestDays),
+        startingCoins: int(src.startingCoins, 0, 100000000, defaults.startingCoins),
+        moneyLoss: bool(src.moneyLoss, defaults.moneyLoss),
+        foodRot: bool(src.foodRot, defaults.foodRot),
+        permaDeath: bool(src.permaDeath, defaults.permaDeath),
+        npcEnabled: enabledMap(src.npcEnabled, defaults.npcEnabled),
+        crittersEnabled: enabledMap(src.crittersEnabled, defaults.crittersEnabled),
+        areasEnabled: enabledMap(src.areasEnabled, defaults.areasEnabled),
+        itemsEnabled: enabledMap(src.itemsEnabled, defaults.itemsEnabled),
+        weatherWeights,
+        itemPrices,
+        startingInventory: Array.isArray(src.startingInventory)
+            ? normalizeStartingInventory(src.startingInventory)
+            : defaults.startingInventory,
+        ...(typeof normalizeExtendedRules === 'function' ? normalizeExtendedRules(src) : {})
+    };
+}
+
+// Only the parts of `rules` that differ from the defaults; maps are diffed per
+// key, so an "all NPCs on except Rick" rule set stores just {Rick: false}.
+function diffCustomRules(rules, defaults) {
+    const out = {};
+    Object.keys(rules).forEach(key => {
+        if (key === 'version') return;
+        const value = rules[key];
+        const base = defaults[key];
+        if (isPlainObject(value) && isPlainObject(base)) {
+            const sub = {};
+            Object.keys(value).forEach(subKey => {
+                if (key === 'weatherWeights' && subKey === 'clear') return; // derived
+                if (JSON.stringify(value[subKey]) !== JSON.stringify(base[subKey])) sub[subKey] = value[subKey];
+            });
+            if (Object.keys(sub).length) out[key] = sub;
+        } else if (JSON.stringify(value) !== JSON.stringify(base)) {
+            out[key] = value;
+        }
+    });
+    return out;
+}
+
+// Inverse of diffCustomRules: lay a partial rule set over the defaults.
+function mergeCustomRules(partial) {
+    const defaults = getDefaultCustomRules();
+    const merged = { ...defaults };
+    if (isPlainObject(partial)) {
+        Object.keys(partial).forEach(key => {
+            if (isPlainObject(defaults[key]) && isPlainObject(partial[key])) {
+                merged[key] = { ...defaults[key], ...partial[key] };
+            } else {
+                merged[key] = partial[key];
+            }
+        });
+    }
+    return normalizeCustomRules(merged);
+}
+
+function encodeShareCode(rules) {
+    const payload = diffCustomRules(normalizeCustomRules(rules), getDefaultCustomRules());
+    const bytes = new TextEncoder().encode(JSON.stringify(payload));
+    let binary = '';
+    bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+    return SHARE_CODE_PREFIX + btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Throws an Error with a player-facing message when the code is unusable.
+function decodeShareCode(code) {
+    const trimmed = String(code || '').replace(/\s+/g, '');
+    if (!trimmed) throw new Error('Paste a rules code first.');
+    if (!trimmed.startsWith(SHARE_CODE_PREFIX)) {
+        throw new Error('That is not a Cloudy Meadows rules code (codes start with ' + SHARE_CODE_PREFIX + ').');
+    }
+    let base64 = trimmed.slice(SHARE_CODE_PREFIX.length).replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    let payload;
+    try {
+        const binary = atob(base64);
+        const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+        payload = JSON.parse(new TextDecoder().decode(bytes));
+    } catch (e) {
+        throw new Error('That code looks damaged. Check it was copied in full.');
+    }
+    if (!isPlainObject(payload)) throw new Error('That code looks damaged. Check it was copied in full.');
+    return mergeCustomRules(payload);
+}
+
+// Built-in presets are partial rule sets laid over the defaults.
+const BUILT_IN_RULE_PRESETS = [
+    {
+        id: 'classic',
+        name: 'Classic',
+        description: 'The standard Cloudy Meadows rules.',
+        rules: {}
+    },
+    {
+        id: 'speedrun',
+        name: 'Speedrun',
+        description: 'Smaller goal, 30-day deadline, and a head start.',
+        rules: {
+            mainQuestCoins: 3000,
+            mainQuestDays: 30,
+            startingCoins: 250,
+            startingInventory: [
+                { name: 'Hoe', amount: 1 },
+                { name: 'Corn', amount: 10 },
+                { name: 'Corn Seed', amount: 20 },
+                { name: 'Tomato Seed', amount: 10 },
+                { name: 'Sprinkler', amount: 2 }
+            ]
+        }
+    },
+    {
+        id: 'hardcore',
+        name: 'Hardcore',
+        description: 'One life, rough weather, a bigger goal and a bare start.',
+        rules: {
+            mainQuestCoins: 15000,
+            mainQuestDays: 80,
+            moneyLoss: true,
+            foodRot: true,
+            permaDeath: true,
+            weatherWeights: { 'fog': 10, 'thunderstorm': 8, 'heatwave': 6 },
+            startingInventory: [{ name: 'Hoe', amount: 1 }, { name: 'Corn', amount: 2 }]
+        }
+    },
+    {
+        id: 'sandbox',
+        name: 'Sandbox',
+        description: 'No deadline, a fortune in coins, every tool, and no penalties.',
+        rules: {
+            mainQuestDays: 0,
+            startingCoins: 1000000,
+            moneyLoss: false,
+            foodRot: false,
+            permaDeath: false,
+            startingInventory: [
+                { name: 'Hoe', amount: 1 },
+                { name: 'Shovel', amount: 1 },
+                { name: 'Axe', amount: 1 },
+                { name: 'Backpack', amount: 1 },
+                { name: 'Time Watch', amount: 1 },
+                { name: 'Flashlight', amount: 1 },
+                { name: 'Sprinkler', amount: 20 },
+                { name: 'Full Course', amount: 20 }
+            ]
+        }
+    },
+    {
+        id: 'weather-chaos',
+        name: 'Weather Chaos',
+        description: 'Clear skies are rare: storms, heatwaves and frog rain.',
+        rules: {
+            weatherWeights: {
+                'partly-cloudy': 5,
+                'overcast': 5,
+                'fog': 12,
+                'sunshower': 10,
+                'rain': 20,
+                'thunderstorm': 15,
+                'heatwave': 12,
+                'frog-rain': 6
+            }
+        }
+    },
+    {
+        id: 'robot-farm',
+        name: 'Robot Farm',
+        description: 'Start with a robot and a stack of programs. Automate from day one.',
+        rules: {
+            startingCoins: 300,
+            startingInventory: [
+                { name: 'Hoe', amount: 1 },
+                { name: 'Robot1', amount: 1 },
+                { name: 'Up Command', amount: 4 },
+                { name: 'Right Command', amount: 4 },
+                { name: 'Down Command', amount: 4 },
+                { name: 'Left Command', amount: 4 },
+                { name: 'Interact Command', amount: 4 },
+                { name: 'Corn Seed', amount: 20 }
+            ]
+        }
+    }
+];
+
+// A random but playable rule set: NPCs, areas, items and prices stay at their
+// defaults so the main quest can always be finished. Always starts with a Hoe.
+function randomCustomRules(rng = Math.random) {
+    const pick = (min, max, step) => min + Math.floor(rng() * (Math.floor((max - min) / step) + 1)) * step;
+
+    const weights = {};
+    WEATHER_WEIGHT_KEYS.forEach(key => {
+        const cap = key === 'frog-rain' ? 3 : (key === 'thunderstorm' || key === 'heatwave') ? 10 : 20;
+        weights[key] = Math.round(rng() * cap * 10) / 10;
+    });
+
+    const candidates = configItemDefinitions().filter((def, idx) => idx > 0 && def && def.name && def.name !== 'Hoe' && def.name !== 'Junk');
+    const startingInventory = [{ name: 'Hoe', amount: 1 }];
+    const extraCount = pick(2, 6, 1);
+    while (startingInventory.length < 1 + extraCount && candidates.length) {
+        const def = candidates.splice(Math.floor(rng() * candidates.length), 1)[0];
+        const single = def.class === 'Tool' || def.class === 'Backpack' || def.name === 'Time Watch' || /^Robot/.test(def.name);
+        startingInventory.push({ name: def.name, amount: single ? 1 : pick(1, 20, 1) });
+    }
+
+    return mergeCustomRules({
+        mainQuestCoins: pick(2000, 30000, 500),
+        mainQuestDays: pick(30, 150, 5),
+        startingCoins: pick(0, 2000, 50),
+        moneyLoss: rng() < 0.7,
+        foodRot: rng() < 0.7,
+        permaDeath: rng() < 0.15,
+        weatherWeights: weights,
+        startingInventory
+    });
+}
+
+function loadUserRulePresets() {
+    try {
+        const list = localData.get(CONFIG_PRESETS_STORAGE_KEY);
+        return Array.isArray(list)
+            ? list.filter(p => p && typeof p.name === 'string' && typeof p.code === 'string')
+            : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function storeUserRulePresets(list) {
+    try {
+        localData.set(CONFIG_PRESETS_STORAGE_KEY, list);
+        return true;
+    } catch (e) {
+        console.warn('Failed saving rule presets', e);
+        return false;
+    }
+}
+
+function setConfigPresetStatus(message, isError = false) {
+    const status = document.getElementById('cfg-presets-status');
+    if (!status) return;
+    status.textContent = message || '';
+    status.hidden = !message;
+    status.classList.toggle('error', !!isError);
+    if (message && typeof status.scrollIntoView === 'function') {
+        status.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+}
+
+// Fill the form with a rule set (does not save: the player still presses Save).
+function loadRulesIntoConfigForm(rules, message) {
+    populateConfigForm(rules);
+    setConfigPresetStatus(message + ' Review the tabs, then press Save to keep it.');
+}
+
+function saveCurrentFormAsPreset() {
+    const nameInput = document.getElementById('cfg-preset-name');
+    const name = (nameInput?.value || '').trim().slice(0, MAX_PRESET_NAME_LENGTH);
+    if (!name) {
+        setConfigPresetStatus('Give the preset a name first.', true);
+        nameInput?.focus();
+        return;
+    }
+    const list = loadUserRulePresets();
+    const entry = { name, code: encodeShareCode(readConfigForm()), savedAt: Date.now() };
+    const existing = list.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existing !== -1) {
+        list[existing] = entry;
+    } else {
+        if (list.length >= MAX_USER_PRESETS) {
+            setConfigPresetStatus('You can keep up to ' + MAX_USER_PRESETS + ' presets. Delete one first.', true);
+            return;
+        }
+        list.push(entry);
+    }
+    if (!storeUserRulePresets(list)) {
+        setConfigPresetStatus('Could not save the preset (storage unavailable).', true);
+        return;
+    }
+    if (nameInput) nameInput.value = '';
+    renderUserRulePresets();
+    setConfigPresetStatus(existing !== -1 ? 'Updated preset "' + name + '".' : 'Saved preset "' + name + '".');
+}
+
+function copyTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        return navigator.clipboard.writeText(text).then(() => true, () => false);
+    }
+    return Promise.resolve(false);
+}
+
+function showShareCode(code, label) {
+    const output = document.getElementById('cfg-share-output');
+    if (output) {
+        output.value = code;
+        output.hidden = false;
+        output.select();
+    }
+    copyTextToClipboard(code).then(copied => {
+        setConfigPresetStatus(copied
+            ? label + ' code copied to the clipboard.'
+            : label + ' code is ready below. Copy it to share.');
+    });
+}
+
+function renderUserRulePresets() {
+    const container = document.getElementById('cfg-user-presets');
+    if (!container) return;
+    container.innerHTML = '';
+    const list = loadUserRulePresets();
+
+    if (!list.length) {
+        const empty = document.createElement('div');
+        empty.className = 'config-empty-state';
+        empty.textContent = 'No saved presets yet. Set up the tabs the way you like, name it above, and save.';
+        container.appendChild(empty);
+        return;
+    }
+
+    list.forEach(preset => {
+        const row = document.createElement('div');
+        row.className = 'config-preset-row';
+
+        const info = document.createElement('div');
+        info.className = 'config-preset-info';
+        const name = document.createElement('div');
+        name.className = 'config-preset-name';
+        name.textContent = preset.name;
+        info.appendChild(name);
+        if (preset.savedAt) {
+            const date = document.createElement('div');
+            date.className = 'config-preset-desc';
+            date.textContent = 'Saved ' + new Date(preset.savedAt).toLocaleDateString();
+            info.appendChild(date);
+        }
+        row.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'config-preset-actions';
+
+        const loadBtn = document.createElement('button');
+        loadBtn.type = 'button';
+        loadBtn.className = 'config-btn config-btn-small';
+        loadBtn.textContent = 'Load';
+        loadBtn.addEventListener('click', () => {
+            try {
+                loadRulesIntoConfigForm(decodeShareCode(preset.code), 'Loaded "' + preset.name + '".');
+            } catch (e) {
+                setConfigPresetStatus('"' + preset.name + '" could not be loaded: ' + e.message, true);
+            }
+        });
+        actions.appendChild(loadBtn);
+
+        const shareBtn = document.createElement('button');
+        shareBtn.type = 'button';
+        shareBtn.className = 'config-btn config-btn-small';
+        shareBtn.textContent = 'Share';
+        shareBtn.addEventListener('click', () => showShareCode(preset.code, '"' + preset.name + '"'));
+        actions.appendChild(shareBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'config-btn config-btn-small config-btn-danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', () => {
+            if (!window.confirm('Delete the preset "' + preset.name + '"?')) return;
+            storeUserRulePresets(loadUserRulePresets().filter(p => p.name !== preset.name));
+            renderUserRulePresets();
+            setConfigPresetStatus('Deleted "' + preset.name + '".');
+        });
+        actions.appendChild(deleteBtn);
+
+        row.appendChild(actions);
+        container.appendChild(row);
+    });
+}
+
 function ensureConfigModal() {
     let overlay = document.getElementById('config-overlay');
     if (overlay) return overlay;
@@ -3504,7 +4209,7 @@ function ensureConfigModal() {
     panelWrap.className = 'config-tab-panels';
     modal.appendChild(panelWrap);
 
-    function createTabPanel(tabId, label, helpText) {
+    function createTabPanel(tabId, label) {
         const tabBtn = document.createElement('button');
         tabBtn.type = 'button';
         tabBtn.className = 'config-tab';
@@ -3519,13 +4224,6 @@ function ensureConfigModal() {
         panel.className = 'config-panel';
         panel.dataset.tab = tabId;
         panelWrap.appendChild(panel);
-
-        if (helpText) {
-            const help = document.createElement('div');
-            help.className = 'config-panel-help';
-            help.textContent = helpText;
-            panel.appendChild(help);
-        }
         return panel;
     }
 
@@ -3579,36 +4277,47 @@ function ensureConfigModal() {
         container.appendChild(row);
     }
 
-    function addNumberRow(container, labelText, id, placeholder) {
+    // Settings rows share the layout of the generated rule rows (custom-rules.js):
+    // label on the left, controls in a fixed-width column on the right.
+    function createSettingRow(labelText, id) {
         const row = document.createElement('div');
-        row.className = 'config-row';
+        row.className = 'config-row config-rule-row';
+        const labelWrap = document.createElement('div');
+        labelWrap.className = 'config-rule-label';
         const label = document.createElement('label');
         label.className = 'config-label';
         label.htmlFor = id;
         label.textContent = labelText;
+        labelWrap.appendChild(label);
+        row.appendChild(labelWrap);
+        const control = document.createElement('div');
+        control.className = 'config-rule-control';
+        row.appendChild(control);
+        return { row, control };
+    }
+
+    function addNumberRow(container, labelText, id, placeholder, unit) {
+        const { row, control } = createSettingRow(labelText, id);
         const input = document.createElement('input');
         input.type = 'number';
         input.id = id;
-        input.className = 'config-input';
+        input.className = 'config-input config-rule-number';
         input.placeholder = placeholder || '';
-        row.appendChild(label);
-        row.appendChild(input);
+        control.appendChild(input);
+        const unitLabel = document.createElement('span');
+        unitLabel.className = 'config-unit';
+        unitLabel.textContent = unit || '';
+        control.appendChild(unitLabel);
         container.appendChild(row);
     }
 
     function addToggleRow(container, labelText, id) {
-        const row = document.createElement('div');
-        row.className = 'config-row';
-        const label = document.createElement('label');
-        label.className = 'config-label';
-        label.htmlFor = id;
-        label.textContent = labelText;
+        const { row, control } = createSettingRow(labelText, id);
         const input = document.createElement('input');
         input.type = 'checkbox';
         input.id = id;
-        input.className = 'config-checkbox';
-        row.appendChild(label);
-        row.appendChild(input);
+        input.className = 'config-switch';
+        control.appendChild(input);
         container.appendChild(row);
     }
 
@@ -3639,15 +4348,19 @@ function ensureConfigModal() {
         container.appendChild(actions);
     }
 
-    const corePanel = createTabPanel('core', 'Rules', 'Quest goals and survival rules live here.');
-    const worldPanel = createTabPanel('world', 'World', 'Weather and area access are grouped together.');
-    const peoplePanel = createTabPanel('people', 'People', 'NPC and critter availability can be managed separately.');
-    const itemsPanel = createTabPanel('items', 'Items', 'Item unlocks and price overrides are organized here.');
+    const corePanel = createTabPanel('core', 'Rules');
+    const worldPanel = createTabPanel('world', 'World');
+    const peoplePanel = createTabPanel('people', 'People');
+    const itemsPanel = createTabPanel('items', 'Items');
+    const startPanel = createTabPanel('start', 'Starting Inventory');
+    // Survival, Farming, Economy, Goals, Powers and Map Editor tabs (custom-rules.js)
+    const extendedPanels = typeof createExtendedConfigPanels === 'function' ? createExtendedConfigPanels(createTabPanel) : null;
+    const presetsPanel = createTabPanel('presets', 'Presets & Sharing');
 
     const coreSection = createSection(corePanel, 'Quest and Survival');
-    addNumberRow(coreSection, 'Main Quest Coins', 'cfg-main-quest-coins', 'e.g. 10000');
-    addNumberRow(coreSection, 'Main Quest Days', 'cfg-main-quest-days', 'e.g. 100');
-    addNumberRow(coreSection, 'Starting Coins', 'cfg-starting-coins', 'e.g. 0');
+    addNumberRow(coreSection, 'Main Quest Coins', 'cfg-main-quest-coins', '10000', 'coins');
+    addNumberRow(coreSection, 'Main Quest Days', 'cfg-main-quest-days', '100', 'days');
+    addNumberRow(coreSection, 'Starting Coins', 'cfg-starting-coins', '0', 'coins');
     addToggleRow(coreSection, 'Money Loss', 'cfg-money-loss');
     addToggleRow(coreSection, 'Food Rot', 'cfg-food-rot');
     addToggleRow(coreSection, 'Perma Death', 'cfg-perma-death');
@@ -3748,12 +4461,7 @@ function ensureConfigModal() {
     crittersGrid.className = 'config-grid config-sprite-grid';
     
     // Critter definitions with sprites
-    const CRITTER_DEFINITIONS = [
-        { name: 'Frog', sprite: 'images/npc/frog_front.png' },
-        { name: 'LightBug', sprite: 'images/tiles/FireFlys.gif' },
-        { name: 'Bees', sprite: 'images/tiles/Bees.gif' },
-        { name: 'ladybug', sprite: 'images/tiles/LadyBugs.gif' }
-    ];
+    const CRITTER_DEFINITIONS = CONFIG_CRITTER_DEFINITIONS;
     
     CRITTER_DEFINITIONS.forEach(critter => {
         const btn = document.createElement('button');
@@ -3812,13 +4520,7 @@ function ensureConfigModal() {
     areasGrid.id = 'cfg-areas-grid';
     areasGrid.className = 'config-grid';
     // Define areas with their sub-levels
-    const AREA_DEFINITIONS = [
-        { name: 'Cloudy Meadows', prefix: 'Cloudy Meadows' },
-        { name: 'Poly Park', prefix: 'Poly Park' },
-        { name: 'Swiggy Swamps', prefix: 'Swiggy Swamps' },
-        { name: 'The Big City', prefix: 'The Big City' },
-        { name: 'Beach', prefix: 'Beach' }
-    ];
+    const AREA_DEFINITIONS = CONFIG_AREA_DEFINITIONS;
     AREA_DEFINITIONS.forEach(area => {
         const btn = document.createElement('button');
         btn.className = 'config-grid-item active'; // Areas on by default
@@ -3949,59 +4651,7 @@ function ensureConfigModal() {
     itemsGrid.id = 'cfg-items-grid';
     itemsGrid.className = 'config-grid config-sprite-grid';
     
-    // Item name to image path mapping
-    const ITEM_SPRITE_MAP = {
-        'Hoe': 'images/items/Hoe.png',
-        'Corn': 'images/items/Corn_item.png',
-        'Corn Seed': 'images/items/Corn_Seed_bag.png',
-        'Junk': 'images/items/junk.png',
-        'Sweet Potatoes': 'images/items/SweetPotato.png',
-        'Sweet Potato Seed': 'images/items/seedbag_sp.png',
-        'Strawberries': 'images/items/Stawberry.png',
-        'Strawberry Seed': 'images/items/SeedBag_Stawberry.png',
-        'Compost': 'images/items/Compost.png',
-        'Ladybugs': 'images/items/Lady_Bug_bag.png',
-        'Flower Seed': 'images/items/SeedBagFlower.png',
-        'Sprinkler': 'images/items/Sprinkler.png',
-        'Full Course': 'images/items/FullCourse.png',
-        'Tomato Seed': 'images/items/tomato_bag.png',
-        'Tomato': 'images/items/tomato.png',
-        'Watermelon Seed': 'images/items/seedbagwatermelon.png',
-        'Watermelon': 'images/items/watermelon2.png',
-        'Robot3': 'images/items/robot.png',
-        'Up Command': 'images/items/floppy_up.png',
-        'Right Command': 'images/items/floppy_right.png',
-        'Down Command': 'images/items/floppy_down.png',
-        'Left Command': 'images/items/floppy_left.png',
-        'Interact Command': 'images/items/floppy_interact.png',
-        'Hemp Seed': 'images/items/hemp_seeds.png',
-        'Hemp Flower': 'images/items/hemp.png',
-        'Restart Command': 'images/items/floppy_restart.png',
-        'Robot1': 'images/items/robot.png',
-        'Robot2': 'images/items/robot2.png',
-        'Add to Chest Command': 'images/items/Floppy_addChestt.png',
-        'Add from Chest Command': 'images/items/floppy_removechest.png',
-        'Veggie Oil': 'images/items/veg_oil.png',
-        'Shovel': 'images/items/shovel.png',
-        'Backpack': 'images/items/backPack.png',
-        '1 Day Pause Command': 'images/items/Floppy_Pause.png',
-        'Hotdog': 'images/items/HotDog.png',
-        'Chest': 'images/items/Chest.png',
-        'Grinder': 'images/items/Grinder.png',
-        'Veggie Press': 'images/items/veg_oil_maker.png',
-        'Carrot': 'images/items/carrot.png',
-        'Carrot Seed': 'images/items/seedbag_carrot.png',
-        'Pumpkin': 'images/items/Pumpkin.png',
-        'Pumpkin Seed': 'images/items/Pumpkin_seedBag.png',
-        'Bed': 'images/tiles/Bed.png',
-        'Wall': 'images/tiles/Wood.png',
-        'Axe': 'images/items/Axe.png',
-        'Composter': 'images/tiles/Worm_Bucket.png',
-        'Time Watch': 'images/items/stop_watch.png',
-        'Hemp Oil': 'images/items/veg_oil.png',
-        'Fruit Juice': 'images/items/veg_oil.png',
-        'Flashlight': 'images/items/flashLight.png'
-    };
+    const ITEM_SPRITE_MAP = CONFIG_ITEM_SPRITE_MAP;
     
     itemDefs.forEach((item, idx) => {
         if (!item || idx === 0) return; // Skip empty slot
@@ -4150,6 +4800,211 @@ function ensureConfigModal() {
         Array.from(itemsGrid.querySelectorAll('.config-item-row')).forEach(updateItemConfigRowState);
         applyItemConfigFilters();
     });
+
+    // Starting inventory: 8 hotbar slots + a searchable picker of every item
+    const startSlotsSection = createSection(startPanel, 'Starting Hotbar', 'Click a slot to select it, then pick an item below. Picking an item already in the hotbar adds 1 to its stack. Items turned off in the Items tab are removed when the game starts.');
+    const startSlots = document.createElement('div');
+    startSlots.id = 'cfg-start-slots';
+    startSlots.className = 'config-start-slots';
+    startSlotsSection.appendChild(startSlots);
+
+    const startHint = document.createElement('div');
+    startHint.id = 'cfg-start-hint';
+    startHint.className = 'config-help';
+    startSlotsSection.appendChild(startHint);
+
+    const startActions = document.createElement('div');
+    startActions.className = 'config-actions config-inline-actions';
+    const startDefaultBtn = document.createElement('button');
+    startDefaultBtn.type = 'button';
+    startDefaultBtn.className = 'config-btn';
+    startDefaultBtn.textContent = 'Default Kit';
+    startDefaultBtn.addEventListener('click', () => resetStartingInventoryDraft(DEFAULT_STARTING_INVENTORY));
+    const startClearBtn = document.createElement('button');
+    startClearBtn.type = 'button';
+    startClearBtn.className = 'config-btn';
+    startClearBtn.textContent = 'Clear All';
+    startClearBtn.addEventListener('click', () => resetStartingInventoryDraft([]));
+    startActions.appendChild(startDefaultBtn);
+    startActions.appendChild(startClearBtn);
+    startSlotsSection.appendChild(startActions);
+
+    const startPickerSection = createSection(startPanel, 'Add Items');
+    const startSearch = document.createElement('input');
+    startSearch.type = 'search';
+    startSearch.id = 'cfg-start-search';
+    startSearch.className = 'config-input config-item-search';
+    startSearch.placeholder = 'Search items by name or type';
+    startSearch.autocomplete = 'off';
+    startSearch.addEventListener('input', applyStartingInventoryPickerFilter);
+    startPickerSection.appendChild(startSearch);
+
+    const startPicker = document.createElement('div');
+    startPicker.id = 'cfg-start-picker';
+    startPicker.className = 'config-grid config-sprite-grid config-start-picker';
+    itemDefs.forEach((item, idx) => {
+        if (!item || idx === 0 || !item.name) return;
+        const typeLabel = ITEM_CLASS_LABELS[item.class] || item.class || 'Item';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'config-grid-item config-sprite-item config-start-pick active';
+        btn.dataset.itemName = item.name;
+        btn.dataset.searchText = (item.name + ' ' + typeLabel).toLowerCase();
+        btn.title = 'Add ' + item.name + ' (' + typeLabel + ')';
+
+        const spriteImg = document.createElement('img');
+        spriteImg.className = 'config-sprite-img';
+        spriteImg.width = 32;
+        spriteImg.height = 32;
+        spriteImg.src = ITEM_SPRITE_MAP[item.name] || 'images/items/junk.png';
+        spriteImg.alt = item.name;
+        btn.appendChild(spriteImg);
+
+        const label = document.createElement('span');
+        label.className = 'config-sprite-label';
+        label.textContent = item.name;
+        btn.appendChild(label);
+
+        btn.addEventListener('click', () => pickStartingInventoryItem(item.name));
+        startPicker.appendChild(btn);
+    });
+    startPickerSection.appendChild(startPicker);
+
+    const startEmpty = document.createElement('div');
+    startEmpty.id = 'cfg-start-empty';
+    startEmpty.className = 'config-empty-state';
+    startEmpty.textContent = 'No items match the search.';
+    startEmpty.hidden = true;
+    startPickerSection.appendChild(startEmpty);
+
+    if (extendedPanels) {
+        fillExtendedConfigPanels(extendedPanels, { createSection, worldPanel, peoplePanel });
+    }
+
+    // Presets & sharing
+    const presetsStatus = document.createElement('div');
+    presetsStatus.id = 'cfg-presets-status';
+    presetsStatus.className = 'config-status';
+    presetsStatus.setAttribute('role', 'status');
+    presetsStatus.hidden = true;
+    presetsPanel.appendChild(presetsStatus);
+
+    const builtInSection = createSection(presetsPanel, 'Ready-Made Presets');
+    const builtInGrid = document.createElement('div');
+    builtInGrid.className = 'config-preset-grid';
+    BUILT_IN_RULE_PRESETS.forEach(preset => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'config-preset-card';
+        card.dataset.presetId = preset.id;
+
+        const name = document.createElement('span');
+        name.className = 'config-preset-name';
+        name.textContent = preset.name;
+        card.appendChild(name);
+
+        const desc = document.createElement('span');
+        desc.className = 'config-preset-desc';
+        desc.textContent = preset.description;
+        card.appendChild(desc);
+
+        card.addEventListener('click', () => {
+            loadRulesIntoConfigForm(mergeCustomRules(preset.rules), 'Loaded the ' + preset.name + ' preset.');
+        });
+        builtInGrid.appendChild(card);
+    });
+    builtInSection.appendChild(builtInGrid);
+
+    const quickActions = document.createElement('div');
+    quickActions.className = 'config-actions config-inline-actions';
+    const randomBtn = document.createElement('button');
+    randomBtn.type = 'button';
+    randomBtn.className = 'config-btn';
+    randomBtn.textContent = 'Randomize';
+    randomBtn.title = 'Random goals, survival rules, weather and starting kit. NPCs, areas and items stay on.';
+    randomBtn.addEventListener('click', () => {
+        loadRulesIntoConfigForm(randomCustomRules(), 'Rolled a random rule set.');
+    });
+    const resetAllBtn = document.createElement('button');
+    resetAllBtn.type = 'button';
+    resetAllBtn.className = 'config-btn';
+    resetAllBtn.textContent = 'Reset Everything';
+    resetAllBtn.title = 'Put every tab back to the default rules.';
+    resetAllBtn.addEventListener('click', () => {
+        loadRulesIntoConfigForm(getDefaultCustomRules(), 'Every tab is back to the default rules.');
+    });
+    quickActions.appendChild(randomBtn);
+    quickActions.appendChild(resetAllBtn);
+    builtInSection.appendChild(quickActions);
+
+    const userSection = createSection(presetsPanel, 'My Presets', 'Saves everything currently set in the tabs, including changes you have not saved yet.');
+    const saveRow = document.createElement('div');
+    saveRow.className = 'config-preset-save-row';
+    const presetName = document.createElement('input');
+    presetName.type = 'text';
+    presetName.id = 'cfg-preset-name';
+    presetName.className = 'config-input';
+    presetName.placeholder = 'Preset name';
+    presetName.maxLength = MAX_PRESET_NAME_LENGTH;
+    presetName.autocomplete = 'off';
+    presetName.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveCurrentFormAsPreset();
+        }
+    });
+    saveRow.appendChild(presetName);
+    const savePresetBtn = document.createElement('button');
+    savePresetBtn.type = 'button';
+    savePresetBtn.className = 'config-btn';
+    savePresetBtn.textContent = 'Save as Preset';
+    savePresetBtn.addEventListener('click', saveCurrentFormAsPreset);
+    saveRow.appendChild(savePresetBtn);
+    userSection.appendChild(saveRow);
+
+    const userList = document.createElement('div');
+    userList.id = 'cfg-user-presets';
+    userList.className = 'config-preset-list';
+    userSection.appendChild(userList);
+
+    const shareSection = createSection(presetsPanel, 'Share Codes', 'A code holds every rule in these tabs. Send it to a friend, or paste one you were given.');
+    const shareBtn = document.createElement('button');
+    shareBtn.type = 'button';
+    shareBtn.className = 'config-btn';
+    shareBtn.textContent = 'Get Code for Current Rules';
+    shareBtn.addEventListener('click', () => showShareCode(encodeShareCode(readConfigForm()), 'Rules'));
+    shareSection.appendChild(shareBtn);
+
+    const shareOutput = document.createElement('textarea');
+    shareOutput.id = 'cfg-share-output';
+    shareOutput.className = 'config-share-code';
+    shareOutput.readOnly = true;
+    shareOutput.rows = 3;
+    shareOutput.hidden = true;
+    shareOutput.addEventListener('focus', () => shareOutput.select());
+    shareSection.appendChild(shareOutput);
+
+    const shareInput = document.createElement('textarea');
+    shareInput.id = 'cfg-share-input';
+    shareInput.className = 'config-share-code';
+    shareInput.rows = 3;
+    shareInput.placeholder = 'Paste a code here (starts with ' + SHARE_CODE_PREFIX + ')';
+    shareInput.spellcheck = false;
+    shareSection.appendChild(shareInput);
+
+    const importBtn = document.createElement('button');
+    importBtn.type = 'button';
+    importBtn.className = 'config-btn';
+    importBtn.textContent = 'Load Code';
+    importBtn.addEventListener('click', () => {
+        try {
+            loadRulesIntoConfigForm(decodeShareCode(shareInput.value), 'Loaded rules from the code.');
+            shareInput.value = '';
+        } catch (e) {
+            setConfigPresetStatus(e.message, true);
+        }
+    });
+    shareSection.appendChild(importBtn);
 
     const actions = document.createElement('div');
     actions.className = 'config-actions';
@@ -4325,44 +5180,29 @@ function resetItemConfigFilters() {
     setActiveItemConfigFilter('all');
 }
 
-function showConfigModal() {
-    const overlay = ensureConfigModal();
-    setActiveConfigTab('core');
-    // Populate fields from current rules or defaults
-    const rules = window.customRules || {};
-    document.getElementById('cfg-main-quest-coins').value = (rules.mainQuestCoins ?? 10000);
-    document.getElementById('cfg-main-quest-days').value = (rules.mainQuestDays ?? 100);
-    document.getElementById('cfg-starting-coins').value = (rules.startingCoins ?? 0);
-    document.getElementById('cfg-money-loss').checked = !!(rules.moneyLoss ?? true);
-    document.getElementById('cfg-food-rot').checked = !!(rules.foodRot ?? true);
-    document.getElementById('cfg-perma-death').checked = !!(rules.permaDeath ?? false);
-    // NPC grid state
-    const npcGrid = document.getElementById('cfg-npc-grid');
-    const enabled = rules.npcEnabled || null;
-    if (npcGrid) {
-        const items = Array.from(npcGrid.querySelectorAll('.config-grid-item'));
-        items.forEach(el => {
-            const name = el.dataset.npcName;
-            const isOn = enabled == null ? true : !!enabled[name];
-            el.classList.toggle('active', isOn);
-            // Special visual emphasis for Mr.C
-            if (name === 'Mr.C') {
-                el.setAttribute('data-npc-name', 'Mr.C');
-            }
+// Fill every tab of the config form from a rule set (normalized first, so
+// partial/legacy rules show their defaults).
+function populateConfigForm(rawRules) {
+    const rules = normalizeCustomRules(rawRules);
+    document.getElementById('cfg-main-quest-coins').value = rules.mainQuestCoins;
+    document.getElementById('cfg-main-quest-days').value = rules.mainQuestDays;
+    document.getElementById('cfg-starting-coins').value = rules.startingCoins;
+    document.getElementById('cfg-money-loss').checked = rules.moneyLoss;
+    document.getElementById('cfg-food-rot').checked = rules.foodRot;
+    document.getElementById('cfg-perma-death').checked = rules.permaDeath;
+
+    const setGrid = (gridId, dataKey, map) => {
+        const grid = document.getElementById(gridId);
+        if (!grid) return;
+        Array.from(grid.querySelectorAll('.config-grid-item')).forEach(el => {
+            el.classList.toggle('active', map[el.dataset[dataKey]] !== false);
         });
-    }
-    // Weather weights defaults mirror current system probabilities
-    const ww = rules.weatherWeights ?? {
-        'clear': 48.4,
-        'partly-cloudy': 15,
-        'overcast': 10,
-        'fog': 7,
-        'sunshower': 8,
-        'rain': 8,
-        'thunderstorm': 2,
-        'heatwave': 1.5,
-        'frog-rain': 0.1
     };
+    setGrid('cfg-npc-grid', 'npcName', rules.npcEnabled);
+    setGrid('cfg-critters-grid', 'critterName', rules.crittersEnabled);
+    setGrid('cfg-areas-grid', 'areaName', rules.areasEnabled);
+
+    const ww = rules.weatherWeights;
     const setSlider = (id, v) => { const el = document.getElementById(id); const badge = el?.parentElement?.querySelector('.config-slider-value'); if (el) el.value = v; if (badge) badge.textContent = String(v); };
     setSlider('cfg-weather-partly', ww['partly-cloudy']);
     setSlider('cfg-weather-overcast', ww['overcast']);
@@ -4370,56 +5210,45 @@ function showConfigModal() {
     setSlider('cfg-weather-sunshower', ww['sunshower']);
     setSlider('cfg-weather-rain', ww['rain']);
     setSlider('cfg-weather-thunderstorm', ww['thunderstorm']);
-    // Configs saved before heatwaves existed get the default weight.
-    setSlider('cfg-weather-heatwave', ww['heatwave'] ?? 1.5);
+    setSlider('cfg-weather-heatwave', ww['heatwave']);
     setSlider('cfg-weather-frog', ww['frog-rain']);
-
-    // Normalize total to 100 by adjusting Clear accordingly
+    // Refresh the Clear badge
     normalizeWeatherTotal(null);
-
-    // Areas grid state
-    const areasGrid = document.getElementById('cfg-areas-grid');
-    const areasEnabled = rules.areasEnabled || null;
-    if (areasGrid) {
-        Array.from(areasGrid.querySelectorAll('.config-grid-item')).forEach(el => {
-            const name = el.dataset.areaName;
-            const isOn = areasEnabled == null ? true : !!areasEnabled[name];
-            el.classList.toggle('active', isOn);
-        });
-    }
 
     // Items grid state
     const itemsGrid = document.getElementById('cfg-items-grid');
-    const itemsEnabled = rules.itemsEnabled || null;
-    const itemPrices = rules.itemPrices || {};
     if (itemsGrid) {
         Array.from(itemsGrid.querySelectorAll('.config-item-toggle')).forEach(el => {
-            const idx = el.dataset.itemIdx;
-            const isOn = itemsEnabled == null ? true : !!itemsEnabled[idx];
-            el.classList.toggle('active', isOn);
+            el.classList.toggle('active', rules.itemsEnabled[el.dataset.itemIdx] !== false);
         });
-
         Array.from(itemsGrid.querySelectorAll('.config-item-price')).forEach(inp => {
             const idx = inp.dataset.itemIdx;
-            const defaultPrice = parseInt(inp.dataset.defaultPrice);
-            inp.value = itemPrices[idx] !== undefined ? itemPrices[idx] : defaultPrice;
+            inp.value = rules.itemPrices[idx] !== undefined ? rules.itemPrices[idx] : parseInt(inp.dataset.defaultPrice);
         });
-
         Array.from(itemsGrid.querySelectorAll('.config-item-row')).forEach(updateItemConfigRowState);
     }
     resetItemConfigFilters();
 
-    // Critters grid state
-    const crittersGrid = document.getElementById('cfg-critters-grid');
-    const crittersEnabled = rules.crittersEnabled || null;
-    if (crittersGrid) {
-        Array.from(crittersGrid.querySelectorAll('.config-grid-item')).forEach(el => {
-            const name = el.dataset.critterName;
-            const isOn = crittersEnabled == null ? true : !!crittersEnabled[name];
-            el.classList.toggle('active', isOn);
-        });
-    }
+    // Starting inventory draft
+    resetStartingInventoryDraft(rules.startingInventory);
+    const startSearchInput = document.getElementById('cfg-start-search');
+    if (startSearchInput) startSearchInput.value = '';
+    applyStartingInventoryPickerFilter();
 
+    if (typeof populateExtendedConfigForm === 'function') populateExtendedConfigForm(rules);
+}
+
+function showConfigModal() {
+    const overlay = ensureConfigModal();
+    setActiveConfigTab('core');
+    populateConfigForm(window.customRules || null);
+    renderUserRulePresets();
+    setConfigPresetStatus('');
+    const shareOutput = document.getElementById('cfg-share-output');
+    if (shareOutput) {
+        shareOutput.value = '';
+        shareOutput.hidden = true;
+    }
     overlay.style.display = 'flex';
     updateCanvasPointerEvents();
 }
@@ -4442,8 +5271,9 @@ function clampNumber(val, min, max, fallback) {
     return Math.max(min, Math.min(max, n));
 }
 
-function saveConfigModal() {
-    const newRules = {
+// Read every tab of the config form into a validated rule set.
+function readConfigForm() {
+    return normalizeCustomRules({
         mainQuestCoins: clampInt(document.getElementById('cfg-main-quest-coins').value, 0, 100000000, 10000),
         mainQuestDays: clampInt(document.getElementById('cfg-main-quest-days').value, 0, 100000, 100),
         startingCoins: clampInt(document.getElementById('cfg-starting-coins').value, 0, 100000000, 0),
@@ -4497,14 +5327,9 @@ function saveConfigModal() {
             if (grid) {
                 Array.from(grid.querySelectorAll('.config-item-toggle')).forEach(el => {
                     const idx = el.dataset.itemIdx;
-                    const isActive = el.classList.contains('active');
-                    out[idx] = isActive;
-                    if (!isActive) {
-                        console.log('Disabling item idx:', idx, 'name:', el.dataset.itemName);
-                    }
+                    out[idx] = el.classList.contains('active');
                 });
             }
-            console.log('Built itemsEnabled map:', out);
             return out;
         })(),
         // Build crittersEnabled map from grid
@@ -4534,8 +5359,15 @@ function saveConfigModal() {
                 });
             }
             return out;
-        })()
-    };
+        })(),
+        // Hotbar contents for new games ({name, amount} | 0 per slot)
+        startingInventory: normalizeStartingInventory(startingInventoryDraft),
+        ...(typeof readExtendedConfigForm === 'function' ? readExtendedConfigForm() : {})
+    });
+}
+
+function saveConfigModal() {
+    const newRules = readConfigForm();
 
     window.customRules = newRules;
 
@@ -4551,19 +5383,18 @@ function saveConfigModal() {
 
     // Apply to active game for main quest values
     applyCustomRulesToActiveGame();
+    if (typeof applyCustomRuleRuntime === 'function') applyCustomRuleRuntime();
     applyNPCFilterRules();
     applyCritterFilterRules();
     applyAreaRules();
     applyItemPrices();
     removeDisabledItemsFromInventory();
-    // Immediately re-generate today's weather using the new weights
+    // Keep recorded weather; the new weights apply to days not yet visited.
     if (typeof generateDailyWeather === 'function') {
         try {
-            console.log('SAVE: About to re-roll weather. window.customRules.weatherWeights =', window.customRules?.weatherWeights);
             generateDailyWeather();
-            console.log('Weather re-rolled with updated weights. Current:', typeof currentWeather !== 'undefined' ? currentWeather : '(unknown)');
         } catch (e) {
-            console.warn('Failed to re-roll weather after saving config:', e);
+            console.warn('Failed to restore weather after saving config:', e);
         }
     }
     hideConfigModal();
@@ -5925,6 +6756,12 @@ function saveAll(){
     if(player.talking == 0){
         player.save()
     }
+    if (typeof localData.worldKeys === 'function') {
+        localData.set('__worldInfo', {
+            location: levels[currentLevel_y]?.[currentLevel_x]?.name || '',
+            updatedAt: new Date().toISOString()
+        });
+    }
     const previousDayState = localData.get('Day_curLvl_Dif') || {};
     localData.set('Day_curLvl_Dif', {
         days: days, 
@@ -5932,6 +6769,7 @@ function saveAll(){
         currentLevel_y: currentLevel_y, 
         dificulty: dificulty,
         currentWeather: currentWeather,
+        weatherLog: weatherLog,
         lastRainDay: lastRainDay,
         lastFrogRainDay: lastFrogRainDay,
         heatwaveStartDay: heatwaveStartDay,
@@ -6049,6 +6887,9 @@ function loadAll(){
             if (!hasSavedPlayer && player && typeof window.customRules?.startingCoins === 'number') {
                 player.coins = window.customRules.startingCoins;
             }
+            if (!hasSavedPlayer && player) {
+                applyStartingInventory(player, window.customRules);
+            }
         } catch (e) {
             // If localData access fails, avoid crashing
         }
@@ -6065,33 +6906,18 @@ function loadAll(){
         // Heatwave span (2-3 days) so a reload mid-heatwave keeps it going.
         heatwaveStartDay = typeof savedDayState.heatwaveStartDay === 'number' ? savedDayState.heatwaveStartDay : -999;
         heatwaveEndDay = typeof savedDayState.heatwaveEndDay === 'number' ? savedDayState.heatwaveEndDay : -999;
+        if (typeof CloudyWeather !== 'undefined') {
+            CloudyWeather.loadHistory(savedDayState.weatherLog);
+        }
         
         // Load time of day
         time = localData.get('Day_curLvl_Dif').time || 0;
         timephase = localData.get('Day_curLvl_Dif').timephase || 0;
     } else {
+        weatherLog = [];
         loadTutorialState(null);
     }
-    if(localData.get('Controls') != null){
-        Controls_Interact_button_key = localData.get('Controls').Controls_Interact_button_key
-        Controls_Eat_button_key = localData.get('Controls').Controls_Eat_button_key
-        Controls_Up_button_key = localData.get('Controls').Controls_Up_button_key
-        Controls_Down_button_key = localData.get('Controls').Controls_Down_button_key
-        Controls_Left_button_key = localData.get('Controls').Controls_Left_button_key
-        Controls_Right_button_key = localData.get('Controls').Controls_Right_button_key
-        Controls_Special_button_key = localData.get('Controls').Controls_Special_button_key
-        Controls_Quest_button_key = localData.get('Controls').Controls_Quest_button_key
-        move_right_button = localData.get('Controls').move_right_button
-        move_left_button = localData.get('Controls').move_left_button
-        move_up_button = localData.get('Controls').move_up_button
-        move_down_button = localData.get('Controls').move_down_button
-        interact_button = localData.get('Controls').interact_button
-        eat_button = localData.get('Controls').eat_button
-        pause_button = localData.get('Controls').pause_button
-        special_key = localData.get('Controls').special_key
-        quest_key = localData.get('Controls').quest_key
-    }
-    applyAccessibilityPrefs(localData.get('Options'));
+    loadGamePreferences();
     if(localData.get('extralvlStuff') != null){
         extraCount = localData.get('extralvlStuff').extraCount
         let lvlLength = localData.get('extralvlStuff').lvlLength;
@@ -6118,12 +6944,24 @@ function loadAll(){
     ensureNPCWalkingPaths();
     ensureCooperativeExchangeBoard();
 
+    // Custom rules: push runtime values (max hunger, forced 2D/3D) for this world,
+    // and redo the one-time setup for a custom game reloaded before its first save.
+    if (typeof applyCustomRuleRuntime === 'function') applyCustomRuleRuntime();
+    const savedRulesState = localData.get('Day_curLvl_Dif');
+    const reloadedFreshCustomGame = !!(savedRulesState && savedRulesState.customRules && localData.get('player') == null);
+    if (reloadedFreshCustomGame && typeof applyNewGameCustomRules === 'function') {
+        applyNewGameCustomRules(player, window.customRules);
+    }
+
     // Apply NPC/Area/Price/Critter rules AFTER all levels have loaded from storage
     applyNPCFilterRules();
     applyCritterFilterRules();
     applyAreaRules();
     applyItemPrices();
     removeDisabledItemsFromInventory();
+    if (reloadedFreshCustomGame && typeof applyCustomStartArea === 'function') {
+        applyCustomStartArea(player, window.customRules);
+    }
 
     // Discard any in-memory Time Watch snapshots from a previous world and seed
     // a baseline for the loaded day, so the player can rewind back to the state
@@ -6134,6 +6972,29 @@ function loadAll(){
             captureDaySnapshot(days);
         }
     }
+}
+
+function loadGamePreferences(){
+    if(localData.get('Controls') != null){
+        Controls_Interact_button_key = localData.get('Controls').Controls_Interact_button_key
+        Controls_Eat_button_key = localData.get('Controls').Controls_Eat_button_key
+        Controls_Up_button_key = localData.get('Controls').Controls_Up_button_key
+        Controls_Down_button_key = localData.get('Controls').Controls_Down_button_key
+        Controls_Left_button_key = localData.get('Controls').Controls_Left_button_key
+        Controls_Right_button_key = localData.get('Controls').Controls_Right_button_key
+        Controls_Special_button_key = localData.get('Controls').Controls_Special_button_key
+        Controls_Quest_button_key = localData.get('Controls').Controls_Quest_button_key
+        move_right_button = localData.get('Controls').move_right_button
+        move_left_button = localData.get('Controls').move_left_button
+        move_up_button = localData.get('Controls').move_up_button
+        move_down_button = localData.get('Controls').move_down_button
+        interact_button = localData.get('Controls').interact_button
+        eat_button = localData.get('Controls').eat_button
+        pause_button = localData.get('Controls').pause_button
+        special_key = localData.get('Controls').special_key
+        quest_key = localData.get('Controls').quest_key
+    }
+    applyAccessibilityPrefs(localData.get('Options'));
 }
 
 function loadLevel(level, lvlx = 0, lvly = 0){
@@ -6249,6 +7110,10 @@ function loadLevel(level, lvlx = 0, lvly = 0){
 }
 
 function deleteWorld(){
+    if (typeof localData.worldKeys === 'function') {
+        localData.clear();
+        return;
+    }
     localData.remove('player');
     localData.remove('Day_curLvl_Dif');
     for(let i = 0; i < levels.length; i++){

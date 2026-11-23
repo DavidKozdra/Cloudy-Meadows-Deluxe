@@ -298,7 +298,9 @@ class Robot extends GridMoveEntity{
 
     move(x, y) {
         const bedBoost = player && player.touching && player.touching.name === 'bed' ? 3 : 1;
-        this.moving_timer -= bedBoost;
+        // Robot Speed rule scales how fast the move timer runs down.
+        const speed = typeof customRule === 'function' ? customRule('robotSpeed') / 100 : 1;
+        this.moving_timer -= bedBoost * speed;
         this.fuel_timer -= bedBoost;
         this.recharge();
 
@@ -306,7 +308,8 @@ class Robot extends GridMoveEntity{
             this.move_bool = true;
             this.day_pause = false;
         }
-        if (this.moving_timer > 0 || !this.move_bool || this.fuel <= 0 || !this.instructions.length) return;
+        const needsFuel = typeof customRule !== 'function' || customRule('robotsNeedFuel');
+        if (this.moving_timer > 0 || !this.move_bool || (needsFuel && this.fuel <= 0) || !this.instructions.length) return;
 
         const instruction = this.instructions[this.current_instruction];
         this.moving_timer = this.max_moving_timer;
@@ -346,7 +349,7 @@ class Robot extends GridMoveEntity{
         }
 
         if (!completed) return;
-        this.fuel = Math.max(0, this.fuel - 1);
+        if (needsFuel) this.fuel = Math.max(0, this.fuel - 1);
         if (command !== 'restart') this.advanceInstruction(selectorCount);
         if (currentLevel_x === x && currentLevel_y === y && typeof robot_talkingSound !== 'undefined') robot_talkingSound.play();
         this.anim = (this.anim + 1) % all_imgs[this.png][this.facing].length;

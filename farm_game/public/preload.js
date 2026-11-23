@@ -1446,7 +1446,7 @@ function setup() {
     };
     
     newWorld();
-    loadAll();
+    loadGamePreferences();
 }
 
 function newWorld(){
@@ -3263,4 +3263,6 @@ function newWorld(){
     temp_move_bool = true;
     save_anim = 0;
     extraCount = 0;
+    // Refresh before loading saves or applying rules, including world switches.
+    if (typeof captureBaseLevelMaps === 'function') captureBaseLevelMaps();
 }
