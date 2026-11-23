@@ -465,6 +465,14 @@ class Shop extends Entity {
         if(obj.originalPrices) {
             this.originalPrices = obj.originalPrices;
         }
+        // Keep market history across loading and Time Watch restores. Resetting
+        // the restock day to construction time would refill stock on reload.
+        if(obj.itemsSold && typeof obj.itemsSold === 'object' && !Array.isArray(obj.itemsSold)) {
+            this.itemsSold = { ...obj.itemsSold };
+        }
+        if(Number.isFinite(obj.lastMarketUpdate)) {
+            this.lastMarketUpdate = obj.lastMarketUpdate;
+        }
         
         for(let i = 0; i < obj.inv.length; i++){
             if(obj.inv[i] != 0 && this.inv[i] != 0){

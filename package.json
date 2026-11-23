@@ -7,6 +7,7 @@
     "test": "npm run test:project && npm run test:unit",
     "test:project": "node scripts/test-project.js",
     "test:unit": "node --test \"farm_game/tests/**/*.test.js\"",
+    "test:storage": "python3 scripts/test-world-storage.py",
     "dev:autofarm:world": "npx wrangler dev --config autofarm-worker/wrangler.toml",
     "dev:pages": "npx wrangler pages dev",
     "deploy:autofarm:world": "npx wrangler deploy --config autofarm-worker/wrangler.toml",

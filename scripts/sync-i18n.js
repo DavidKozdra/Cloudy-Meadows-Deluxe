@@ -82,8 +82,17 @@ function extractSourceKeys(keys) {
         }
         // Achievement titles and descriptions reach t() as variables.
         if (file === path.join('classes', 'achievements.js')) {
-            for (const match of source.matchAll(/\b(?:title|description):\s*(['"])((?:\\.|(?!\1).)*?)\1/g)) {
+            for (const match of source.matchAll(/\b(?:title|description|category):\s*(['"])((?:\\.|(?!\1).)*?)\1/g)) {
                 addKey(keys, match[2].replace(/\\(['"`\\])/g, '$1'));
+            }
+            // Hint templates and weather names, also passed to t() as variables.
+            for (const name of ['COLLECTION_HINTS', 'WEATHER_LABELS']) {
+                const start = source.indexOf(`const ${name}`);
+                if (start < 0) continue;
+                const block = source.slice(start, source.indexOf('});', start));
+                for (const match of block.matchAll(/:\s*(['"])((?:\\.|(?!\1).)*?)\1/g)) {
+                    addKey(keys, match[2].replace(/\\(['"`\\])/g, '$1'));
+                }
             }
         }
     }

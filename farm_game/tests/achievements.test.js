@@ -2,8 +2,10 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
-const { readPublic, extractArray, loadDefinition } = require('./support/load');
+const { readPublic, publicPath, extractArray, loadDefinition } = require('./support/load');
 
 const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
 const FIXED_DATE = '2026-11-23T12:00:00.000Z';
@@ -34,6 +36,7 @@ function loadAchievements(globals = {}) {
 }
 
 const { api } = loadAchievements();
+const byId = id => api.DEFINITIONS.find(def => def.id === id);
 
 function makeTracker(store = memoryStore()) {
     const unlocked = [];
@@ -42,103 +45,214 @@ function makeTracker(store = memoryStore()) {
 }
 
 const progressOf = (tracker, id) => clone(tracker.list().find(entry => entry.id === id).progress);
+const repeat = (count, action) => { for (let i = 0; i < count; i++) action(); };
 
-test('every achievement from the design is defined once', () => {
-    assert.deepEqual(clone(api.DEFINITIONS.map(def => def.title)), [
-        'Corn Addict', 'Gamer', 'Hello World', 'Bible Reference', "It's Like Minecraft", 'Nice', 'Absolute Gamer'
-    ]);
-    assert.equal(new Set(api.DEFINITIONS.map(def => def.id)).size, api.DEFINITIONS.length);
-});
+// For each stat, how to raise it by n through the real event types.
+const STAT_PRODUCERS = {
+    planted: (tracker, n) => repeat(n, () => tracker.track('plant')),
+    tilled: (tracker, n) => repeat(n, () => tracker.track('till')),
+    harvested: (tracker, n) => tracker.track('harvest', { name: 'Tomato', amount: n }),
+    composted: (tracker, n) => tracker.track('compost', { amount: n }),
+    sold: (tracker, n) => tracker.track('sell', { amount: n }),
+    bought: (tracker, n) => repeat(n, () => tracker.track('buy')),
+    coinsEarned: (tracker, n) => tracker.track('earn', { amount: n, total: 0 }),
+    // Best-value stats: raise the best seen by n.
+    mostCoins: (tracker, n) => tracker.track('earn', { amount: 1, total: tracker.stat('mostCoins') + n }),
+    contracts: (tracker, n) => repeat(n, () => tracker.track('contract')),
+    deaths: (tracker, n) => repeat(n, () => tracker.track('death')),
+    gamesWon: (tracker, n) => repeat(n, () => tracker.recordGameBeaten({ difficulty: 0, days: 50, deaths: 3 })),
+    sideQuests: (tracker, n) => repeat(n, () => tracker.track('quest')),
+    highestDay: (tracker, n) => tracker.checkWorld({ days: tracker.stat('highestDay') + n, weatherLog: [] }),
+    trips: (tracker, n) => repeat(n, () => tracker.track('travel', { via: 'train' })),
+    'trips:balloon': (tracker, n) => repeat(n, () => tracker.track('travel', { via: 'balloon' })),
+    robotsPlaced: (tracker, n) => repeat(n, () => tracker.track('place', { name: 'Robot2' })),
+    robotHarvested: (tracker, n) => tracker.track('harvest', { name: 'Carrot', amount: n, byRobot: true }),
+    robotsBoomed: (tracker, n) => repeat(n, () => tracker.track('robotBoom')),
+    rewinds: (tracker, n) => repeat(n, () => tracker.track('rewind')),
+    fastForwards: (tracker, n) => repeat(n, () => tracker.track('fastForward')),
+    creditsViewed: (tracker, n) => repeat(n, () => tracker.track('credits')),
+    otherLanguage: (tracker, n) => repeat(n, () => tracker.track('language', { language: 'ja' }))
+};
 
-test('corn harvests add up and unlock Corn Addict at 1,000, once', () => {
-    const { tracker, unlocked, store } = makeTracker();
-    tracker.recordHarvest('Tomato', 500);
-    tracker.recordHarvest('Corn', 0);
-    tracker.recordHarvest('Corn', -5);
-    tracker.recordHarvest('Corn', 'lots');
-    tracker.recordHarvest('Corn', 999);
-    assert.equal(tracker.isUnlocked('corn-addict'), false);
-    assert.deepEqual(progressOf(tracker, 'corn-addict'), { current: 999, goal: 1000 });
+function producerFor(stat) {
+    if (STAT_PRODUCERS[stat]) return STAT_PRODUCERS[stat];
+    const [kind, name] = stat.split(/:(.*)/s);
+    if (kind === 'harvest') return (tracker, n) => tracker.track('harvest', { name, amount: n });
+    if (kind === 'placed') return (tracker, n) => repeat(n, () => tracker.track('place', { name }));
+    if (kind === 'eat') return (tracker, n) => repeat(n, () => tracker.track('eat', { name }));
+    if (kind === 'talk') return (tracker, n) => repeat(n, () => tracker.track('talk', { name }));
+    return null;
+}
 
-    tracker.recordHarvest('Corn', 3);
-    tracker.recordHarvest('Corn', 50);
-    assert.deepEqual(unlocked, ['corn-addict']);
-    assert.deepEqual(progressOf(tracker, 'corn-addict'), { current: 1000, goal: 1000 });
-    const saved = store.get('Achievements');
-    assert.equal(saved.cornHarvested, 1052);
-    assert.equal(saved.unlocked['corn-addict'], FIXED_DATE);
-});
+// How to find one entry of each collection.
+const COLLECTORS = {
+    npcs: (tracker, name) => tracker.track('talk', { name }),
+    crops: (tracker, name) => tracker.track('harvest', { name, amount: 1 }),
+    foods: (tracker, name) => tracker.track('eat', { name }),
+    districts: (tracker, name) => tracker.track('visit', { level: name === 'Beach' ? 'Beach' : name + ': Somewhere' }),
+    weather: (tracker, weather) => tracker.checkWorld({ days: 1, weatherLog: [{ day: 1, weather }] })
+};
 
-test('progress is read back from storage', () => {
-    const store = memoryStore();
-    api.create(store).recordHarvest('Corn', 400);
-    api.create(store).recordNpcTalk('Rick');
-    const reloaded = api.create(store);
-    assert.equal(progressOf(reloaded, 'corn-addict').current, 400);
-    assert.equal(progressOf(reloaded, 'hello-world').current, 1);
-});
+// Unlocked by run conditions rather than a stat or collection.
+const CONDITION_ONLY = ['gamer', 'like-minecraft', 'absolute-gamer', 'untouchable', 'bible-reference'];
 
-test('Hello World needs every NPC in the world, each counted once', () => {
-    const { tracker, unlocked } = makeTracker();
-    tracker.recordNpcTalk('Jake'); // a shop, not an NPC
-    tracker.recordNpcTalk('Deb'); // defined but never placed in the world
-    tracker.recordNpcTalk(undefined);
-    const last = api.ALL_NPCS[api.ALL_NPCS.length - 1];
-    for (const name of api.ALL_NPCS.slice(0, -1)) {
-        tracker.recordNpcTalk(name);
-        tracker.recordNpcTalk(name);
+test('46 achievements: the original 7 plus 39 new ones, each with a unique id', () => {
+    assert.equal(api.DEFINITIONS.length, 46);
+    assert.equal(new Set(api.DEFINITIONS.map(def => def.id)).size, 46);
+    assert.equal(byId('foreclosed'), undefined, 'losing is not an achievement');
+    for (const title of ['Corn Addict', 'Gamer', 'Hello World', 'Bible Reference', "It's Like Minecraft", 'Nice', 'Absolute Gamer']) {
+        assert.ok(api.DEFINITIONS.some(def => def.title === title), title);
     }
-    assert.deepEqual(progressOf(tracker, 'hello-world'), {
-        current: api.ALL_NPCS.length - 1, goal: api.ALL_NPCS.length, remaining: [last]
+});
+
+test('every achievement has a category, an existing icon and a way to unlock', () => {
+    for (const def of api.DEFINITIONS) {
+        assert.ok(api.CATEGORIES.includes(def.category), `${def.id} category`);
+        assert.ok(def.title && def.description, `${def.id} text`);
+        assert.ok(fs.existsSync(publicPath(def.icon)), `${def.id} icon ${def.icon}`);
+        const ways = [!!def.stat, !!def.collection, CONDITION_ONLY.includes(def.id)].filter(Boolean).length;
+        assert.equal(ways, 1, `${def.id} needs exactly one unlock rule`);
+        if (def.stat) assert.ok(Number.isInteger(def.goal) && def.goal >= 1, `${def.id} goal`);
+        if (def.collection) assert.ok(api.COLLECTIONS[def.collection], `${def.id} collection`);
+    }
+});
+
+test('each stat achievement unlocks exactly at its goal through real events', () => {
+    for (const def of api.DEFINITIONS.filter(entry => entry.stat)) {
+        const produce = producerFor(def.stat);
+        assert.ok(produce, `no event raises the stat ${def.stat} (${def.id})`);
+        const { tracker } = makeTracker();
+        produce(tracker, def.goal - 1);
+        assert.equal(tracker.isUnlocked(def.id), false, `${def.id} unlocked early`);
+        produce(tracker, 1);
+        assert.equal(tracker.isUnlocked(def.id), true, `${def.id} did not unlock at ${def.goal}`);
+    }
+});
+
+test('each collection achievement unlocks when the last entry is found', () => {
+    for (const def of api.DEFINITIONS.filter(entry => entry.collection)) {
+        const entries = api.COLLECTIONS[def.collection];
+        const { tracker } = makeTracker();
+        entries.slice(0, -1).forEach(entry => { COLLECTORS[def.collection](tracker, entry); COLLECTORS[def.collection](tracker, entry); });
+        assert.equal(tracker.isUnlocked(def.id), false, `${def.id} unlocked early`);
+        assert.deepEqual(progressOf(tracker, def.id), {
+            current: entries.length - 1, goal: entries.length, remaining: [entries[entries.length - 1]]
+        });
+        COLLECTORS[def.collection](tracker, entries[entries.length - 1]);
+        assert.equal(tracker.isUnlocked(def.id), true, def.id);
+    }
+});
+
+test('events ignore things that are not real entries or amounts', () => {
+    const { tracker, unlocked } = makeTracker();
+    tracker.track('talk', { name: 'Jake' }); // a shop, not an NPC
+    tracker.track('talk', { name: 'Deb' }); // defined but never placed in the world
+    tracker.track('harvest', { name: 'Corn', amount: 0 });
+    tracker.track('harvest', { name: 'Corn', amount: -5 });
+    tracker.track('harvest', { name: 'Corn', amount: 'lots' });
+    tracker.track('eat', { name: 'Junk' });
+    tracker.track('visit', { level: 'Extra y:0 x:1' });
+    tracker.track('language', { language: 'en' });
+    tracker.track('no-such-event');
+    assert.deepEqual(unlocked, []);
+    assert.equal(tracker.stat('harvest:Corn'), 0);
+    assert.equal(progressOf(tracker, 'hello-world').current, 0);
+});
+
+test('harvests count toward totals, the crop, robots and the crop collection', () => {
+    const { tracker, unlocked } = makeTracker();
+    tracker.track('harvest', { name: 'Corn', amount: 999 });
+    tracker.track('harvest', { name: 'Corn', amount: 3, byRobot: true });
+    assert.equal(tracker.stat('harvested'), 1002);
+    assert.equal(tracker.stat('harvest:Corn'), 1002);
+    assert.equal(tracker.stat('robotHarvested'), 3);
+    assert.deepEqual(unlocked, ['corn-addict']);
+    assert.deepEqual(progressOf(tracker, 'corn-addict'), { current: 1000, goal: 1000 }, 'progress caps at the goal');
+});
+
+test('progress is saved and read back, including the first release format', () => {
+    const store = memoryStore();
+    api.create(store).track('harvest', { name: 'Pumpkin', amount: 40 });
+    api.create(store).track('talk', { name: 'Rick' });
+    const reloaded = api.create(store);
+    assert.equal(reloaded.stat('harvest:Pumpkin'), 40);
+    assert.equal(progressOf(reloaded, 'hello-world').current, 1);
+
+    const legacyStore = memoryStore({
+        Achievements: { unlocked: { nice: FIXED_DATE }, cornHarvested: 400, npcsTalkedTo: ['Rick', 'Mira'] }
     });
-    assert.deepEqual(unlocked, []);
-    tracker.recordNpcTalk(last);
-    assert.deepEqual(unlocked, ['hello-world']);
+    const legacy = makeTracker(legacyStore).tracker;
+    assert.equal(legacy.isUnlocked('nice'), true);
+    assert.equal(legacy.stat('harvest:Corn'), 400);
+    assert.equal(progressOf(legacy, 'hello-world').current, 2);
+    legacy.track('plant'); // saves in the new format
+    assert.equal(makeTracker(legacyStore).tracker.isUnlocked('nice'), true, 'first-release unlocks survive the next save');
 });
 
-test('Nice unlocks on day 69', () => {
-    const { tracker, unlocked } = makeTracker();
-    tracker.checkWorld({ days: 68, weatherLog: [] });
-    assert.deepEqual(unlocked, []);
-    tracker.checkWorld({ days: 69, weatherLog: [] });
-    tracker.checkWorld({ days: 120, weatherLog: [] });
-    assert.deepEqual(unlocked, ['nice']);
+test('a goal raised in an update re-locks achievements that no longer meet it', () => {
+    const saved = stats => memoryStore({ Achievements: { unlocked: { 'green-thumb': FIXED_DATE, 'roll-credits': FIXED_DATE }, stats } });
+    const early = makeTracker(saved({ planted: 1, creditsViewed: 1 })).tracker;
+    assert.equal(early.isUnlocked('green-thumb'), false);
+    assert.equal(early.isUnlocked('roll-credits'), true);
+    assert.equal(early.stat('planted'), 1, 'progress is kept');
+    assert.equal(makeTracker(saved({ planted: 10000, creditsViewed: 1 })).tracker.isUnlocked('green-thumb'), true);
 });
 
-test('Bible Reference counts separate frog-rain days in the world weather log', () => {
+test('damaged stored data is cleaned up and a failing store does not break play', () => {
+    const { tracker } = makeTracker(memoryStore({
+        Achievements: {
+            unlocked: { nice: '2026-01-01T00:00:00.000Z', retired: FIXED_DATE, gamer: 5 },
+            stats: { tilled: 'lots', planted: 4, deaths: -2, highestDay: 70 },
+            collections: { npcs: ['Rick', 'Rick', 'Nobody'], crops: 'Corn' }
+        }
+    }));
+    assert.equal(tracker.unlockedCount(), 1);
+    assert.equal(tracker.stat('tilled'), 0);
+    assert.equal(tracker.stat('planted'), 4);
+    assert.equal(tracker.stat('deaths'), 0);
+    assert.equal(progressOf(tracker, 'hello-world').current, 1);
+    assert.equal(progressOf(tracker, 'crop-rotation').current, 0);
+
+    assert.equal(makeTracker(memoryStore({ Achievements: 'garbage' })).tracker.unlockedCount(), 0);
+    const broken = { get() { throw new Error('storage blocked'); }, set() { throw new Error('storage full'); } };
+    const { tracker: offline, unlocked } = makeTracker(broken);
+    offline.track('credits');
+    assert.deepEqual(unlocked, ['roll-credits'], 'a failed save still unlocks for this session');
+});
+
+test('world checks: best day, weather seen and frog rain twice in one world', () => {
     const { tracker, unlocked } = makeTracker();
-    const weatherLog = [
-        { day: 3, weather: 'frog-rain' },
-        { day: 3, weather: 'frog-rain' },
-        { day: 4, weather: 'rain' }
-    ];
-    tracker.checkWorld({ days: 4, weatherLog });
+    const weatherLog = [{ day: 3, weather: 'frog-rain' }, { day: 3, weather: 'frog-rain' }, { day: 4, weather: 'rain' }];
+    tracker.checkWorld({ days: 68, weatherLog });
     assert.deepEqual(unlocked, []);
+    tracker.checkWorld({ days: 12, weatherLog }); // a younger world doesn't lower the best day
+    assert.equal(tracker.stat('highestDay'), 68);
     weatherLog.push({ day: 9, weather: 'frog-rain' });
-    tracker.checkWorld({ days: 9, weatherLog });
-    assert.deepEqual(unlocked, ['bible-reference']);
+    tracker.checkWorld({ days: 100, weatherLog, weather: 'fog' });
+    assert.deepEqual(unlocked, ['nice', 'century-farmer', 'bible-reference']);
+    assert.equal(progressOf(tracker, 'storm-chaser').current, 3);
     assert.equal(api.frogRainDays(null), 0);
 });
 
-test('beating the game checks Hard/Hardcore, 3D mode and a finish before day 20', () => {
+test('beating the game checks difficulty, 3D mode, speed and deaths', () => {
     const misc = readPublic('miscfunctions.js');
     const presets = extractArray(misc, misc.indexOf('const BUILT_IN_RULE_PRESETS')).value;
     const hardcore = presets.find(preset => preset.id === 'hardcore').rules;
     const sandbox = presets.find(preset => preset.id === 'sandbox').rules;
+    const won = ['saved-the-meadows'];
 
     const cases = [
-        [{ difficulty: 0, days: 50, is3D: false }, []],
-        [{ difficulty: 1, days: 50 }, []],
-        [{ difficulty: 2, days: 50 }, ['gamer']],
-        [{ difficulty: 3, rules: hardcore, days: 50 }, ['gamer']],
-        [{ difficulty: 3, rules: { ...hardcore, permaDeath: false }, days: 50 }, []],
-        [{ difficulty: 3, rules: sandbox, days: 50 }, []],
-        [{ difficulty: 3, rules: null, days: 50 }, []],
-        [{ difficulty: 0, days: 50, is3D: true }, ['like-minecraft']],
-        [{ difficulty: 0, days: 19 }, ['absolute-gamer']],
-        [{ difficulty: 0, days: 20 }, []],
-        [{ difficulty: 0 }, []],
-        [{ difficulty: 2, days: 5, is3D: true }, ['gamer', 'like-minecraft', 'absolute-gamer']]
+        [{ difficulty: 0, days: 50, is3D: false, deaths: 2 }, won],
+        [{ difficulty: 2, days: 50, deaths: 2 }, [...won, 'gamer']],
+        [{ difficulty: 3, rules: hardcore, days: 50, deaths: 2 }, [...won, 'gamer']],
+        [{ difficulty: 3, rules: { ...hardcore, permaDeath: false }, days: 50, deaths: 2 }, won],
+        [{ difficulty: 3, rules: sandbox, days: 50, deaths: 2 }, won],
+        [{ difficulty: 0, days: 50, is3D: true, deaths: 2 }, [...won, 'like-minecraft']],
+        [{ difficulty: 0, days: 19, deaths: 2 }, [...won, 'absolute-gamer']],
+        [{ difficulty: 0, days: 20, deaths: 2 }, won],
+        [{ difficulty: 0, days: 50, deaths: 0 }, [...won, 'untouchable']],
+        [{ difficulty: 0, days: 50 }, won], // an old save with no death count
+        [{ difficulty: 2, days: 5, is3D: true, deaths: 0 }, [...won, 'gamer', 'like-minecraft', 'absolute-gamer', 'untouchable']]
     ];
     for (const [run, expected] of cases) {
         const { tracker, unlocked } = makeTracker();
@@ -147,25 +261,30 @@ test('beating the game checks Hard/Hardcore, 3D mode and a finish before day 20'
     }
 });
 
-test('damaged or outdated stored data is cleaned up', () => {
-    const { tracker } = makeTracker(memoryStore({
-        Achievements: {
-            unlocked: { nice: '2026-01-01T00:00:00.000Z', retired: FIXED_DATE, gamer: 5 },
-            cornHarvested: 'lots',
-            npcsTalkedTo: ['Rick', 'Rick', 'Nobody']
-        }
-    }));
-    assert.equal(tracker.isUnlocked('nice'), true);
-    assert.equal(tracker.isUnlocked('gamer'), false);
-    assert.equal(tracker.unlockedCount(), 1);
-    assert.equal(progressOf(tracker, 'corn-addict').current, 0);
-    assert.equal(progressOf(tracker, 'hello-world').current, 1);
+test('collections match the game data', () => {
+    const tiles = loadDefinition('config/tiles.js', 'TILE_DEFINITIONS', { kiahTileNum: 122 });
+    const items = loadDefinition('config/items.js', 'ITEM_DEFINITIONS');
+    const sorted = list => [...list].sort();
 
-    assert.equal(makeTracker(memoryStore({ Achievements: 'garbage' })).tracker.unlockedCount(), 0);
-    const broken = { get() { throw new Error('storage blocked'); }, set() { throw new Error('storage full'); } };
-    const { tracker: offline, unlocked } = makeTracker(broken);
-    offline.checkWorld({ days: 70 });
-    assert.deepEqual(unlocked, ['nice'], 'a failed save still unlocks for this session');
+    const crops = items.filter(item => item && item.class === 'Seed')
+        .map(seed => items[tiles[seed.plant_num - 1].eat_num])
+        .filter(Boolean).map(item => item.name);
+    assert.deepEqual(sorted(api.COLLECTIONS.crops), sorted(new Set(crops)));
+
+    const foods = items.filter(item => item && item.class === 'Eat').map(item => item.name);
+    assert.deepEqual(sorted(api.COLLECTIONS.foods), sorted(foods));
+    // Balanced Diet must be possible: every food is grown or sold somewhere.
+    const sold = new Set(tiles.filter(tile => tile.class === 'Shop').flatMap(tile => tile.inv || [])
+        .filter(entry => entry && entry.num).map(entry => items[entry.num].name));
+    for (const food of foods) assert.ok(crops.includes(food) || sold.has(food), `${food} cannot be obtained`);
+
+    const preload = readPublic('preload.js');
+    const levelNames = [...preload.matchAll(/new Level\(\s*(['"])([^'"]+)\1\s*,/g)].map(match => match[2]);
+    assert.deepEqual(sorted(api.COLLECTIONS.districts), sorted(new Set(levelNames.map(api.districtOf))));
+
+    const weatherSource = readPublic('classes/weather-system.js');
+    const weights = vm.runInNewContext('(' + weatherSource.match(/DEFAULT_WEIGHTS\s*=\s*(\{[^}]*\})/)[1] + ')');
+    assert.deepEqual(sorted(api.COLLECTIONS.weather), sorted(Object.keys(weights)));
 });
 
 test('the NPC list matches every NPC placed in the world', () => {
@@ -188,58 +307,71 @@ test('the NPC list matches every NPC placed in the world', () => {
     assert.deepEqual([...api.ALL_NPCS].sort(), [...placed].sort());
 });
 
-test('achievements are shared by every world and survive deleting one', () => {
-    const data = new Map();
-    const raw = {
-        get: key => clone(data.get(key)),
-        set: (key, value) => data.set(key, clone(value)),
-        remove: key => data.delete(key),
-        clear: () => data.clear(),
-        keys: () => data.size,
-        key: index => 'passphrase.life.' + [...data.keys()][index],
-        showprefix: () => 'passphrase.life.'
-    };
-    const state = { window: {} };
-    vm.runInNewContext(readPublic('classes/world-saves.js'), state);
-    const worlds = state.window.CloudyWorldSaves.create(raw);
+test('game code only reports event types the tracker handles, and every type is reported', () => {
+    const source = readPublic('classes/achievements.js');
+    const handled = new Set([...source.slice(source.indexOf('function track(')).matchAll(/case '([^']+)':/g)].map(match => match[1]));
+    // Types the module itself reports from browser events.
+    const fromEvents = new Set([...source.matchAll(/trackAchievement\('([^']+)'/g)].map(match => match[1]));
 
-    worlds.activate(2);
-    worlds.store.set('Day_curLvl_Dif', { days: 70 });
-    api.create(worlds.store).checkWorld({ days: 70 });
-    worlds.activate(1);
-    assert.equal(api.create(worlds.store).isUnlocked('nice'), true, 'visible from another world');
-    worlds.clearWorld(2);
-    worlds.clearWorld(1);
-    assert.equal(api.create(worlds.store).isUnlocked('nice'), true, 'kept after deleting worlds');
+    const reported = new Set();
+    const publicDir = publicPath('.');
+    for (const file of fs.readdirSync(publicDir, { recursive: true })) {
+        if (!file.endsWith('.js') || file.includes('libraries') || file.endsWith('achievements.js')) continue;
+        for (const match of fs.readFileSync(path.join(publicDir, file), 'utf8').matchAll(/trackAchievement\(\s*'([^']+)'/g)) {
+            assert.ok(handled.has(match[1]), `${file} reports unknown type '${match[1]}'`);
+            reported.add(match[1]);
+        }
+    }
+    for (const type of handled) {
+        assert.ok(reported.has(type) || fromEvents.has(type), `nothing reports '${type}'`);
+    }
 });
 
-test('game events and harvest sites feed the tracker', () => {
+test('achievements are stored with the settings every world shares', () => {
+    const saves = readPublic('classes/world-saves.js');
+    const shared = saves.match(/SHARED_KEYS\s*=\s*new Set\(\[([^\]]*)\]\)/);
+    assert.ok(shared, 'SHARED_KEYS not found');
+    assert.match(shared[1], /'Achievements'/);
+});
+
+test('game events and hook calls feed the tracker', () => {
     const store = memoryStore();
     const { context, fire } = loadAchievements({
         localData: store,
-        all_items: [{ name: 'empty' }, { name: 'Corn' }, { name: 'Tomato' }],
-        days: 12, dificulty: 2, is3DMode: true, weatherLog: []
+        all_items: [0, { name: 'Corn' }, { name: 'Tomato' }],
+        days: 12, dificulty: 2, is3DMode: true, weatherLog: [], currentWeather: 'clear',
+        player: { deaths: 0 }
     });
-    const saved = () => store.get('Achievements') || { unlocked: {} };
+    const saved = () => store.get('Achievements') || { unlocked: {}, stats: {}, collections: {} };
 
-    context.recordCropHarvest(1, 600, 'Cloudy Meadows: Home', true);
-    context.recordCropHarvest(1, 5000, 'Auto Farms: 2', false); // the district's own bots
-    context.recordCropHarvest(2, 5000, 'Cloudy Meadows: Home', true);
-    assert.equal(saved().cornHarvested, 600);
-    context.recordCropHarvest(1, 400, 'Cloudy Meadows: Home', false); // the player's robot
+    context.trackAchievement('harvest', { itemNum: 1, amount: 600, level: 'Cloudy Meadows: Home', byPlayer: true });
+    context.trackAchievement('harvest', { itemNum: 1, amount: 5000, level: 'Auto Farms: 2', byPlayer: false });
+    context.trackAchievement('harvest', { itemNum: 0, amount: 5, level: 'Cloudy Meadows: Home', byPlayer: true });
+    assert.equal(saved().stats['harvest:Corn'], 600);
+    context.trackAchievement('harvest', { itemNum: 1, amount: 400, level: 'Cloudy Meadows: Home', byPlayer: false });
     assert.ok(saved().unlocked['corn-addict']);
+    assert.equal(saved().stats.robotHarvested, 400);
 
-    fire('npcInteraction', { npcName: 'Rick' });
-    assert.deepEqual(saved().npcsTalkedTo, ['Rick']);
+    fire('npcInteraction', { npcName: 'Dog' });
+    assert.ok(saved().unlocked['good-boy']);
+    fire('moneyGained', { amount: 300, totalCoins: 26000 });
+    assert.ok(saved().unlocked['dragon-hoard']);
+    fire('locationVisited', { locationName: 'The Big City : Downtown' });
+    assert.deepEqual(saved().collections.districts, ['The Big City']);
+    fire('languageChanged', { language: 'fr' });
+    assert.ok(saved().unlocked.polyglot);
 
     fire('questCompleted', { quest: { og_name: 'Talk to some people' } });
-    assert.equal(Object.keys(saved().unlocked).length, 1);
+    assert.equal(saved().stats.sideQuests, 1);
     fire('questCompleted', { quest: { og_name: 'Save Cloudy Meadows' } });
-    for (const id of ['gamer', 'like-minecraft', 'absolute-gamer']) assert.ok(saved().unlocked[id], id);
+    for (const id of ['saved-the-meadows', 'gamer', 'like-minecraft', 'absolute-gamer', 'untouchable']) {
+        assert.ok(saved().unlocked[id], id);
+    }
 
     context.days = 69;
     context.weatherLog = [{ day: 2, weather: 'frog-rain' }, { day: 40, weather: 'frog-rain' }];
     fire('newDay', { day: 69 });
     assert.ok(saved().unlocked.nice);
     assert.ok(saved().unlocked['bible-reference']);
+    assert.deepEqual(saved().collections.weather, ['clear', 'frog-rain']);
 });

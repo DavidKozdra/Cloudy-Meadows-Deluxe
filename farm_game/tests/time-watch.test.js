@@ -114,3 +114,17 @@ for (const speed of [1, 2, 4, 8, 16]) {
         assert.deepEqual(effects, []);
     });
 }
+
+test('morning updates distant shops once with the correct weather and skips empty areas', () => {
+    const { state, tick } = makeClock({ time: 1, timephase: 1, timeSpeed: 1, days: 6, dayOfWeek: 1, lastRainDay: 6 });
+    vm.runInNewContext(readPublic('classes/level.js') + '\nthis.TestLevel = Level;', state);
+    const calls = [];
+    const shop = { class: 'Shop', age: -1, daily_update: (...args) => calls.push(args) };
+    const remote = Object.create(state.TestLevel.prototype);
+    remote.map = [[shop]];
+    state.levels = [[0, undefined, remote]];
+    tick();
+    assert.deepEqual(calls, [[1, 6, -999]], 'one restock per morning, even in a distant area');
+    tick();
+    assert.equal(calls.length, 1, 'the next clock tick does not repeat morning updates');
+});

@@ -6380,6 +6380,46 @@ body.acc-high-contrast .mobile-inv-slot.selected {
     #main-menu-container .main-menu-title-image { width: 65px !important; }
     #main-menu-container .main-menu-actions { gap: 6px; }
 }
+/* The brand wrapper is invisible to layout except on landscape phones. */
+.main-menu-brand { display: contents; }
+/* Landscape phones: logo on the left, buttons on the right. The container's
+   display is toggled inline (flex/none), so this stays a flex row. The
+   language picker moves to the top-left so it never sits over the buttons;
+   the logo is capped at 100dvh - 170px so the centred column clears it. */
+@media (max-height: 500px) and (orientation: landscape) {
+    #main-menu-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-content: center;
+        column-gap: max(24px, 6vw);
+        row-gap: 8px;
+        padding-left: max(20px, env(safe-area-inset-left));
+        padding-right: max(20px, env(safe-area-inset-right));
+    }
+    #main-menu-container .main-menu-actions {
+        order: 2;
+        width: min(calc(280px * var(--acc-control-scale)), 40vw);
+    }
+    #main-menu-container .main-menu-language-control {
+        right: auto;
+        left: max(14px, env(safe-area-inset-left));
+    }
+    #main-menu-container .main-menu-brand {
+        order: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+    #main-menu-container .main-menu-title-image {
+        width: min(38vw, calc(100dvh - 170px)) !important;
+    }
+    #main-menu-container #world-storage-loading {
+        order: 3;
+        flex-basis: 100%;
+    }
+}
 html.acc-high-contrast .world-menu-panel { background: #111; color: #fff; }
 html.acc-high-contrast .world-slot-card { background: #222; border-color: #fff; color: #fff; }
 html.acc-high-contrast .world-slot-difficulty,
@@ -6394,6 +6434,21 @@ html.acc-high-contrast .world-slot-stats dt { color: #ffe56d; }
     font-size: 16px;
 }
 #pause-menu .achievement-summary { color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6); }
+.achievement-category + .achievement-category { margin-top: 22px; }
+.achievement-category-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #577f66;
+    font-family: pixelFont, monospace;
+    font-size: 17px;
+}
+.achievement-category-count { font-size: 12px; opacity: 0.8; }
+#pause-menu .achievement-category-title { color: #fff; border-color: rgba(255, 255, 255, 0.5); text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6); }
+html.acc-high-contrast .achievement-category-title { border-color: #fff; }
 .achievement-list {
     display: grid;
     gap: 12px;
@@ -6865,3 +6920,10 @@ html.acc-high-contrast .achievement-toast { background: #111; border-color: #fff
     border: 2px solid rgb(100, 70, 40);
     border-radius: 3px;
 }
+
+/* Save status is independent of title/gameplay navigation. */
+#world-save-notice { position: fixed; right: 16px; bottom: 16px; z-index: 14000; max-width: min(420px, calc(100vw - 64px)); padding: 16px; background: #f3fff1; color: #203f43; border: 3px solid #577f66; font-size: 12px; line-height: 1.6; box-shadow: 0 4px 12px #0004; }
+#world-save-notice[hidden] { display: none; }
+#world-save-notice p { margin: 0 0 8px; }
+#world-save-notice button { width: auto; margin: 4px; padding: 8px; font-size: 12px; }
+#world-storage-loading { max-width: 560px; font-size: 12px; line-height: 1.6; text-align: center; }

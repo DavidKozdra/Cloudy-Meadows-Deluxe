@@ -1,222 +1,135 @@
 'use strict';
-
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { readPublic } = require('./support/load');
-
-const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
-
-function makeWorlds(initial = {}) {
-    const data = new Map(Object.entries(clone(initial)));
-    const raw = {
-        get: key => clone(data.get(key)),
-        set: (key, value) => data.set(key, clone(value)),
-        remove: key => data.delete(key),
-        clear: () => data.clear(),
-        keys: () => data.size,
-        key: index => 'passphrase.life.' + [...data.keys()][index],
-        showprefix: () => 'passphrase.life.'
+vm.runInThisContext(readPublic('classes/storage/save-codec.js'));
+vm.runInThisContext(readPublic('classes/storage/legacy-saves.js'));
+const C = globalThis.CloudySaveCodec;
+const clone = C.clone;
+function world() {
+    return {
+        BridgeTutorialSeen: true,
+        Day_curLvl_Dif: { days: 30, dificulty: 2, currentLevel_x: 4, currentLevel_y: 1, currentWeather: 'rain', weatherLog: [{ day: 30, weather: 'rain' }] },
+        player: { coins: 250, inv: [0, { name: 'Corn', amount: 12 }], quests: [{ name: 'Save Cloudy Meadows', progress: 7 }], pos: { x: 32, y: 64 } },
+        Home: { name: 'Home', map: Array.from({ length: 30 }, (_, y) => Array.from({ length: 30 }, (_, x) => ({ name: 'corn', pos: { x, y }, age: 10, water: 5 }))) }
     };
-    const state = { window: {} };
-    vm.runInNewContext(readPublic('classes/world-saves.js'), state);
-    return { worlds: state.window.CloudyWorldSaves.create(raw), create: () => state.window.CloudyWorldSaves.create(raw), raw, data };
 }
-
-function saveWorld(worlds, id, days = id * 10) {
-    worlds.activate(id);
-    worlds.store.set('Day_curLvl_Dif', {
-        days, dificulty: id - 1, currentLevel_x: 4, currentLevel_y: 1,
-        currentWeather: 'rain', weatherLog: [{ day: days, weather: 'rain' }]
-    });
-    worlds.store.set('player', { coins: id * 100, pos: { x: 32, y: 64 }, inv: [], quests: [] });
-    worlds.store.set('Cloudy Meadows: Home', { name: 'Cloudy Meadows: Home', map: [[{ name: `crop-${id}` }]] });
-    worlds.store.set('Extra y:0 x:1', { name: 'Extra y:0 x:1', map: [[id]] });
-}
-
-test('an existing save becomes World 1 without rewriting or deleting its data', () => {
-    const legacy = {
-        Day_curLvl_Dif: { days: 42, dificulty: 1, currentLevel_x: 4, currentLevel_y: 1, currentWeather: 'fog' },
-        player: { coins: 1234, pos: { x: 1, y: 2 }, inv: [], quests: [] },
-        'Cloudy Meadows: Home': { map: [[1]] }, Options: { musicVolume: 0.4 }
-    };
-    const { worlds, data } = makeWorlds(legacy);
-    assert.equal(worlds.activeId, 1);
-    assert.equal(worlds.summary(1).valid, true);
-    assert.equal(worlds.summary(1).days, 42);
-    assert.equal(worlds.summary(1).coins, 1234);
-    assert.equal(worlds.summary(2).occupied, false);
-    assert.equal(worlds.summary(3).occupied, false);
-    assert.deepEqual(Object.fromEntries(data), legacy);
+test('maps, players, quests and weather round-trip as separate records', async () => {
+    const expected = world(), records = C.split(expected), decoded = {};
+    assert.ok(records.quests && records.weather && records.day && records['data:Home']);
+    assert.equal(records.player.quests, undefined);
+    for (const [key, value] of Object.entries(records)) decoded[key] = await C.decode(await C.encode(value));
+    assert.deepEqual(clone(C.join(decoded)), expected);
 });
-
-test('three worlds keep independent players, levels and weather through switching and reload', () => {
-    const { worlds, create } = makeWorlds();
-    for (let id = 1; id <= 3; id++) saveWorld(worlds, id);
-    const loaded = create();
-    assert.equal(loaded.activeId, 3);
-    for (let id = 1; id <= 3; id++) {
-        loaded.activate(id);
-        assert.equal(loaded.store.get('player').coins, id * 100);
-        assert.equal(loaded.store.get('Cloudy Meadows: Home').map[0][0].name, `crop-${id}`);
-        assert.equal(loaded.store.get('Extra y:0 x:1').map[0][0], id);
-        assert.deepEqual(clone(loaded.store.get('Day_curLvl_Dif').weatherLog), [{ day: id * 10, weather: 'rain' }]);
+test('large records use gzip and detect damaged contents', async () => {
+    const value = world().Home, encoded = await C.encode(value);
+    assert.equal(encoded.encoding, 'gzip');
+    assert.ok(encoded.bytes < encoded.logicalBytes / 3);
+    encoded.hash = 'corrupted';
+    await assert.rejects(C.decode(encoded), /checksum/);
+});
+test('map edits are deltas against an immutable versioned base', async () => {
+    const base = world().Home, next = clone(base);
+    next.map[4][5] = { name: 'Chest', inv: [{ name: 'Corn', amount: 8 }] };
+    const record = await C.encode(next, { id: 'base-v1:map1', value: base });
+    assert.equal(record.baseId, 'base-v1:map1');
+    assert.ok(record.bytes < 1000);
+    assert.deepEqual(await C.decode(record, base), next);
+    assert.equal(base.map[4][5].name, 'corn');
+    await assert.rejects(C.decode(record), /base map/);
+});
+test('unchanged records avoid compression and rewriting', async () => {
+    const value = world().Home, first = await C.encode(value);
+    const next = await C.encode(value, null, first.hash);
+    assert.equal(next.unchanged, true);
+    assert.equal(next.data, undefined);
+});
+test('bridge tutorial completion is world metadata and survives record round-trips', async () => {
+    for (const seen of [true, false]) {
+        const data = world(); data.BridgeTutorialSeen = seen;
+        const records = C.split(data), decoded = {};
+        assert.equal(records['data:BridgeTutorialSeen'], seen);
+        for (const [key, value] of Object.entries(records)) decoded[key] = await C.decode(await C.encode(value));
+        assert.deepEqual(clone(C.join(decoded)), data);
     }
 });
-
-test('repeated tile data uses less storage and still round-trips as objects', () => {
-    const { worlds, raw } = makeWorlds();
-    const level = { name: 'Farm', map: Array.from({ length: 20 }, () => [{
-        name: 'grass', class: 'Tile', png: 1, pos: { x: 32, y: 64 }, age: 0, variant: 0, collide: false
-    }]) };
-    worlds.store.set('Farm', level);
-    assert.ok(JSON.stringify(raw.get('Farm')).length < JSON.stringify(level).length * 0.7);
-    assert.deepEqual(clone(worlds.store.get('Farm')), level);
-    worlds.store.set('Options', { musicVolume: 0.2 });
-    assert.deepEqual(raw.get('Options'), { musicVolume: 0.2 }, 'shared settings remain compatible with bootstrap readers');
+test('delta patches handle removal, resizing, Unicode and prototype-like nested keys', () => {
+    const before = JSON.parse('{"array":[1,2,3],"obsolete":1,"__proto__":{"value":2}}');
+    const after = JSON.parse('{"array":["🌽"],"added":[null,false,{}],"__proto__":{"value":4}}');
+    assert.deepEqual(C.apply(before, C.diff(before, after)), after);
+    assert.equal({}.value, undefined);
 });
-
-test('options, controls and custom presets are shared while clearing a world keeps them', () => {
-    const { worlds } = makeWorlds();
-    saveWorld(worlds, 1);
-    saveWorld(worlds, 2);
-    for (const key of ['Options', 'Controls', 'customRulePresets']) worlds.store.set(key, { test: key });
-    worlds.store.clear();
-    assert.equal(worlds.summary(2).occupied, false);
-    assert.equal(worlds.summary(1).valid, true);
-    worlds.activate(1);
-    for (const key of ['Options', 'Controls', 'customRulePresets']) assert.deepEqual(worlds.store.get(key), { test: key });
-});
-
-test('making room for new worlds compacts legacy maps without changing their contents or shared settings', () => {
-    const tile = JSON.parse('{"name":"corn","pos":{"x":32,"y":64},"__proto__":{"safe":true},"state":[null,false,0,-2,"🌽",[],{}]}');
-    const level = { name: 'Old Farm', map: Array.from({ length: 40 }, () => [tile]) };
-    const { worlds, raw } = makeWorlds({ 'Old Farm': level, Options: { musicVolume: 0.5 } });
-    worlds.compact();
-    assert.ok(JSON.stringify(raw.get('Old Farm')).length < JSON.stringify(level).length);
-    assert.deepEqual(clone(worlds.store.get('Old Farm')), level);
-    assert.deepEqual(raw.get('Options'), { musicVolume: 0.5 });
-    const once = clone(raw.get('Old Farm'));
-    worlds.compact();
-    assert.deepEqual(raw.get('Old Farm'), once, 'already compacted data is not encoded twice');
-});
-
-for (const deleted of [1, 2, 3]) {
-    test(`deleting World ${deleted} removes all its generated areas and keeps the other two worlds`, () => {
-        const { worlds } = makeWorlds();
-        for (let id = 1; id <= 3; id++) saveWorld(worlds, id);
-        worlds.clearWorld(deleted);
-        assert.equal(worlds.summary(deleted).occupied, false);
-        assert.deepEqual(clone(worlds.store.worldKeys(deleted)), []);
-        for (let id = 1; id <= 3; id++) {
-            if (id === deleted) continue;
-            worlds.activate(id);
-            assert.equal(worlds.summary(id).valid, true);
-            assert.equal(worlds.store.get('player').coins, id * 100);
-        }
-    });
+for (const corrupt of [data => data.Day_curLvl_Dif.days = -1, data => data.player.inv = {}, data => data.Day_curLvl_Dif.weatherLog = [{ day: 'bad' }], data => data.Home.map[0] = null, data => data.Options = {}]) {
+    test('malformed imports are rejected before any storage writes', () => { const data = world(); corrupt(data); assert.throws(() => C.validate(data), /Invalid/); });
 }
-
-test('clear all removes all three worlds and shared settings', () => {
-    const { worlds, data } = makeWorlds();
-    for (let id = 1; id <= 3; id++) saveWorld(worlds, id);
-    worlds.store.set('Options', { musicVolume: 0.5 });
-    worlds.clearAll();
-    assert.equal(worlds.activeId, 1);
-    assert.equal(data.size, 0);
-    assert.ok(worlds.list().every(world => !world.occupied));
-});
-
-test('partial or malformed saves cannot be continued or silently reused as empty slots', () => {
-    const { worlds } = makeWorlds({ player: { coins: 10 } });
-    assert.equal(worlds.summary(1).valid, false);
-    assert.equal(worlds.summary(1).occupied, true);
-    worlds.activate(2);
-    worlds.store.set('Day_curLvl_Dif', { days: -2, dificulty: 0 });
-    assert.equal(worlds.summary(2).valid, false);
-    assert.equal(worlds.summary(2).occupied, true);
-    worlds.activate(3);
-    worlds.store.set('Day_curLvl_Dif', { days: 0, dificulty: 3, currentLevel_x: 4, currentLevel_y: 1, customRules: { startingCoins: 250 } });
-    assert.equal(worlds.summary(3).valid, true, 'legacy new games may not have a saved player yet');
-    assert.equal(worlds.summary(3).coins, 250);
-});
-
-test('summary info updates after saving without loading that world into gameplay', () => {
-    const { worlds } = makeWorlds();
-    assert.equal(worlds.summary(1).valid, false);
-    saveWorld(worlds, 1, 20);
-    worlds.store.set('__worldInfo', { location: 'Cloudy Meadows: Home', updatedAt: '2026-11-23T12:00:00Z' });
-    assert.equal(worlds.summary(1).days, 20);
-    assert.equal(worlds.summary(1).location, 'Cloudy Meadows: Home');
-    worlds.store.set('player', { coins: 999, inv: [], quests: [], pos: { x: 0, y: 0 } });
-    assert.equal(worlds.summary(1).coins, 999);
-});
-
-test('invalid slot IDs and reserved keys cannot modify another world', () => {
-    const { worlds, data } = makeWorlds();
-    for (const id of [0, 4, -1, 1.5, '2', null]) {
-        assert.throws(() => worlds.activate(id), /Invalid world slot/);
-        assert.throws(() => worlds.clearWorld(id), /Invalid world slot/);
-    }
-    for (const key of ['__cloudyActiveWorld', '__cloudyWorld2:player']) {
-        assert.throws(() => worlds.store.set(key, {}), /Invalid world data key/);
-    }
-    assert.equal(data.size, 0);
-});
-
-test('import replaces only the selected world, including its generated areas', async () => {
-    const { worlds } = makeWorlds();
-    for (let id = 1; id <= 3; id++) saveWorld(worlds, id);
-    worlds.activate(2);
-    const misc = readPublic('miscfunctions.js');
-    const state = {
-        localData: worlds.store, setSaveTransferStatus() {}, refreshSaveTransferButtons() {}, alert() {},
-        window: { location: { reload() {} } }
+function legacyRaw(initial) {
+    const values = new Map(Object.entries(clone(initial)));
+    return { values, get: key => cloneOrMissing(values.get(key)), set: (key, value) => values.set(key, clone(value)),
+        remove: key => values.delete(key), keys: () => values.size,
+        key: index => 'passphrase.life.' + [...values.keys()][index], showprefix: () => 'passphrase.life.' };
+}
+function cloneOrMissing(value) { return value == null ? value : clone(value); }
+function migrationRepo(options = {}) {
+    const heads = new Map(), data = new Map(), receipts = new Map();
+    return { heads, data, receipts,
+        get: async (store, key) => store === 'migrations' ? receipts.get(key) : undefined,
+        setSetting: async () => {}, getBySlot: async slot => heads.get(slot),
+        save: async (id, value, { slot }) => {
+            if (options.failSave) throw new DOMException('Full', 'QuotaExceededError');
+            const head = { id, slot, revision: 1 }; heads.set(slot, head); data.set(id, clone(value)); return head;
+        },
+        load: async id => ({ head: { id, revision: 1 }, data: options.corruptRead ? {} : data.get(id) }),
+        receipt: async (key, value) => receipts.set(key, value)
     };
-    vm.runInNewContext(misc.slice(misc.indexOf('function normalizeImportedSavePayload('), misc.indexOf('function ensureSaveImportInput(')), state);
-    await state.importSaveDataFromText(JSON.stringify({ data: {
-        Day_curLvl_Dif: { days: 8, dificulty: 0, currentLevel_x: 4, currentLevel_y: 1 },
-        levels: { Home: { name: 'Home', map: [[2]] } }
-    } }));
-    assert.equal(worlds.summary(2).days, 8);
-    assert.equal(worlds.store.get('Extra y:0 x:1'), undefined);
-    assert.equal(worlds.summary(1).coins, 100);
-    assert.equal(worlds.summary(3).coins, 300);
+}
+test('legacy worlds migrate independently and originals are removed only after read-back verification', async () => {
+    const first = world(), second = world(); second.player.coins = 999;
+    const raw = legacyRaw({ ...first, ...Object.fromEntries(Object.entries(second).map(([key, value]) => ['__cloudyWorld2:' + key, value])), Options: { volume: 0.5 } });
+    const repo = migrationRepo();
+    assert.equal((await CloudyLegacySaves.migrate(repo, raw)).size, 0);
+    assert.equal(repo.data.get('legacy-v1-world-1').player.coins, 250);
+    assert.equal(repo.data.get('legacy-v1-world-2').player.coins, 999);
+    assert.deepEqual([...raw.values.keys()], ['Options']);
+    assert.equal(repo.receipts.size, 2);
 });
-
-for (const difficulty of [2, 3]) {
-    test(`permanent death in difficulty ${difficulty} deletes only the active world`, () => {
-        const { worlds } = makeWorlds();
-        for (let id = 1; id <= 3; id++) saveWorld(worlds, id);
-        worlds.activate(2);
-        const misc = readPublic('miscfunctions.js');
-        const state = {
-            localData: worlds.store, window: { customRules: { permaDeath: true }, addEventListener() {} },
-            document: { addEventListener() {} },
-            newWorld() {}, title_screen: false,
-            localStorage: { clear() { assert.fail('Must not erase other worlds'); } }
-        };
-        vm.runInNewContext(misc.slice(misc.indexOf('function deleteSave()'), misc.indexOf('function selectDifficulty(')), state);
-        vm.runInNewContext('class MoveableEntity {}\n' + readPublic('classes/tile_classes/player.js') + '\nthis.Player = Player;', state);
-        const player = Object.create(state.Player.prototype);
-        player.deathConsequence(difficulty);
-        assert.equal(worlds.summary(2).occupied, false);
-        assert.equal(worlds.summary(1).valid, true);
-        assert.equal(worlds.summary(3).valid, true);
+for (const options of [{ failSave: true }, { corruptRead: true }]) {
+    test('migration preserves the entire original if writing or verification fails', async () => {
+        const data = world(), raw = legacyRaw(data);
+        const errors = await CloudyLegacySaves.migrate(migrationRepo(options), raw);
+        assert.ok(errors.has(1)); assert.deepEqual(Object.fromEntries(raw.values), data);
     });
 }
-
-test('Continue opens one valid world directly and offers a picker for several', () => {
-    const { worlds } = makeWorlds();
-    const calls = [];
-    const state = { worldSaves: worlds, window: { addEventListener() {} } };
-    vm.runInNewContext(readPublic('classes/ui/world-menu.js'), state);
-    state.openSavedWorld = id => calls.push(['open', id]);
-    state.showWorldPicker = mode => calls.push(['picker', mode]);
-    state.continueWorldGame();
-    saveWorld(worlds, 3);
-    state.continueWorldGame();
-    saveWorld(worlds, 1);
-    state.continueWorldGame();
-    assert.deepEqual(calls, [['picker', 'new'], ['open', 3], ['picker', 'continue']]);
+test('legacy compact data remains readable', () => {
+    const raw = { $cloudyWorld: 1, shapes: [['name','map']], strings: ['Home'], data: [0, [-2,0], [-1,[-1,1,2]]] };
+    assert.deepEqual(CloudyLegacySaves.unpack(raw), { name: 'Home', map: [[1,2]] });
+});
+test('imports validate quest, inventory and tile data before replacing a playable world', () => {
+    const data = world();
+    data.player.quests = [{ og_name: 'Farm', days: 10, reward_item: 0, goals: [{ class: 'FundingGoal', amount: 100 }] }];
+    data.Home.map[2][3] = { name: 'Chest', inv: [[0, { name: 'Corn', amount: 5 }], [0, 0]] };
+    assert.equal(C.validateImport(data), data);
+    for (const corrupt of [value => value.player.quests[0].goals = null,
+        value => value.player.quests[0] = null,
+        value => value.player.inv[1].amount = 'bad',
+        value => value.Home.map[0][0].pos = { x: 'bad', y: 1 }]) {
+        const broken = clone(data); corrupt(broken);
+        assert.throws(() => C.validateImport(broken), /Invalid imported/);
+    }
+});
+test('rewind restores map data directly without even staging a save', () => {
+    const calls = [], level = { name: 'Home', map: [[{ name: 'corn', age: 3 }]] };
+    const sandbox = { levels: [[level]], loadLevel: (...args) => calls.push(args), console,
+        localData: { get() { assert.fail('Rewind must not read permanent storage'); }, set() { assert.fail('Rewind must not write permanent storage'); } } };
+    vm.runInNewContext(readPublic('classes/time-rewind.js'), sandbox);
+    sandbox.captureDaySnapshot(1); level.map[0][0].age = 7; sandbox.restoreDaySnapshot(1);
+    assert.equal(calls[0][3].map[0][0].age, 3);
+    assert.equal(calls[0][0], level);
+});
+test('Time Watch history has a separate bounded byte budget', () => {
+    const sandbox = { levels: [[{ name: 'Big', map: [[{ name: 'corn', data: 'x'.repeat(1024 * 1024) }]] }]], customRule: () => 1000, console };
+    vm.runInNewContext(readPublic('classes/time-rewind.js'), sandbox);
+    for (let day = 0; day < 40; day++) sandbox.captureDaySnapshot(day);
+    assert.equal(sandbox.hasDaySnapshot(0), false);
+    assert.equal(sandbox.hasDaySnapshot(39), true);
 });

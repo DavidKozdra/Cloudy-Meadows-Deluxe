@@ -107,7 +107,7 @@ class FarmRobot extends GridMoveEntity {
                         ? scaleHarvestYield(baseYield, levels[y][x].ladybugs)
                         : baseYield + levels[y][x].ladybugs;
                     addItem(this, look.eat_num, harvestAmount);
-                    if (typeof recordCropHarvest === 'function') recordCropHarvest(look.eat_num, harvestAmount, levels[y][x].name, false);
+                    if (typeof trackAchievement === 'function') trackAchievement('harvest', { itemNum: look.eat_num, amount: harvestAmount, level: levels[y][x].name, byPlayer: false });
                     // Specialized showcase harvesters include an integrated seed
                     // hopper, so harvested beds are immediately replanted.
                     levels[y][x].map[look.pos.y / tileSize][look.pos.x / tileSize] = new_tile_from_num(cropTileNum, look.pos.x, look.pos.y);

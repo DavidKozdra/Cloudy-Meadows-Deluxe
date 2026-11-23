@@ -502,7 +502,11 @@ class Level {
         }
     }
 
-    daily_update() {
+    daily_update(
+        marketDay = typeof dayOfWeek !== 'undefined' ? dayOfWeek : 0,
+        rainDay = typeof lastRainDay !== 'undefined' ? lastRainDay : -999,
+        frogRainDay = typeof lastFrogRainDay !== 'undefined' ? lastFrogRainDay : -999
+    ) {
         // The calendar decoration exists only in the story world. Procedural
         // modes still share every generic daily tile and market update below.
         if(typeof level17 !== 'undefined' && level17 && days % 10 == 0){
@@ -516,7 +520,7 @@ class Level {
                 const tile = this.map[i][j];
                 if (!tile || tile === 0) continue;
                 if(tile.class == 'Shop'){
-                    tile.daily_update();
+                    tile.daily_update(marketDay, rainDay, frogRainDay);
                 }
                 if (tile.age >= 0 && tile.class != 'Plant') {
                     tile.age += 1;

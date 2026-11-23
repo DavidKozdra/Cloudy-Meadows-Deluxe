@@ -1742,6 +1742,11 @@ const UI_BOUNDS = {
 
 // Fast travel CSS animation trigger
 function triggerTravelTransition(callback, destination = 'Unknown') {
+    // Called while the player is still talking to the Ticket Master or balloon.
+    if (typeof trackAchievement === 'function') {
+        const viaBalloon = typeof player !== 'undefined' && player && player.talking && player.talking.class === 'AirBallon';
+        trackAchievement('travel', { via: viaBalloon ? 'balloon' : 'train' });
+    }
     const overlay = document.getElementById('travelOverlay');
     const destinationText = overlay.querySelector('.travel-destination');
     
@@ -2006,14 +2011,16 @@ function draw() {
             text(t('YOU DIED'), canvasWidth/2, canvasHeight/4);
             textSize(20);
             const respawnTicks = player.getRespawnTicks();
+            // Perma Death / last life: the countdown leads back to the title, not a respawn.
+            const countdownLabel = player.isFinalDeath() ? t('Returning to title in') : t('Respawn in');
             if(player.transphase == 0){
-                text(t('Respawn in') + ' ' + floor(respawnTicks/60), canvasWidth/2, (3*canvasHeight)/4);
+                text(countdownLabel + ' ' + floor(respawnTicks/60), canvasWidth/2, (3*canvasHeight)/4);
             }
             else if(player.transphase == 1){
-                text(t('Respawn in') + ' ' + floor((respawnTicks-player.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
+                text(countdownLabel + ' ' + floor((respawnTicks-player.ticks)/60), canvasWidth/2, (3*canvasHeight)/4);
             }
             else if(player.transphase == 2){
-                text(t('Respawn in') + ' 0', canvasWidth/2, (3*canvasHeight)/4);
+                text(countdownLabel + ' 0', canvasWidth/2, (3*canvasHeight)/4);
             }
             // Lives rule: show how many are left after this death.
             const maxLives = typeof customRule === 'function' ? customRule('lives') : 0;
@@ -2049,6 +2056,7 @@ function draw() {
                             dayOfWeek = days % 5;
                             time = 200;
                             timephase = 1;
+                            if (typeof trackAchievement === 'function') trackAchievement('rewind');
                             // Crossed a day boundary backwards: revert the world
                             // to the snapshot for the day we landed on so crops,
                             // entities and shops match the rewound clock. Player
@@ -2153,17 +2161,8 @@ function draw() {
                     timephase = 0;
                     for (let y = 0; y < levels.length; y++) {
                         for (let x = 0; x < levels[y].length; x++) {
-                            if (levels[y][x] != 0) {
-                                levels[y][x].daily_update();
-                                // Update all shops in this level's map with day/weather info
-                                for(let my = 0; my < levels[y][x].map.length; my++){
-                                    for(let mx = 0; mx < levels[y][x].map[my].length; mx++){
-                                        const tile = levels[y][x].map[my][mx];
-                                        if(tile && tile.class == 'Shop'){
-                                            tile.daily_update(dayOfWeek, lastRainDay, lastFrogRainDay);
-                                        }
-                                    }
-                                }
+                            if (levels[y][x]) {
+                                levels[y][x].daily_update(dayOfWeek, lastRainDay, lastFrogRainDay);
                             }
                         }
                     }

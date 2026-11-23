@@ -19,15 +19,17 @@
  *    reverted — the player keeps the progress they made.
  *
  * Capture/restore deliberately reuse the SAME serialize -> rehydrate path the
- * normal save/load uses (localData + loadLevel), so no parallel reconstruction
+ * normal save/load uses (plain level data + loadLevel), so no parallel reconstruction
  * logic can drift from it.
  */
 
+const TIME_REWIND_BYTE_BUDGET = 64 * 1024 * 1024;
 const MAX_SNAPSHOTS = 7; // days of history retained
 
 // Map of dayNumber -> { levelData: { levelName: plainLevelObject }, meta }.
 // Held in memory only; snapshots are never persisted.
 let timeRewindSnapshots = {};
+let timeRewindSnapshotBytes = 0;
 
 /**
  * Deep-clone the plain-data form of every live level, exactly as saveAll would
@@ -81,7 +83,7 @@ function captureWorldLevelData() {
 function captureDaySnapshot(dayNumber) {
     if (typeof dayNumber !== 'number' || isNaN(dayNumber)) return;
 
-    timeRewindSnapshots[dayNumber] = {
+    const snapshot = {
         day: dayNumber,
         // Day-scalar world state that lives outside the level objects.
         weather: (typeof currentWeather !== 'undefined') ? currentWeather : 'clear',
@@ -91,6 +93,10 @@ function captureDaySnapshot(dayNumber) {
         heatwaveEndDay: (typeof heatwaveEndDay !== 'undefined') ? heatwaveEndDay : -999,
         levelData: captureWorldLevelData()
     };
+    snapshot.byteSize = JSON.stringify(snapshot).length * 2;
+    timeRewindSnapshotBytes -= timeRewindSnapshots[dayNumber]?.byteSize || 0;
+    timeRewindSnapshots[dayNumber] = snapshot;
+    timeRewindSnapshotBytes += snapshot.byteSize;
 
     // Evict oldest days beyond the retention window.
     const keys = Object.keys(timeRewindSnapshots)
@@ -98,8 +104,9 @@ function captureDaySnapshot(dayNumber) {
         .sort((a, b) => a - b);
     // Rewind depth can be changed by the Time Watch custom rule (Powers tab).
     const maxSnapshots = typeof customRule === 'function' ? customRule('timeWatchDays') : MAX_SNAPSHOTS;
-    while (keys.length > maxSnapshots) {
+    while (keys.length && (keys.length > maxSnapshots || timeRewindSnapshotBytes > TIME_REWIND_BYTE_BUDGET)) {
         const oldest = keys.shift();
+        timeRewindSnapshotBytes -= timeRewindSnapshots[oldest].byteSize;
         delete timeRewindSnapshots[oldest];
     }
 }
@@ -135,21 +142,11 @@ function restoreDaySnapshot(dayNumber) {
             const saved = snap.levelData[level.name];
             if (saved == null) continue;
 
-            // loadLevel reads the plain data from localData under the level's
-            // name — the same channel the real save uses. Stash the snapshot
-            // there, rehydrate, then restore whatever the persisted save held so
-            // we don't clobber the on-disk save with snapshot data.
-            const persisted = localData.get(level.name);
-            localData.set(level.name, saved);
+            // Rehydrate directly; rewind never stages or writes permanent save data.
             try {
-                loadLevel(level);
+                loadLevel(level, j, i, saved);
             } catch (e) {
                 console.warn('time-rewind: failed to restore level', level.name, e);
-            }
-            if (persisted != null) {
-                localData.set(level.name, persisted);
-            } else {
-                localData.remove(level.name);
             }
         }
     }
@@ -159,4 +156,5 @@ function restoreDaySnapshot(dayNumber) {
 /** Clear all snapshots (e.g. on new game / load / world reset). */
 function clearTimeRewindSnapshots() {
     timeRewindSnapshots = {};
+    timeRewindSnapshotBytes = 0;
 }

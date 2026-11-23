@@ -1,3 +1,5 @@
 ./farm_game/public.zip
 .wrangler/
 autofarm-worker/.wrangler/
+
+/artifacts/

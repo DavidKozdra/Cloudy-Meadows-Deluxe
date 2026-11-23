@@ -587,7 +587,9 @@ function buildSaveExportPayload() {
         data: {}
     };
 
-    const rootKeys = ['player', 'Day_curLvl_Dif', 'extralvlStuff', 'Options', 'Controls'];
+    const rootKeys = typeof CloudySaveCodec !== 'undefined'
+        ? [...CloudySaveCodec.WORLD_ROOT_KEYS, 'Options', 'Controls']
+        : ['player', 'Day_curLvl_Dif', 'extralvlStuff', 'BridgeTutorialSeen', 'Options', 'Controls'];
     for (let i = 0; i < rootKeys.length; i++) {
         const key = rootKeys[i];
         const value = localData.get(key);
@@ -678,6 +680,7 @@ async function tryCopySaveDataText(text) {
 
 async function copySaveData() {
     try {
+        if (typeof worldSaves !== 'undefined') await worldSaves.prepareExport();
         const serializedData = getSerializedSaveData();
         showSaveTransferEditor('copy', serializedData);
         const copied = await tryCopySaveDataText(serializedData);
@@ -692,6 +695,7 @@ async function copySaveData() {
 }
 
 function normalizeImportedSavePayload(payload) {
+    if (payload?.format && (payload.format !== 'cloudy-meadows-save' || ![1, 2].includes(payload.version))) throw new Error('Unsupported save file version.');
     const data = payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object'
         ? payload.data
         : payload;
@@ -720,12 +724,28 @@ function normalizeImportedSavePayload(payload) {
 }
 
 async function importSaveDataFromText(text) {
+    if (text.length > 64 * 1024 * 1024) throw new Error('Save file is too large.');
     const parsed = JSON.parse(text.trim());
     const data = normalizeImportedSavePayload(parsed);
+    if (typeof worldSaves !== 'undefined') {
+        const replacement = Object.create(null);
+        for (const key of CloudySaveCodec.WORLD_ROOT_KEYS) if (data[key] != null) replacement[key] = data[key];
+        for (const [key, value] of Object.entries(data.levels || {})) {
+            if (CloudySaveCodec.WORLD_ROOT_KEYS.includes(key)) throw new Error('Invalid map name.');
+            Object.defineProperty(replacement, key, { value, enumerable: true });
+        }
+        CloudySaveCodec.validateImport(replacement);
+        await worldSaves.replace(replacement);
+        for (const key of ['Options', 'Controls']) if (data[key] != null) localData.set(key, data[key]);
+        await worldSaves.flushSettings();
+        setSaveTransferStatus('Save imported. Reloading...');
+        window.location.reload();
+        return;
+    }
 
     localData.clear();
 
-    const rootKeys = ['player', 'Day_curLvl_Dif', 'extralvlStuff', 'Options', 'Controls'];
+    const rootKeys = ['player', 'Day_curLvl_Dif', 'extralvlStuff', 'BridgeTutorialSeen', 'Options', 'Controls'];
     for (let i = 0; i < rootKeys.length; i++) {
         const key = rootKeys[i];
         if (data[key] != null) {
@@ -2451,9 +2471,9 @@ function showLoseScreen() {
         const btn = document.createElement('button');
         btn.className = 'lose-btn';
         btn.textContent = 'Return to Title';
-        btn.addEventListener('click', () => {
-            deleteSave();
-            location.reload(); // Reload to reset everything
+        btn.addEventListener('click', async () => {
+            try { await deleteSave(); location.reload(); }
+            catch (error) { reportWorldSaveError(error); }
         });
         loseScreen.appendChild(btn);
     }
@@ -2463,8 +2483,7 @@ function showLoseScreen() {
 
 function deleteSave() {
     if (typeof localData.worldKeys === 'function') {
-        localData.clear();
-        return;
+        return localData.clear();
     }
     localData.remove('player');
     localData.remove('Day_curLvl_Dif');
@@ -3292,11 +3311,11 @@ function showTitleOptions(){
         clearBtn.id = 'clear-data-btn';
         clearBtn.className = 'options-button options-button-danger';
         clearBtn.textContent = 'Clear All Saved Data';
-        clearBtn.addEventListener('click', () => {
+        clearBtn.addEventListener('click', async () => {
             if (confirm('Are you sure you want to clear all saved data and local settings? This cannot be undone.')) {
                 clear_anim = true;
                 try {
-                    if (typeof worldSaves !== 'undefined') worldSaves.clearAll();
+                    if (typeof worldSaves !== 'undefined') await worldSaves.clearAll();
                     else localData.clear();
                     console.log('Data cleared from IndexedDB');
                     setTimeout(() => {
@@ -3304,8 +3323,8 @@ function showTitleOptions(){
                         window.location.reload();
                     }, 1500);
                 } catch (e) {
-                    console.warn('Failed to clear data:', e);
-                    window.location.reload();
+                    clear_anim = false;
+                    reportWorldSaveError(e);
                 }
             }
         });
@@ -6041,17 +6060,7 @@ function ensurePauseMenuContainer() {
     quitBtn.id = 'pause-quit-btn';
     quitBtn.className = 'pause-button';
     quitBtn.textContent = 'Save and Quit';
-    quitBtn.addEventListener('click', () => {
-        console.log('Saving and quitting to title screen...');
-        title_screen = true;
-        paused = false;
-        hidePaused();
-        startButton.show();
-        creditsButton.show();
-        optionsButton.show();
-        clearButton.hide();
-        saveAll();
-    });
+    quitBtn.addEventListener('click', saveAndQuitWorld);
     actions.appendChild(quitBtn);
     pauseMenu.appendChild(actions);
 
@@ -6137,6 +6146,7 @@ function showCreditsMenu(){
         return;
     }
     creditsMenu.style.display = 'flex';
+    if (typeof trackAchievement === 'function') trackAchievement('credits');
 
     // Re-roll David's random portrait variant each time the credits are opened.
     const davidPortrait = creditsMenu.querySelector('[data-david-portrait]');
@@ -6727,76 +6737,94 @@ function new_item_from_num(num, amount) {
 }
 
 function saveAll(){
-    save_anim = 255;
-    removeTemporaryRainFrogsFromLevels();
-    
-    // 1. Prepare all levels and entities (clear circular references and non-serializable objects)
-    for(let i = 0; i < levels.length; i++){
-        for(let j = 0; j < levels[i].length; j++){
-            const level = levels[i][j];
-            if(level && level !== 0){
-                // Prepare the level itself
-                if(typeof level.getReadyForSave === 'function'){
-                    level.getReadyForSave();
-                }
-                // Prepare all entities in the level
-                for(let y = 0; y < level.map.length; y++){
-                    for(let x = 0; x < level.map[y].length; x++){
-                        const tile = level.map[y][x];
-                        if (tile && tile !== 0 && typeof tile.getReadyForSave === 'function'){
-                            tile.getReadyForSave();
+    try {
+        if (typeof worldSaves !== 'undefined') worldSaves.begin();
+        removeTemporaryRainFrogsFromLevels();
+
+        // 1. Prepare all levels and entities (clear circular references and non-serializable objects)
+        for(let i = 0; i < levels.length; i++){
+            for(let j = 0; j < levels[i].length; j++){
+                const level = levels[i][j];
+                if(level && level !== 0){
+                    // Prepare the level itself
+                    if(typeof level.getReadyForSave === 'function'){
+                        level.getReadyForSave();
+                    }
+                    // Prepare all entities in the level
+                    for(let y = 0; y < level.map.length; y++){
+                        for(let x = 0; x < level.map[y].length; x++){
+                            const tile = level.map[y][x];
+                            if (tile && tile !== 0 && typeof tile.getReadyForSave === 'function'){
+                                tile.getReadyForSave();
+                            }
                         }
                     }
                 }
             }
         }
-    }
-    
-    // 2. Prepare player (who might be touching one of those entities)
-    if (player && typeof player.getReadyForSave === 'function') {
-        player.getReadyForSave();
-    }
 
-    // 3. Now save everything
-    if(player.talking == 0){
-        player.save()
-    }
-    if (typeof localData.worldKeys === 'function') {
-        localData.set('__worldInfo', {
-            location: levels[currentLevel_y]?.[currentLevel_x]?.name || '',
-            updatedAt: new Date().toISOString()
+        // 2. Prepare player (who might be touching one of those entities)
+        if (player && typeof player.getReadyForSave === 'function') {
+            player.getReadyForSave();
+        }
+
+        // 3. Now save everything
+        if(player.talking == 0){
+            player.save()
+        } else {
+            // A dialog reference is transient; inventory and quest progress must
+            // still belong to the same revision as the maps and calendar.
+            localData.set('player', { ...player, talking: 0 });
+        }
+        if (typeof localData.worldKeys === 'function') {
+            localData.set('__worldInfo', {
+                location: levels[currentLevel_y]?.[currentLevel_x]?.name || '',
+                updatedAt: new Date().toISOString()
+            });
+        }
+        const previousDayState = localData.get('Day_curLvl_Dif') || {};
+        localData.set('Day_curLvl_Dif', {
+            days: days,
+            currentLevel_x: currentLevel_x,
+            currentLevel_y: currentLevel_y,
+            dificulty: dificulty,
+            currentWeather: currentWeather,
+            weatherLog: weatherLog,
+            lastRainDay: lastRainDay,
+            lastFrogRainDay: lastFrogRainDay,
+            heatwaveStartDay: heatwaveStartDay,
+            heatwaveEndDay: heatwaveEndDay,
+            time: time,
+            timephase: timephase,
+            customRules: window.customRules || null,
+            tutorialState: getTutorialStateForSave(),
+            hasBeatenGame: previousDayState.hasBeatenGame || hasCompletedMainQuest()
         });
-    }
-    const previousDayState = localData.get('Day_curLvl_Dif') || {};
-    localData.set('Day_curLvl_Dif', {
-        days: days, 
-        currentLevel_x: currentLevel_x, 
-        currentLevel_y: currentLevel_y, 
-        dificulty: dificulty,
-        currentWeather: currentWeather,
-        weatherLog: weatherLog,
-        lastRainDay: lastRainDay,
-        lastFrogRainDay: lastFrogRainDay,
-        heatwaveStartDay: heatwaveStartDay,
-        heatwaveEndDay: heatwaveEndDay,
-        time: time,
-        timephase: timephase,
-        customRules: window.customRules || null,
-        tutorialState: getTutorialStateForSave(),
-        hasBeatenGame: previousDayState.hasBeatenGame || hasCompletedMainQuest()
-    });
-    let lvlLength = 0;
-    for(let i = 0; i < levels.length; i++){
-        for(let j = 0; j < levels[i].length; j++){
-            if(levels[i][j] != 0 && levels[i][j] != undefined){
-                localData.set(levels[i][j].name, levels[i][j]);
-                if(j > lvlLength){
-                    lvlLength = j
+        let lvlLength = 0;
+        for(let i = 0; i < levels.length; i++){
+            for(let j = 0; j < levels[i].length; j++){
+                if(levels[i][j] != 0 && levels[i][j] != undefined){
+                    localData.set(levels[i][j].name, levels[i][j]);
+                    if(j > lvlLength){
+                        lvlLength = j
+                    }
                 }
             }
         }
+        localData.set('extralvlStuff', {extraCount: extraCount, lvlLength: lvlLength});
+        if (typeof worldSaves !== 'undefined') {
+            return worldSaves.commit().then(() => { save_anim = 255; return true; }, error => {
+                reportWorldSaveError(error);
+                return false;
+            });
+        }
+        save_anim = 255;
+        return true;
+    } catch (error) {
+        if (typeof worldSaves !== 'undefined') worldSaves.rollback();
+        if (typeof reportWorldSaveError === 'function') reportWorldSaveError(error);
+        return false;
     }
-    localData.set('extralvlStuff', {extraCount: extraCount, lvlLength: lvlLength});
 }
 
 function removeTemporaryRainFrogsFromLevels(){
@@ -7006,10 +7034,10 @@ function loadGamePreferences(){
     applyAccessibilityPrefs(localData.get('Options'));
 }
 
-function loadLevel(level, lvlx = 0, lvly = 0){
+function loadLevel(level, lvlx = 0, lvly = 0, savedOverride){
     let newLvl = 0;
     if(level === undefined){
-        newLvl = localData.get('Extra y:'+ lvly + ' x:' + (lvlx-6));
+        newLvl = arguments.length >= 4 ? savedOverride : localData.get('Extra y:'+ lvly + ' x:' + (lvlx-6));
         if(newLvl == undefined){
             return;
         }
@@ -7047,7 +7075,7 @@ function loadLevel(level, lvlx = 0, lvly = 0){
             }
         }
     }else{
-        newLvl = localData.get(level.name)
+        newLvl = arguments.length >= 4 ? savedOverride : localData.get(level.name)
     }
     // Big City districts are authored, non-editable levels. Older saves baked in an
     // oversized (24-wide) map with duplicate carts and no lighting; overlaying that
@@ -7120,8 +7148,7 @@ function loadLevel(level, lvlx = 0, lvly = 0){
 
 function deleteWorld(){
     if (typeof localData.worldKeys === 'function') {
-        localData.clear();
-        return;
+        return localData.clear();
     }
     localData.remove('player');
     localData.remove('Day_curLvl_Dif');

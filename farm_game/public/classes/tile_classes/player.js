@@ -226,6 +226,7 @@ class Player extends MoveableEntity {
                         this.hunger = 4;
                         this.hunger_timer = all_items[2].hunger_timer;
                         this.deaths += 1;
+                        if (typeof trackAchievement === 'function') trackAchievement('death');
                         this.transphase = 2;
                         this.ticks = 0;
                         saveAll(); // Auto-save after respawn
@@ -255,6 +256,18 @@ class Player extends MoveableEntity {
         return typeof customRule === 'function' ? customRule('respawnSeconds') * 60 : 600;
     }
 
+    // True when the current death ends the run (Perma Death, or the last of the
+    // Lives) instead of respawning. Mirrors deathConsequence(); livesUsed only
+    // counts this death once transphase 2 has applied the consequence.
+    isFinalDeath(){
+        if(dificulty != 3 || !window.customRules) return false;
+        if(window.customRules.permaDeath) return true;
+        const maxLives = typeof customRule === 'function' ? customRule('lives') : 0;
+        if(maxLives <= 0) return false;
+        const used = (this.livesUsed || 0) + (this.transphase < 2 ? 1 : 0);
+        return used >= maxLives;
+    }
+
     // Max Health rule (100 by default).
     maxHealthLimit(){
         return typeof getMaxHealth === 'function' ? getMaxHealth() : 100;
@@ -262,8 +275,14 @@ class Player extends MoveableEntity {
 
     endRunAfterDeath(){
         title_screen = true;
-        deleteSave();
-        newWorld();
+        const deletion = deleteSave();
+        if (deletion?.then) {
+            if (typeof worldMenuBusy !== 'undefined') worldMenuBusy = true;
+            return deletion.then(() => newWorld()).catch(error => {
+                if (typeof reportWorldSaveError === 'function') reportWorldSaveError(error);
+            }).finally(() => { if (typeof worldMenuBusy !== 'undefined') worldMenuBusy = false; });
+        }
+        else newWorld();
     }
 
     deathConsequence(dif){
@@ -541,6 +560,7 @@ class Player extends MoveableEntity {
 
                 if (canStoreByproduct) {
                     EatSound.play();
+                    if (typeof trackAchievement === 'function') trackAchievement('eat', { name: food.name });
                     this.hunger += food.hunger;
                     if (this.hunger > maxHunger) {
                         this.hunger = maxHunger;
@@ -641,7 +661,7 @@ class Player extends MoveableEntity {
                     const ladybugExtra = round(random((levels[y][x].ladybugs > 4 ? 1:0), levels[y][x].ladybugs));
                     const harvestAmount = typeof scaleHarvestYield === 'function' ? scaleHarvestYield(baseYield, ladybugExtra) : baseYield + ladybugExtra;
                     addItem(this, this.touching.eat_num, harvestAmount);
-                    if (typeof recordCropHarvest === 'function') recordCropHarvest(this.touching.eat_num, harvestAmount, currentLevelName, true);
+                    if (typeof trackAchievement === 'function') trackAchievement('harvest', { itemNum: this.touching.eat_num, amount: harvestAmount, level: currentLevelName, byPlayer: true });
                     levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(3, this.touching.pos.x, this.touching.pos.y);
                     PlantingSound.play()
                 }
@@ -701,6 +721,7 @@ class Player extends MoveableEntity {
                     }
                 }
                 this.inv[this.hand].amount -= current_amount;
+                if (typeof trackAchievement === 'function') trackAchievement('sell', { amount: current_amount });
                 if(this.quests != undefined && this.quests.length > 0){
                 if(this.current_quest != undefined && this.quests[this.current_quest].goals[this.quests[this.current_quest].current_Goal] != undefined){
                     if(this.quests[this.current_quest].goals[this.quests[this.current_quest].current_Goal].class == 'SellGoal'){
@@ -756,6 +777,7 @@ class Player extends MoveableEntity {
                         levels[y][x].ladybugs += 1;
                     }
                 }
+                if (typeof trackAchievement === 'function') trackAchievement('place', { name: this.inv[this.hand].name });
                 this.inv[this.hand].amount -= 1;
                 if (this.inv[this.hand].amount == 0) {
                     this.inv[this.hand] = 0;
@@ -766,6 +788,7 @@ class Player extends MoveableEntity {
             if (this.inv[this.hand].name == 'Hoe') {
                 hoe_sound.play();
                 levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(3, this.touching.pos.x, this.touching.pos.y);
+                if (typeof trackAchievement === 'function') trackAchievement('till');
             }
         }
         else if (this.touching.name == 'sprinkler'){
@@ -794,6 +817,7 @@ class Player extends MoveableEntity {
             if (this.inv[this.hand].class == 'Seed') {
                 levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(this.inv[this.hand].plant_num, this.touching.pos.x, this.touching.pos.y);
                 this.inv[this.hand].amount -= 1;
+                if (typeof trackAchievement === 'function') trackAchievement('plant');
                 PlantingSound.play()
                 if (this.inv[this.hand].amount == 0) {
                     this.inv[this.hand] = 0;
@@ -834,6 +858,7 @@ class Player extends MoveableEntity {
                         break;
                     }
                 }
+                if (processed > 0 && typeof trackAchievement === 'function') trackAchievement('compost', { amount: processed });
             }
             else {
                 console.log('❌ Item is not valid for composting. Need Junk or Seed.');
@@ -1528,6 +1553,7 @@ function takeInput() {
                             moneySound.play()
                             addItem(player, item_name_to_num(player.talking.inv[actualIdx].name), 1);
                             player.coins -= buyPrice; //reduce money by buy price
+                            if (typeof trackAchievement === 'function') trackAchievement('buy');
                             player.talking.updateItemStock(player.talking.inv[actualIdx].name, player.talking.inv[actualIdx].amount - 1); //shop.inv -1 and recalc prices
                         }
                     }
@@ -1651,6 +1677,7 @@ function takeInput() {
                 } else if (keyIsDown(interact_button)) {
                     timeSpeedIndex = min(8, timeSpeedIndex + 1);
                     lastTimeWatchMili = millis();
+                    if (timeSpeedIndex === 8 && typeof trackAchievement === 'function') trackAchievement('fastForward');
                 }
             }
             const TIME_WATCH_SPEEDS = [-16, -8, -4, -2, 1, 2, 4, 8, 16];

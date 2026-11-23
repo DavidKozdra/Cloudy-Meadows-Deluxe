@@ -157,6 +157,7 @@ function deliverCooperativeContract(contractId) {
 
     contract.status = 'completed';
     state.completedContracts += 1;
+    if (typeof trackAchievement === 'function') trackAchievement('contract');
     state.reputation += 1;
     state.prosperity[contract.district] = (state.prosperity[contract.district] || 0) + contract.prosperityReward;
     if (typeof addMoney === 'function') addMoney(contract.reward);

@@ -1067,6 +1067,7 @@ function setup() {
             if (confirm(t('Are you sure? Booming the robot will REMOVE ALL its inventory and it cannot be recovered!'))) {
                 if(checkForSpace(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name))){
                     addItem(player, item_name_to_num(player.looking(currentLevel_x, currentLevel_y).name), 1);
+                    if (typeof trackAchievement === 'function') trackAchievement('robotBoom');
                     if (player.touching != 0) {
                         levels[currentLevel_y][currentLevel_x].map[(player.looking(currentLevel_x, currentLevel_y).pos.y / tileSize)][player.looking(currentLevel_x, currentLevel_y).pos.x / tileSize] = player.looking(currentLevel_x, currentLevel_y).under_tile;
                     }
@@ -1199,17 +1200,7 @@ function setup() {
     QuitButton.style('background','none');
     QuitButton.style("font-family","pixelFont");
     QuitButton.style('cursor', 'pointer');
-    QuitButton.mousePressed(() => {
-        console.log('Saving and quitting to title screen...');
-        title_screen = true;
-        paused = false;
-        startButton.show();
-        creditsButton.show();
-        optionsButton.show();
-        clearButton.hide();
-        QuitButton.hide();
-        saveAll();
-    });
+    QuitButton.mousePressed(saveAndQuitWorld);
     QuitButton.hide();
 
 
@@ -1446,6 +1437,8 @@ function setup() {
     };
     
     newWorld();
+    worldSaves.baseReady = worldSaves.registerBaseMaps(captureWorldLevelData());
+    worldSaves.baseReady.catch(reportWorldSaveError);
     loadGamePreferences();
 }
 

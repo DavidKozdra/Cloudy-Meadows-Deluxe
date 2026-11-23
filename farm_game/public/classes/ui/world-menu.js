@@ -52,15 +52,22 @@ function backToWorldMainMenu() {
     document.getElementById('new-game-btn')?.focus();
 }
 
-function continueWorldGame() {
-    const valid = worldSaves.list().filter(world => world.valid);
-    if (valid.length === 1) openSavedWorld(valid[0].id);
-    else showWorldPicker(valid.length ? 'continue' : 'new');
+async function continueWorldGame() {
+    try {
+        await worldSaves.ready;
+        const page = await worldSaves.page({ limit: 2 });
+        if (page.items.length === 1) await openSavedWorld(page.items[0].id);
+        else await showWorldPicker(page.items.length ? 'continue' : 'new');
+    } catch (error) { reportWorldSaveError(error); }
 }
 
-function showWorldPicker(mode = 'continue') {
-    worldSaves.invalidate();
-    const worlds = worldSaves.list();
+async function showWorldPicker(mode = 'continue', after = 0) {
+    await worldSaves.ready;
+    await worldSaves.invalidate();
+    const savedPage = mode === 'new' ? null : await worldSaves.page({ after, limit: 3 });
+    const usesDefaultSlots = !after && worldSaves.count <= 3 && savedPage?.items.every(world => world.id <= 3);
+    const page = usesDefaultSlots ? null : savedPage;
+    const worlds = page ? page.items : worldSaves.list();
     const full = worlds.every(world => world.occupied);
     const title = mode === 'new' ? 'New Game' : mode === 'manage' ? 'Manage Worlds' : 'Choose Your World';
     const intro = mode === 'new'
@@ -113,11 +120,12 @@ function showWorldPicker(mode = 'continue') {
             actions.appendChild(worldMenuButton('New Game', () => startNewWorld(world.id), 'world-slot-play'));
         } else {
             if (world.valid && mode !== 'new') actions.appendChild(worldMenuButton('Continue', () => openSavedWorld(world.id), 'world-slot-play'));
+            if (mode === 'manage' && world.valid) actions.appendChild(worldMenuButton('Download Backup', () => worldSaves.download(world.id).catch(reportWorldSaveError), 'world-slot-play'));
             if (mode !== 'continue') {
-                actions.appendChild(worldMenuButton('Delete World', () => {
+                actions.appendChild(worldMenuButton('Delete World', async () => {
                     if (!confirm(t('Delete World {number}? Its progress will be permanently removed. Your other worlds will be kept.', { number: world.id }))) return;
-                    worldSaves.clearWorld(world.id);
-                    showWorldPicker(mode);
+                    try { await worldSaves.clearWorld(world.id); await showWorldPicker(mode); }
+                    catch (error) { reportWorldSaveError(error); }
                 }, 'world-slot-delete'));
             }
         }
@@ -125,6 +133,24 @@ function showWorldPicker(mode = 'continue') {
         grid.appendChild(card);
     }
     panel.appendChild(grid);
+    if (page) {
+        const paging = document.createElement('div'); paging.className = 'world-slot-actions';
+        if (after) paging.appendChild(worldMenuButton('First page', () => showWorldPicker(mode), 'world-menu-back'));
+        if (page.next) paging.appendChild(worldMenuButton('Next page', () => showWorldPicker(mode, page.next), 'world-menu-back'));
+        panel.appendChild(paging);
+    }
+    if (mode === 'manage') {
+        const storage = document.createElement('p'); storage.className = 'world-menu-intro';
+        panel.appendChild(storage);
+        worldSaves.storageInfo().then(info => {
+            storage.textContent = info.quota == null ? t('Storage estimate unavailable.') :
+                `${Math.ceil(info.usage / 1048576)} MB / ${Math.floor(info.quota / 1048576)} MB · ${info.persistent ? t('Persistent storage enabled') : t('Back up your worlds regularly')}`;
+        });
+        panel.appendChild(worldMenuButton('Protect Local Saves', async () => {
+            const granted = await worldSaves.requestPersistence();
+            storage.textContent = t(granted ? 'Persistent storage enabled. Download backups to keep another copy.' : 'The browser did not grant persistent storage. Download backups to keep another copy.');
+        }, 'world-menu-back'));
+    }
     panel.appendChild(worldMenuButton('Back', backToWorldMainMenu, 'world-menu-back'));
     panel.querySelector('button')?.focus({ preventScroll: true });
 }
@@ -159,8 +185,9 @@ function showAchievementsPanel() {
     back.focus({ preventScroll: true });
 }
 
-function resetRuntimeForWorld(id) {
-    worldSaves.activate(id);
+async function resetRuntimeForWorld(id) {
+    await worldSaves.activate(id);
+    await worldSaves.baseReady;
     const savedDay = localData.get('Day_curLvl_Dif');
     window.customRules = savedDay?.customRules || null;
     if (tutorialScheduleTimer) window.clearTimeout(tutorialScheduleTimer);
@@ -173,6 +200,8 @@ function resetRuntimeForWorld(id) {
     hideBridgeTutorialBanner();
     window.mainQuestNPCs = null;
     window.playerOriginalPos = null;
+    window.bridgeTutorialActive = false;
+    window.bridgeTutorialStartLevel = null;
     visitedLocations = new Set();
     lose_screen = false;
     paused = false;
@@ -198,12 +227,12 @@ function resetRuntimeForWorld(id) {
     loadAll();
 }
 
-function openSavedWorld(id) {
+async function openSavedWorld(id) {
     if (worldMenuBusy || !worldSaves.summary(id).valid) return;
     worldMenuBusy = true;
-    triggerMenuFadeOut(() => {
+    triggerMenuFadeOut(async () => {
         try {
-            resetRuntimeForWorld(id);
+            await resetRuntimeForWorld(id);
             closeWorldMenuPanel();
             hideMainMenu();
             hideDifficultyMenu();
@@ -222,23 +251,28 @@ function openSavedWorld(id) {
     });
 }
 
-function startNewWorld(id) {
+async function startNewWorld(id) {
     if (worldMenuBusy || worldSaves.summary(id).occupied) return;
-    worldSaves.compact();
-    pendingNewWorld = { id, previousId: worldSaves.activeId };
-    resetRuntimeForWorld(id);
+    worldMenuBusy = true;
+    try {
+        await worldSaves.ready;
+        if (await worldSaves.repository.getBySlot(id)) throw new Error('This slot was filled in another tab. Refresh the world list.');
+        pendingNewWorld = { id, previousId: worldSaves.activeId };
+        await resetRuntimeForWorld(id);
     closeWorldMenuPanel();
     hideMainMenu();
     document.getElementById('difficulty-menu')?.remove();
     title_screen = false;
     dificulty_screen = true;
     showDifficultyMenu();
+    } catch (error) { pendingNewWorld = null; reportWorldSaveError(error); }
+    finally { worldMenuBusy = false; }
 }
 
-function cancelNewWorld() {
+async function cancelNewWorld() {
     if (pendingNewWorld) {
-        worldSaves.clearWorld(pendingNewWorld.id);
-        worldSaves.activate(pendingNewWorld.previousId);
+        await worldSaves.clearWorld(pendingNewWorld.id);
+        await worldSaves.activate(pendingNewWorld.previousId);
         pendingNewWorld = null;
     }
     dificulty_screen = false;
@@ -248,10 +282,15 @@ function cancelNewWorld() {
     showMainMenu();
 }
 
-function finishNewWorldSave() {
-    saveAll();
-    captureDaySnapshot(days);
-    pendingNewWorld = null;
+async function finishNewWorldSave() {
+    paused = true;
+    try {
+        if (await saveAll()) {
+            captureDaySnapshot(days);
+            pendingNewWorld = null;
+            paused = false;
+        }
+    } catch (error) { reportWorldSaveError(error); }
 }
 
 function showWorldMainMenu() {
@@ -277,7 +316,11 @@ function showWorldMainMenu() {
         const deluxe = document.createElement('div');
         deluxe.className = 'deluxe-text';
         deluxe.textContent = 'DELUXE';
-        container.append(image, deluxe);
+        // Logo + DELUXE travel together; on landscape phones they form the right column.
+        const brand = document.createElement('div');
+        brand.className = 'main-menu-brand';
+        brand.append(image, deluxe);
+        container.appendChild(brand);
         const actions = document.createElement('div');
         actions.className = 'main-menu-actions';
         const entries = [
@@ -303,9 +346,61 @@ function showWorldMainMenu() {
         document.body.appendChild(container);
     }
     const continueButton = document.getElementById('start-btn');
-    continueButton.hidden = !worldSaves.list().some(world => world.valid);
+    continueButton.hidden = !worldSaves.count;
+    for (const id of ['start-btn', 'new-game-btn', 'more-btn']) document.getElementById(id).disabled = !worldSaves.initialized;
+    let loading = document.getElementById('world-storage-loading');
+    if (!loading) { loading = document.createElement('p'); loading.id = 'world-storage-loading'; container.appendChild(loading); }
+    loading.hidden = worldSaves.initialized;
+    loading.textContent = worldSaves.initializationError ? t('Could not open saves. Reload to try again; existing saves have been kept.') : t('Opening saved worlds…');
     container.style.display = 'flex';
     updateCanvasPointerEvents();
 }
 
 window.addEventListener('storage', () => worldSaves.invalidate());
+
+function reportWorldSaveError(error) {
+    console.error('World save failed:', error);
+    showWorldSaveStatus({ state: 'error', message: error?.message || 'Could not save this world.' });
+}
+
+async function saveAndQuitWorld() {
+    const button = document.getElementById('pause-quit-btn');
+    if (button?.disabled) return;
+    if (button) button.disabled = true;
+    try {
+        if (!await saveAll()) return;
+        title_screen = true; paused = false; hidePaused();
+        clearButton.hide(); QuitButton.hide();
+        showMainMenu();
+    } catch (error) { reportWorldSaveError(error); }
+    finally { if (button) button.disabled = false; }
+}
+
+let worldSaveNoticeTimer = null;
+function showWorldSaveStatus({ state, message }) {
+    if (!document.body) {
+        window.addEventListener('DOMContentLoaded', () => showWorldSaveStatus({ state, message }), { once: true });
+        return;
+    }
+    clearTimeout(worldSaveNoticeTimer);
+    let notice = document.getElementById('world-save-notice');
+    if (!notice) { notice = document.createElement('aside'); notice.id = 'world-save-notice'; document.body.appendChild(notice); }
+    notice.replaceChildren(); notice.hidden = state === 'idle';
+    notice.setAttribute('role', state === 'error' ? 'alert' : 'status');
+    const text = document.createElement('p');
+    text.textContent = state === 'saving' ? t('Saving…') : state === 'saved' ? t('Saved') : message;
+    notice.appendChild(text);
+    if (state === 'error' || state === 'recovered') {
+        if (worldSaves.activeWorldId) {
+            notice.appendChild(worldMenuButton('Download Backup', () => worldSaves.download().catch(reportWorldSaveError)));
+            notice.appendChild(worldMenuButton('Retry Save', () => {
+                if (pendingNewWorld) finishNewWorldSave();
+                else if (!title_screen) Promise.resolve(saveAll()).catch(reportWorldSaveError);
+                else worldSaves.flush().catch(reportWorldSaveError);
+            }));
+        }
+        notice.appendChild(worldMenuButton('Close', () => { notice.hidden = true; }));
+    }
+    if (state === 'saved') worldSaveNoticeTimer = setTimeout(() => { notice.hidden = true; }, 1800);
+}
+window.addEventListener('worldSaveStatus', event => showWorldSaveStatus(event.detail));
