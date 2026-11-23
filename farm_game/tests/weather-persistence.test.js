@@ -36,10 +36,14 @@ test('Time Watch rewind restores rain and frog-rain days with the weather', () =
 
 test('saveAll writes and the loader reads lastRainDay / lastFrogRainDay', () => {
     const source = readPublic('miscfunctions.js');
-    const saveBlock = source.slice(source.indexOf("localData.set('Day_curLvl_Dif', {"));
-    const saved = saveBlock.slice(0, saveBlock.indexOf('});'));
-    assert.match(saved, /lastRainDay:\s*lastRainDay/);
-    assert.match(saved, /lastFrogRainDay:\s*lastFrogRainDay/);
+    // Every full write of the day record (new game, custom game, saveAll) must carry both.
+    const writes = source.split("localData.set('Day_curLvl_Dif', {").slice(1).map(rest => rest.slice(0, rest.indexOf('});')));
+    assert.equal(writes.length, 3);
+    for (const saved of writes) {
+        assert.match(saved, /currentWeather/);
+        assert.match(saved, /\blastRainDay\b/);
+        assert.match(saved, /\blastFrogRainDay\b/);
+    }
     assert.match(source, /lastRainDay = savedDayState\.lastRainDay/);
     assert.match(source, /lastFrogRainDay = savedDayState\.lastFrogRainDay/);
 });
