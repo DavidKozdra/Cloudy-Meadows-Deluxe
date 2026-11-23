@@ -98,7 +98,13 @@ class Plant extends Tile {
                 }
             }
         }
-        
+
+        // Heatwave: crops without a sprinkler in range grow at half speed
+        // (hand-watering keeps them alive but doesn't shield them from the heat).
+        if (typeof currentWeather !== 'undefined' && currentWeather === 'heatwave' && water_found === 0) {
+            this.growTimer -= 0.5;
+        }
+
         // Rain counts as water source for all plants
         if (typeof currentWeather !== 'undefined' && 
             (currentWeather === 'rain' || currentWeather === 'thunderstorm' || currentWeather === 'sunshower')) {

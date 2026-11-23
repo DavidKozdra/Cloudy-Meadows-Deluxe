@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v62';
+const CACHE_VERSION = 'v63';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -47,7 +47,7 @@ const APP_SHELL = [
   './classes/quest.js?v=9',
   './classes/dialouge.js?v=8',
   './classes/tile_classes/tile.js?v=8',
-  './classes/tile_classes/plant.js?v=9',
+  './classes/tile_classes/plant.js?v=10',
   './classes/tile_classes/entity.js?v=8',
   './classes/tile_classes/moveable-entity.js?v=8',
   './classes/tile_classes/player.js?v=13',
@@ -56,24 +56,24 @@ const APP_SHELL = [
   './classes/tile_classes/light-move-entity.js?v=8',
   './classes/tile_classes/pay-to-move-entity.js?v=8',
   './classes/tile_classes/npc.js?v=10',
-  './classes/tile_classes/shop.js?v=9',
+  './classes/tile_classes/shop.js?v=10',
   './classes/tile_classes/chest.js?v=8',
   './classes/tile_classes/robot.js?v=8',
   './classes/tile_classes/farm-robot.js?v=8',
   './classes/tile_classes/air_ballon.js?v=8',
   './classes/cooperative-exchange.js?v=8',
-  './classes/time-rewind.js?v=2',
+  './classes/time-rewind.js?v=3',
   './config/constants.js?v=8',
   './config/items.js?v=9',
   './config/tiles.js?v=10',
   './classes/raycaster3d.js?v=36',
   './classes/ui/display.js?v=1',
-  './classes/weather-system.js?v=2',
-  './miscfunctions.js?v=16',
+  './classes/weather-system.js?v=3',
+  './miscfunctions.js?v=17',
   './preload.js?v=15',
   './gamepad.js?v=8',
   './mobile-look.js?v=1',
-  './sketch.js?v=19',
+  './sketch.js?v=20',
   './images/pwa/icon-192.png',
   './images/pwa/icon-512.png',
   './images/pwa/icon-maskable-512.png',

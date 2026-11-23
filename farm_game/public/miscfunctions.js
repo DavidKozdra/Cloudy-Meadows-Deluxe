@@ -2574,6 +2574,10 @@ function selectDifficulty(difficulty){
     if (typeof lastFrogRainDay !== 'undefined') {
         lastFrogRainDay = -999;
     }
+    if (typeof heatwaveStartDay !== 'undefined') {
+        heatwaveStartDay = -999;
+        heatwaveEndDay = -999;
+    }
     if (typeof frogRainEntities !== 'undefined') {
         frogRainEntities = [];
     }
@@ -2600,6 +2604,8 @@ function selectDifficulty(difficulty){
             currentWeather,
             lastRainDay,
             lastFrogRainDay,
+            heatwaveStartDay,
+            heatwaveEndDay,
             time,
             timephase,
             customRules: null,
@@ -2626,6 +2632,10 @@ function selectCustomDifficulty(features){
     }
     if (typeof lastFrogRainDay !== 'undefined') {
         lastFrogRainDay = -999;
+    }
+    if (typeof heatwaveStartDay !== 'undefined') {
+        heatwaveStartDay = -999;
+        heatwaveEndDay = -999;
     }
     if (typeof frogRainEntities !== 'undefined') {
         frogRainEntities = [];
@@ -2688,6 +2698,8 @@ function selectCustomDifficulty(features){
             currentWeather,
             lastRainDay,
             lastFrogRainDay,
+            heatwaveStartDay,
+            heatwaveEndDay,
             time,
             timephase,
             customRules: window.customRules,
@@ -3778,6 +3790,7 @@ function ensureConfigModal() {
     addSliderRow(weatherSection, 'Sunshower', 'cfg-weather-sunshower', 0, 100, 1);
     addSliderRow(weatherSection, 'Rain', 'cfg-weather-rain', 0, 100, 1);
     addSliderRow(weatherSection, 'Thunderstorm', 'cfg-weather-thunderstorm', 0, 100, 1);
+    addSliderRow(weatherSection, 'Heatwave (2-3 days)', 'cfg-weather-heatwave', 0, 100, 0.5);
     addSliderRow(weatherSection, 'Frog Rain', 'cfg-weather-frog', 0, 100, 0.1);
 
     // Total indicator (always kept at 100%)
@@ -4340,13 +4353,14 @@ function showConfigModal() {
     }
     // Weather weights defaults mirror current system probabilities
     const ww = rules.weatherWeights ?? {
-        'clear': 49.9,
+        'clear': 48.4,
         'partly-cloudy': 15,
         'overcast': 10,
         'fog': 7,
         'sunshower': 8,
         'rain': 8,
         'thunderstorm': 2,
+        'heatwave': 1.5,
         'frog-rain': 0.1
     };
     const setSlider = (id, v) => { const el = document.getElementById(id); const badge = el?.parentElement?.querySelector('.config-slider-value'); if (el) el.value = v; if (badge) badge.textContent = String(v); };
@@ -4356,6 +4370,8 @@ function showConfigModal() {
     setSlider('cfg-weather-sunshower', ww['sunshower']);
     setSlider('cfg-weather-rain', ww['rain']);
     setSlider('cfg-weather-thunderstorm', ww['thunderstorm']);
+    // Configs saved before heatwaves existed get the default weight.
+    setSlider('cfg-weather-heatwave', ww['heatwave'] ?? 1.5);
     setSlider('cfg-weather-frog', ww['frog-rain']);
 
     // Normalize total to 100 by adjusting Clear accordingly
@@ -4455,9 +4471,10 @@ function saveConfigModal() {
                 'sunshower': get('cfg-weather-sunshower'),
                 'rain': get('cfg-weather-rain'),
                 'thunderstorm': get('cfg-weather-thunderstorm'),
+                'heatwave': get('cfg-weather-heatwave'),
                 'frog-rain': get('cfg-weather-frog')
             };
-            const sumOthers = ww['partly-cloudy'] + ww['overcast'] + ww['fog'] + ww['sunshower'] + ww['rain'] + ww['thunderstorm'] + ww['frog-rain'];
+            const sumOthers = ww['partly-cloudy'] + ww['overcast'] + ww['fog'] + ww['sunshower'] + ww['rain'] + ww['thunderstorm'] + ww['heatwave'] + ww['frog-rain'];
             ww['clear'] = Math.max(0, 100 - sumOthers);
             return ww;
         })(),
@@ -4582,6 +4599,7 @@ function normalizeWeatherTotal(changedId) {
         'cfg-weather-sunshower',
         'cfg-weather-rain',
         'cfg-weather-thunderstorm',
+        'cfg-weather-heatwave',
         'cfg-weather-frog'
     ];
     const get = (id) => { const el = document.getElementById(id); return el ? parseFloat(el.value) || 0 : 0; };
@@ -5916,6 +5934,8 @@ function saveAll(){
         currentWeather: currentWeather,
         lastRainDay: lastRainDay,
         lastFrogRainDay: lastFrogRainDay,
+        heatwaveStartDay: heatwaveStartDay,
+        heatwaveEndDay: heatwaveEndDay,
         time: time,
         timephase: timephase,
         customRules: window.customRules || null,
@@ -6042,6 +6062,9 @@ function loadAll(){
         const savedDayState = localData.get('Day_curLvl_Dif');
         if (typeof savedDayState.lastRainDay === 'number') lastRainDay = savedDayState.lastRainDay;
         if (typeof savedDayState.lastFrogRainDay === 'number') lastFrogRainDay = savedDayState.lastFrogRainDay;
+        // Heatwave span (2-3 days) so a reload mid-heatwave keeps it going.
+        heatwaveStartDay = typeof savedDayState.heatwaveStartDay === 'number' ? savedDayState.heatwaveStartDay : -999;
+        heatwaveEndDay = typeof savedDayState.heatwaveEndDay === 'number' ? savedDayState.heatwaveEndDay : -999;
         
         // Load time of day
         time = localData.get('Day_curLvl_Dif').time || 0;

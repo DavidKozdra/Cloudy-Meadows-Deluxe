@@ -87,6 +87,8 @@ function captureDaySnapshot(dayNumber) {
         weather: (typeof currentWeather !== 'undefined') ? currentWeather : 'clear',
         lastRainDay: (typeof lastRainDay !== 'undefined') ? lastRainDay : -999,
         lastFrogRainDay: (typeof lastFrogRainDay !== 'undefined') ? lastFrogRainDay : -999,
+        heatwaveStartDay: (typeof heatwaveStartDay !== 'undefined') ? heatwaveStartDay : -999,
+        heatwaveEndDay: (typeof heatwaveEndDay !== 'undefined') ? heatwaveEndDay : -999,
         levelData: captureWorldLevelData()
     };
 
@@ -120,6 +122,8 @@ function restoreDaySnapshot(dayNumber) {
     }
     if (typeof snap.lastRainDay === 'number') lastRainDay = snap.lastRainDay;
     if (typeof snap.lastFrogRainDay === 'number') lastFrogRainDay = snap.lastFrogRainDay;
+    if (typeof snap.heatwaveStartDay === 'number') heatwaveStartDay = snap.heatwaveStartDay;
+    if (typeof snap.heatwaveEndDay === 'number') heatwaveEndDay = snap.heatwaveEndDay;
 
     for (let i = 0; i < levels.length; i++) {
         for (let j = 0; j < levels[i].length; j++) {

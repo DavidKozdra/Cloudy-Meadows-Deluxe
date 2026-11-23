@@ -265,7 +265,7 @@ class Shop extends Entity {
                     adjustment = round(random(-5, -3));
                 }
                 
-                this.inv[i].price = max(1, basePrice + adjustment);
+                this.inv[i].price = max(1, round((basePrice + adjustment) * this.priceModifier(itemName)));
                 break;
             }
         }
@@ -302,9 +302,40 @@ class Shop extends Entity {
                     adjustment = round(random(-5, -3));
                 }
                 
-                this.inv[i].price = max(1, basePrice + adjustment);
+                this.inv[i].price = max(1, round((basePrice + adjustment) * this.priceModifier(this.inv[i].name)));
             }
         }
+    }
+
+    // Day-of-week and weather price multiplier for one item. Applied inside every
+    // price recalculation (daily and after each purchase) so the effect lasts all
+    // day instead of being wiped by the next supply-based reprice.
+    priceModifier(itemName) {
+        const today = typeof days === 'number' ? days : 0;
+        let multiplier = 1;
+
+        // Fruits half-off on Friday (dayOfWeek == 4, red day)
+        if (typeof dayOfWeek !== 'undefined' && dayOfWeek === 4 && this.isFruit(itemName)) {
+            multiplier *= 0.5;
+        }
+
+        // Ladybugs and Bees double price for 3 days after frog-rain
+        if ((itemName === 'Ladybugs' || itemName === 'Bees') &&
+            typeof lastFrogRainDay === 'number' && today - lastFrogRainDay < 3) {
+            multiplier *= 2.0;
+        }
+
+        if (itemName === 'Sprinkler') {
+            // Sprinklers half-off for 3 days after rain
+            if (typeof lastRainDay === 'number' && today - lastRainDay < 3) {
+                multiplier *= 0.5;
+            }
+            // Heatwave: everyone wants a sprinkler, so they cost 50% more
+            if (typeof currentWeather !== 'undefined' && currentWeather === 'heatwave') {
+                multiplier *= 1.5;
+            }
+        }
+        return multiplier;
     }
 
     isFruit(itemName) {
@@ -347,29 +378,11 @@ class Shop extends Entity {
             }
         }
         
-        // Apply day-of-week and weather modifiers
+        // Prices above already include the day-of-week/weather multipliers
+        // (see priceModifier). Rain also brings a fresh batch of sprinklers.
         for(let i = 0; i < this.inv.length; i++){
-            if(this.inv[i] != 0) {
-                const itemName = this.inv[i].name;
-                
-                // Fruits half-off on Friday (dayOfWeek == 4, red day)
-                if(dayOfWeek === 4 && this.isFruit(itemName)) {
-                    this.inv[i].price = round(this.inv[i].price * 0.5);
-                }
-                
-                // Ladybugs and Bees double price for 3 days after frog-rain
-                if((itemName === 'Ladybugs' || itemName === 'Bees') && days - lastFrogRainDay < 3) {
-                    this.inv[i].price = round(this.inv[i].price * 2.0);
-                }
-                
-                // Sprinklers half-off for 3 days after rain
-                if(itemName === 'Sprinkler' && days - lastRainDay < 3) {
-                    this.inv[i].price = round(this.inv[i].price * 0.5);
-                    // Also increase stock after rain
-                    if(days - lastRainDay === 0) { // First day after rain
-                        this.inv[i].amount += Math.round(random(5, 10));
-                    }
-                }
+            if(this.inv[i] != 0 && this.inv[i].name === 'Sprinkler' && days - lastRainDay === 0) {
+                this.inv[i].amount += Math.round(random(5, 10));
             }
         }
         

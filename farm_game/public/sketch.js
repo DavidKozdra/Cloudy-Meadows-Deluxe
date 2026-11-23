@@ -1226,6 +1226,7 @@ var dayOfWeekColors = ['blue', 'green', 'yellow', 'orange', 'red'];
 // Weather tracking for economy effects
 var lastRainDay = -999; // Track when rain last occurred
 var lastFrogRainDay = -999; // Track when frog-rain last occurred
+var heatwaveStartDay = -999, heatwaveEndDay = -999; // Current/last heatwave span (inclusive day numbers)
 
 // Weather system
 var currentWeather = 'clear'; // 'clear', 'overcast', 'rain'
