@@ -57,6 +57,7 @@ class MoveableEntity extends Entity {
                         ? scaleHarvestYield(baseYield, levels[y][x].ladybugs)
                         : baseYield + levels[y][x].ladybugs;
                     addItem(this, this.under_tile.eat_num, harvestAmount);
+                    if (typeof recordCropHarvest === 'function') recordCropHarvest(this.under_tile.eat_num, harvestAmount, levels[y][x].name, false);
                     this.under_tile = new_tile_from_num(3, this.under_tile.pos.x, this.under_tile.pos.y);
                 }
             }

@@ -5822,6 +5822,9 @@ function setActivePauseMenuTab(tabId) {
     if (tabId === 'help') {
         renderPauseHelpTabContent();
     }
+    if (tabId === 'achievements' && typeof renderAchievementList === 'function') {
+        renderAchievementList(document.getElementById('pause-panel-achievements'));
+    }
 }
 
 function renderPauseHelpTabContent() {
@@ -5910,6 +5913,8 @@ function ensurePauseMenuContainer() {
     const displayPanel = createPausePanel('display', 'Display');
     const controlsPanel = !mobileOrSmallScreen ? createPausePanel('controls', 'Controls') : null;
     const helpPanel = !mobileOrSmallScreen ? createPausePanel('help', 'Help') : null;
+    // Filled by renderAchievementList() each time the tab opens.
+    createPausePanel('achievements', 'Achievements');
 
     const sliderSection = document.createElement('div');
     sliderSection.className = 'pause-menu-section';
@@ -6972,6 +6977,10 @@ function loadAll(){
             captureDaySnapshot(days);
         }
     }
+
+    // A save that already reached day 69 or saw frog rain twice earns those
+    // achievements on load.
+    if (typeof checkWorldAchievements === 'function') checkWorldAchievements();
 }
 
 function loadGamePreferences(){

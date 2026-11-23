@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v71';
+const CACHE_VERSION = 'v72';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -22,10 +22,10 @@ const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=9',
+  './styles.css?v=10',
   './manifest.webmanifest',
   './localDataStorage-3.0.0.min.js',
-  './classes/world-saves.js?v=1',
+  './classes/world-saves.js?v=2',
   './i18n.js?v=2',
   './i18n/es.json',
   './i18n/fr.json',
@@ -50,8 +50,8 @@ const APP_SHELL = [
   './classes/tile_classes/tile.js?v=8',
   './classes/tile_classes/plant.js?v=11',
   './classes/tile_classes/entity.js?v=8',
-  './classes/tile_classes/moveable-entity.js?v=9',
-  './classes/tile_classes/player.js?v=14',
+  './classes/tile_classes/moveable-entity.js?v=10',
+  './classes/tile_classes/player.js?v=15',
   './classes/tile_classes/grid-move-entity.js?v=9',
   './classes/tile_classes/free-move-entity.js?v=8',
   './classes/tile_classes/light-move-entity.js?v=8',
@@ -60,19 +60,20 @@ const APP_SHELL = [
   './classes/tile_classes/shop.js?v=11',
   './classes/tile_classes/chest.js?v=8',
   './classes/tile_classes/robot.js?v=9',
-  './classes/tile_classes/farm-robot.js?v=9',
+  './classes/tile_classes/farm-robot.js?v=10',
   './classes/tile_classes/air_ballon.js?v=8',
   './classes/cooperative-exchange.js?v=9',
   './classes/time-rewind.js?v=4',
   './classes/custom-rules.js?v=2',
+  './classes/achievements.js?v=1',
   './config/constants.js?v=8',
   './config/items.js?v=9',
   './config/tiles.js?v=10',
   './classes/raycaster3d.js?v=36',
   './classes/ui/display.js?v=1',
   './classes/weather-system.js?v=4',
-  './miscfunctions.js?v=19',
-  './classes/ui/world-menu.js?v=1',
+  './miscfunctions.js?v=20',
+  './classes/ui/world-menu.js?v=2',
   './preload.js?v=17',
   './gamepad.js?v=9',
   './mobile-look.js?v=1',

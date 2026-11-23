@@ -6385,6 +6385,107 @@ html.acc-high-contrast .world-slot-card { background: #222; border-color: #fff; 
 html.acc-high-contrast .world-slot-difficulty,
 html.acc-high-contrast .world-slot-stats dt { color: #ffe56d; }
 
+/* Achievements: the list (More menu and pause menu) and the unlock popup */
+.achievement-host { width: min(720px, 100%); }
+.achievement-summary {
+    margin: 0 0 14px;
+    text-align: center;
+    font-family: pixelFont, monospace;
+    font-size: 16px;
+}
+#pause-menu .achievement-summary { color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6); }
+.achievement-list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.achievement-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    border: 3px solid #577f66;
+    border-radius: 8px;
+    background: #f3fff1;
+    box-shadow: 0 5px 0 #3d66572b;
+    color: #203f43;
+    font-family: pixelFont, monospace;
+    text-align: left;
+}
+.achievement-locked { border-style: dashed; background: #e8eee6; }
+.achievement-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+.achievement-locked .achievement-icon { filter: grayscale(1); opacity: 0.45; }
+.achievement-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.achievement-title { margin: 0; font-size: 17px; }
+.achievement-description,
+.achievement-progress-label,
+.achievement-hint,
+.achievement-status { margin: 0; font-size: 12px; line-height: 1.5; }
+.achievement-hint { color: #4d6663; overflow-wrap: anywhere; }
+.achievement-status { color: #4d6663; }
+.achievement-unlocked .achievement-status { color: #2f7a35; }
+.achievement-progress {
+    height: 10px;
+    overflow: hidden;
+    border: 2px solid #577f66;
+    border-radius: 4px;
+    background: #fff;
+}
+.achievement-progress span { display: block; height: 100%; background: #79c94f; }
+
+.achievement-toast {
+    position: fixed;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: max-content;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 12px 18px;
+    border: 4px solid rgb(149, 108, 65);
+    border-radius: 6px;
+    background: rgb(187, 132, 75);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-family: pixelFont, monospace;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -140%);
+    transition: transform 0.35s ease, opacity 0.35s ease;
+}
+.achievement-toast.visible { opacity: 1; transform: translate(-50%, 0); }
+.achievement-toast-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+.achievement-toast-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.achievement-toast-label { color: #ffe58a; font-size: 11px; }
+.achievement-toast-title { font-size: 17px; }
+.achievement-toast-description { font-size: 12px; line-height: 1.4; }
+
+@media (max-width: 760px) {
+    .achievement-card { padding: 12px; gap: 12px; }
+    .achievement-icon { width: 40px; height: 40px; }
+}
+html.acc-high-contrast .achievement-card { background: #222; border-color: #fff; color: #fff; }
+html.acc-high-contrast .achievement-hint,
+html.acc-high-contrast .achievement-status { color: #ffe56d; }
+html.acc-high-contrast .achievement-toast { background: #111; border-color: #fff; }
+
 /* Gamepad/controller focus highlight for DOM menu buttons */
 .gp-focus {
     outline: 3px solid rgb(255, 221, 102);

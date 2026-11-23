@@ -139,12 +139,24 @@ function showMoreMenu() {
     autoFarm.className = 'main-menu-button';
     autoFarm.textContent = 'AutoFarm';
     actions.appendChild(autoFarm);
+    actions.appendChild(worldMenuButton('Achievements', showAchievementsPanel));
     actions.appendChild(worldMenuButton('How to Play', () => {
         queueTutorialPrompt('full-tutorial', { manual: true, dedupeKey: 'main-menu-help' });
     }));
     actions.appendChild(worldMenuButton('Back', backToWorldMainMenu));
     panel.appendChild(actions);
     actions.querySelector('button')?.focus({ preventScroll: true });
+}
+
+function showAchievementsPanel() {
+    const panel = openWorldMenuPanel('achievements', 'Achievements');
+    const host = document.createElement('div');
+    host.className = 'achievement-host';
+    panel.appendChild(host);
+    renderAchievementList(host);
+    const back = worldMenuButton('Back', showMoreMenu, 'world-menu-back');
+    panel.appendChild(back);
+    back.focus({ preventScroll: true });
 }
 
 function resetRuntimeForWorld(id) {

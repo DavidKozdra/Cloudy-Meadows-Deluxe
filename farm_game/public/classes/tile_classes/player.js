@@ -641,6 +641,7 @@ class Player extends MoveableEntity {
                     const ladybugExtra = round(random((levels[y][x].ladybugs > 4 ? 1:0), levels[y][x].ladybugs));
                     const harvestAmount = typeof scaleHarvestYield === 'function' ? scaleHarvestYield(baseYield, ladybugExtra) : baseYield + ladybugExtra;
                     addItem(this, this.touching.eat_num, harvestAmount);
+                    if (typeof recordCropHarvest === 'function') recordCropHarvest(this.touching.eat_num, harvestAmount, currentLevelName, true);
                     levels[y][x].map[this.touching.pos.y / tileSize][this.touching.pos.x / tileSize] = new_tile_from_num(3, this.touching.pos.x, this.touching.pos.y);
                     PlantingSound.play()
                 }

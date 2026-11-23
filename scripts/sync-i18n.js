@@ -80,6 +80,12 @@ function extractSourceKeys(keys) {
         if (file === 'miscfunctions.js') {
             extractTutorialKeys(source, keys);
         }
+        // Achievement titles and descriptions reach t() as variables.
+        if (file === path.join('classes', 'achievements.js')) {
+            for (const match of source.matchAll(/\b(?:title|description):\s*(['"])((?:\\.|(?!\1).)*?)\1/g)) {
+                addKey(keys, match[2].replace(/\\(['"`\\])/g, '$1'));
+            }
+        }
     }
 }
 

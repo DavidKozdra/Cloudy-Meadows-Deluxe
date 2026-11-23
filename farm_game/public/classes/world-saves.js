@@ -4,7 +4,8 @@
     const SLOT_COUNT = 3;
     const ACTIVE_KEY = '__cloudyActiveWorld';
     const SLOT_PREFIX = '__cloudyWorld';
-    const SHARED_KEYS = new Set(['Options', 'Controls', 'customRulePresets']);
+    // Shared by every world: settings, rule presets and achievements.
+    const SHARED_KEYS = new Set(['Options', 'Controls', 'customRulePresets', 'Achievements']);
 
     // Tiles repeat the same property names and strings thousands of times.
     // Store those once per record, keeping synchronous save/load inexpensive.
