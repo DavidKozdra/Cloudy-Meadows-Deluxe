@@ -3426,6 +3426,96 @@ button {
     display: block;
 }
 
+/* Keep the camera stick separate from movement and action touch targets. */
+#mobile-controls.look-enabled {
+    height: 100dvh;
+    --look-size: clamp(96px, 22vmin, 128px);
+    --look-right: max(16px, env(safe-area-inset-right));
+    --look-bottom: max(86px, calc(70px + env(safe-area-inset-bottom)));
+    --look-action-size: clamp(44px, calc(55px * var(--ui-scale) * var(--acc-control-scale)), 64px);
+}
+
+#mobile-look-stick {
+    box-sizing: border-box;
+    position: absolute;
+    right: var(--look-right);
+    bottom: var(--look-bottom);
+    width: var(--look-size);
+    height: var(--look-size);
+    border: 3px solid rgba(149, 108, 65, 0.9);
+    border-radius: 50%;
+    background: rgba(45, 35, 25, 0.4);
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+}
+
+#mobile-look-stick[hidden] {
+    display: none;
+}
+
+#mobile-look-knob {
+    box-sizing: border-box;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44%;
+    height: 44%;
+    border: 3px solid rgba(149, 108, 65, 0.9);
+    border-radius: 50%;
+    background: rgba(255, 248, 201, 0.8);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+#mobile-look-stick.pressed #mobile-look-knob {
+    background: rgba(126, 217, 87, 0.9);
+}
+
+.mobile-look-label {
+    position: absolute;
+    bottom: 8px;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-size: 10px;
+    text-shadow: 1px 1px 2px black;
+    pointer-events: none;
+}
+
+#mobile-controls.look-enabled #action-buttons {
+    display: flex;
+    gap: 10px;
+    right: var(--look-right);
+    bottom: calc(var(--look-bottom) + var(--look-size) + 12px);
+    width: auto;
+    height: auto;
+}
+
+#mobile-controls.look-enabled #action-buttons .action-btn {
+    position: static;
+    width: var(--look-action-size);
+    height: var(--look-action-size);
+    transform: none;
+}
+
+#mobile-controls.look-enabled #action-buttons .action-btn.pressed {
+    transform: scale(0.95);
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    #mobile-controls.look-enabled {
+        --look-size: clamp(88px, 28dvh, 112px);
+        --look-bottom: max(76px, calc(60px + env(safe-area-inset-bottom)));
+    }
+
+    #mobile-controls.look-enabled #action-buttons {
+        flex-direction: column;
+        right: calc(var(--look-right) + var(--look-size) + 12px);
+        bottom: var(--look-bottom);
+    }
+}
+
 /* Top Left Mobile Menu Buttons */
 #mobile-menu-buttons {
     position: absolute;

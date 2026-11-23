@@ -85,6 +85,8 @@ function captureDaySnapshot(dayNumber) {
         day: dayNumber,
         // Day-scalar world state that lives outside the level objects.
         weather: (typeof currentWeather !== 'undefined') ? currentWeather : 'clear',
+        lastRainDay: (typeof lastRainDay !== 'undefined') ? lastRainDay : -999,
+        lastFrogRainDay: (typeof lastFrogRainDay !== 'undefined') ? lastFrogRainDay : -999,
         levelData: captureWorldLevelData()
     };
 
@@ -116,6 +118,8 @@ function restoreDaySnapshot(dayNumber) {
     if (typeof snap.weather === 'string') {
         currentWeather = snap.weather;
     }
+    if (typeof snap.lastRainDay === 'number') lastRainDay = snap.lastRainDay;
+    if (typeof snap.lastFrogRainDay === 'number') lastFrogRainDay = snap.lastFrogRainDay;
 
     for (let i = 0; i < levels.length; i++) {
         for (let j = 0; j < levels[i].length; j++) {

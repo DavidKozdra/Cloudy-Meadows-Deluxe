@@ -879,6 +879,7 @@ function configureThreePlayerCamera(playerObj, currentLvl) {
     const eyeY = tileSize * WEBGL_WALL_HEIGHT_TILES / 2;
     const eyeZ = playerObj.pos.y + tileSize / 2;
     const yawRad = getActiveCameraYawDeg(playerObj) * Math.PI / 180;
+    const pitchRad = (typeof isMobile !== 'undefined' && isMobile ? (playerObj.lookPitchDeg || 0) : 0) * Math.PI / 180;
 
     three3DCamera.fov = WEBGL_FOV_DEGREES;
     three3DCamera.aspect = canvasWidth / canvasHeight;
@@ -887,9 +888,9 @@ function configureThreePlayerCamera(playerObj, currentLvl) {
     three3DCamera.updateProjectionMatrix();
     three3DCamera.position.set(eyeX, eyeY, eyeZ);
     three3DCamera.lookAt(
-        eyeX + Math.cos(yawRad),
-        eyeY,
-        eyeZ + Math.sin(yawRad)
+        eyeX + Math.cos(yawRad) * Math.cos(pitchRad),
+        eyeY + Math.sin(pitchRad),
+        eyeZ + Math.sin(yawRad) * Math.cos(pitchRad)
     );
     three3DCamera.updateMatrixWorld();
 }
@@ -1465,8 +1466,8 @@ function updatePlayer3DMovementWebgl(playerObj) {
     if (!currentLvl || typeof currentLvl !== 'object' || !currentLvl.map) return;
 
     const stepTiles = MOVE_SPEED_TILES_PER_SEC * (deltaTime / 1000);
-    // Keep movement aligned with the camera. Outside pointer lock (including
-    // touch devices), the renderer uses the cardinal-facing fallback.
+    // Keep movement aligned with camera yaw, including mobile free look.
+    // Pitch never changes movement speed or lifts the player off the ground.
     const yawRad = (getActiveCameraYawDeg(playerObj) * Math.PI) / 180;
     const forwardX = Math.cos(yawRad);
     const forwardY = Math.sin(yawRad);

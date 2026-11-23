@@ -57,8 +57,8 @@ class Plant extends Tile {
         
         // Apply weather modifiers to growth rate
         if (typeof currentWeather !== 'undefined') {
-            if (currentWeather === 'rain') {
-                // Rain makes plants grow faster (80 ticks instead of 100)
+            if (currentWeather === 'rain' || currentWeather === 'thunderstorm' || currentWeather === 'sunshower') {
+                // Any rainy weather makes plants grow faster (80 ticks instead of 100)
                 this.growTimer += 0.25;
             } else if (currentWeather === 'overcast') {
                 // Overcast makes plants grow slower (125 ticks instead of 100)

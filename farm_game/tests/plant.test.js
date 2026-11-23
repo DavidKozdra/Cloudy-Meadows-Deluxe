@@ -139,6 +139,20 @@ test('rain also accelerates growth relative to clear weather', () => {
     assert.ok(rainy.growTimer > clearTimer, 'rain adds a growth bonus per tick');
 });
 
+test('every rainy weather speeds growth, not just plain rain', () => {
+    const timerIn = weather => {
+        const plant = makeCorn(10, 0);
+        worldWith(plant, 1, 1);
+        global.currentWeather = weather;
+        plant.grow(0, 0);
+        return plant.growTimer;
+    };
+    const rain = timerIn('rain');
+    assert.ok(rain > timerIn('clear'));
+    assert.equal(timerIn('thunderstorm'), rain, 'thunderstorm grows as fast as rain');
+    assert.equal(timerIn('sunshower'), rain, 'sunshower grows as fast as rain');
+});
+
 test('planting on a bed grants a large growth bonus', () => {
     const plant = makeCorn(10, 0);
     worldWith(plant);

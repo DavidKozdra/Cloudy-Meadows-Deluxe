@@ -42,7 +42,7 @@
     <script src="classes/quest.js?v=9"></script>
     <script src="classes/dialouge.js?v=8"></script>
     <script src="classes/tile_classes/tile.js?v=8"></script>
-    <script src="classes/tile_classes/plant.js?v=8"></script>
+    <script src="classes/tile_classes/plant.js?v=9"></script>
     <script src="classes/tile_classes/entity.js?v=8"></script>
     <script src="classes/tile_classes/moveable-entity.js?v=8"></script>
     <script src="classes/tile_classes/player.js?v=13"></script>
@@ -57,7 +57,7 @@
     <script src="classes/tile_classes/farm-robot.js?v=8"></script>
     <script src="classes/tile_classes/air_ballon.js?v=8"></script>
     <script src="classes/cooperative-exchange.js?v=8"></script>
-    <script src="classes/time-rewind.js?v=1"></script>
+    <script src="classes/time-rewind.js?v=2"></script>
 
     <!-- Configuration files -->
     <script type="text/javascript" src="config/constants.js?v=8"></script>
@@ -65,15 +65,16 @@
     <script type="text/javascript" src="config/tiles.js?v=10"></script>
 
     <!-- GPU-rendered 3D Mode -->
-    <script type="text/javascript" src="classes/raycaster3d.js?v=35"></script>
+    <script type="text/javascript" src="classes/raycaster3d.js?v=36"></script>
     <script type="text/javascript" src="classes/ui/display.js?v=1"></script>
-    <script type="text/javascript" src="classes/weather-system.js?v=1"></script>
+    <script type="text/javascript" src="classes/weather-system.js?v=2"></script>
 
     <!-- Main game files -->
-    <script type="text/javascript" src="miscfunctions.js?v=15"></script>
+    <script type="text/javascript" src="miscfunctions.js?v=16"></script>
     <script type="text/javascript" src="preload.js?v=15"></script>
     <script type="text/javascript" src="gamepad.js?v=8"></script>
-    <script type="text/javascript" src="sketch.js?v=18"></script>
+    <script type="text/javascript" src="mobile-look.js?v=1"></script>
+    <script type="text/javascript" src="sketch.js?v=19"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -259,6 +260,12 @@
         <button id="dpad-down" class="dpad-btn">▼</button>
       </div>
       
+      <!-- First-person camera joystick; shown only during mobile 3D play. -->
+      <div id="mobile-look-stick" role="group" aria-label="Camera look joystick" hidden>
+        <span id="mobile-look-knob" aria-hidden="true"></span>
+        <span class="mobile-look-label" aria-hidden="true">LOOK</span>
+      </div>
+
       <!-- Action Buttons -->
       <div id="action-buttons">
         <button id="btn-interact" class="action-btn">E</button>

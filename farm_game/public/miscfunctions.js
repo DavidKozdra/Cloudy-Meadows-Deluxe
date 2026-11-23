@@ -5910,6 +5910,8 @@ function saveAll(){
         currentLevel_y: currentLevel_y, 
         dificulty: dificulty,
         currentWeather: currentWeather,
+        lastRainDay: lastRainDay,
+        lastFrogRainDay: lastFrogRainDay,
         time: time,
         timephase: timephase,
         customRules: window.customRules || null,
@@ -6031,6 +6033,11 @@ function loadAll(){
         
         // Load weather state
         currentWeather = localData.get('Day_curLvl_Dif').currentWeather || 'clear';
+        // Rain / frog-rain days drive the 3-day shop price effects (sprinkler
+        // discount, Ladybug/Bee doubling). Older saves lack them: keep the default.
+        const savedDayState = localData.get('Day_curLvl_Dif');
+        if (typeof savedDayState.lastRainDay === 'number') lastRainDay = savedDayState.lastRainDay;
+        if (typeof savedDayState.lastFrogRainDay === 'number') lastFrogRainDay = savedDayState.lastFrogRainDay;
         
         // Load time of day
         time = localData.get('Day_curLvl_Dif').time || 0;

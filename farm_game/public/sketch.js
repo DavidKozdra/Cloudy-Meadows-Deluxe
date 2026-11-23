@@ -322,13 +322,8 @@ function setupMobileControls() {
 // Show/hide mobile controls based on game state
 function updateMobileControlsVisibility() {
     const mobileControls = document.getElementById('mobile-controls');
-    if (!mobileControls || !isMobile) return;
-    
-    if (title_screen || paused) {
-        mobileControls.classList.remove('active');
-    } else {
-        mobileControls.classList.add('active');
-    }
+    if (!mobileControls) return;
+    mobileControls.classList.toggle('active', isMobile && !title_screen && !paused && !dificulty_screen && !lose_screen);
 }
 
 // Update mobile status on window resize
@@ -366,8 +361,10 @@ function windowResized() {
 // Initialize mobile controls after DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupMobileControls);
+    document.addEventListener('DOMContentLoaded', setupMobileLook);
 } else {
     setupMobileControls();
+    setupMobileLook();
 }
 
 // ============================================
@@ -1811,6 +1808,7 @@ function draw() {
         player.hand = findNextEnabledSlot(player.hand, 1);
     }
 
+    updateMobileLook(deltaTime);
     takeInput();
 
     // Release mouse-look pointer lock whenever a blocking UI opens, so the
