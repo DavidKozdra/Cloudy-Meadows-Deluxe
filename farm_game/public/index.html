@@ -103,12 +103,16 @@
         #boot-loader {
             position: fixed;
             inset: 0;
+            box-sizing: border-box;
+            height: 100dvh;
+            padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+                     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
             z-index: 10000;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 18px;
+            gap: clamp(8px, 2vh, 18px);
             background: #7ec0ee;
             /* System stack: pixelFont.ttf may not have arrived yet. */
             font-family: 'Press Start 2P', monospace;
@@ -122,11 +126,16 @@
         }
 
         #boot-loader-logo {
-            width: min(70vw, 420px);
+            /* The square logo must leave room for progress on short screens. */
+            width: min(70vw, 420px, 50vh);
+            width: min(70vw, 420px, 50dvh);
+            min-height: 0;
+            object-fit: contain;
             image-rendering: pixelated;
         }
 
         #boot-loader-deluxe {
+            flex-shrink: 0;
             color: #fff8c9;
             font-size: clamp(12px, 3vw, 20px);
             letter-spacing: 0.35em;
@@ -138,7 +147,11 @@
         #boot-loader-track {
             position: relative;
             width: min(70vw, 420px);
+            max-width: 100%;
             height: 14px;
+            flex-shrink: 0;
+            /* Reserve the farmer's height above the bar, even in landscape. */
+            margin-top: 24px;
             background: #2a5d80;
             border: 3px solid #1b3f58;
             box-shadow: 0 0 0 3px #7ec0ee;
@@ -173,9 +186,22 @@
         #boot-loader-status {
             display: flex;
             justify-content: space-between;
+            gap: 12px;
+            flex-shrink: 0;
             width: min(70vw, 420px);
+            max-width: 100%;
             color: #1b3f58;
             font-size: clamp(7px, 1.6vw, 10px);
+            line-height: 1.6;
+        }
+
+        #boot-loader-label {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        #boot-loader-pct {
+            flex-shrink: 0;
         }
 
         /* Respect users who don't want the walk cycle looping at them. */
@@ -183,7 +209,7 @@
             #boot-loader-farmer { animation: none; }
         }
     </style>
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
 
  
 </head>
