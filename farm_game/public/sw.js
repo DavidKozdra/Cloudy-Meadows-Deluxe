@@ -13,7 +13,7 @@
  * files instead of serving stale ones forever.
  */
 
-const CACHE_VERSION = 'v76';
+const CACHE_VERSION = 'v77';
 const SHELL_CACHE = `cloudy-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cloudy-runtime-${CACHE_VERSION}`;
 
@@ -55,7 +55,7 @@ const APP_SHELL = [
   './classes/tile_classes/plant.js?v=11',
   './classes/tile_classes/entity.js?v=8',
   './classes/tile_classes/moveable-entity.js?v=11',
-  './classes/tile_classes/player.js?v=17',
+  './classes/tile_classes/player.js?v=18',
   './classes/tile_classes/grid-move-entity.js?v=9',
   './classes/tile_classes/free-move-entity.js?v=8',
   './classes/tile_classes/light-move-entity.js?v=8',
@@ -76,7 +76,7 @@ const APP_SHELL = [
   './classes/raycaster3d.js?v=36',
   './classes/ui/display.js?v=1',
   './classes/weather-system.js?v=4',
-  './miscfunctions.js?v=23',
+  './miscfunctions.js?v=24',
   './classes/ui/world-menu.js?v=4',
   './preload.js?v=18',
   './gamepad.js?v=9',

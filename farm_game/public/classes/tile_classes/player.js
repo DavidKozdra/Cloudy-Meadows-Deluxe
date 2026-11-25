@@ -1514,6 +1514,7 @@ function takeInput() {
                         player.talking.dialouges[player.talking.current_dialouge].new_replies = -1;
                     }
                     if(selectedReply.dialouge_num == -1){
+                        const finishedMrCIntro = player.talking.name === 'Mr.C' && !window.mainQuestNPCs && days < 99;
                         player.talking.move_bool = true;
                         player.talking.current_dialouge = 0;
                         player.oldlooking_name = player.talking.name;
@@ -1537,6 +1538,11 @@ function takeInput() {
                         }
                         player.talking = 0;
                         current_reply = 0;
+                        // Wait for the final reply, then replace the automatic quest
+                        // panel with How To Play. Closing the tutorial resumes play.
+                        if (finishedMrCIntro && typeof maybeQueueFullGameTutorial === 'function' && maybeQueueFullGameTutorial()) {
+                            player.show_quests = false;
+                        }
                     }
                     else{
                         player.talking.current_dialouge = selectedReply.dialouge_num;

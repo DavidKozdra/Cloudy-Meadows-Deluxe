@@ -1523,7 +1523,7 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
         }
     };
 
-    tabs.forEach((tabConfig, index) => {
+    tabs.forEach(tabConfig => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'tutorial-directory-tab';
@@ -1563,12 +1563,9 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
 
         nav.appendChild(button);
         tabButtons.push(button);
-
-        if (index === 0) {
-            renderActiveTab(tabConfig.id);
-        }
     });
 
+    renderActiveTab(prompt.defaultTab || tabs[0].id);
     return directory;
 }
 
@@ -1624,6 +1621,7 @@ function buildFullTutorialPrompt(options = {}) {
     return {
         type: 'full-tutorial',
         layout: 'directory',
+        defaultTab: options.auto ? 'farming' : 'start',
         allowOverlayClose: true,
         title: 'How To Play',
         intro: 'Use the tabs to learn the core loop, recognize important assets, and find the next useful thing to do.',
@@ -2132,13 +2130,16 @@ function openQuestLogFromTutorial() {
 function shouldAutoShowFullTutorial() {
     const state = getTutorialState();
     const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
-    return !mobileOrSmallScreen && !state.fullTutorialSeen && !title_screen && !lose_screen && days <= 0 && isMainQuestMrCPending();
+    return !mobileOrSmallScreen && !state.fullTutorialSeen && !title_screen && !lose_screen && !paused &&
+        !!player && !player.dead && player.talking === 0 && !!getMainQuestMrCGoal()?.done;
 }
 
 function maybeQueueFullGameTutorial() {
     if (shouldAutoShowFullTutorial()) {
         queueTutorialPrompt('full-tutorial', { auto: true, dedupeKey: 'full-tutorial-auto' });
+        return true;
     }
+    return false;
 }
 
 function shouldShowMrCHint() {
@@ -2158,7 +2159,6 @@ function scheduleContextualTutorials(delay = 200) {
     }
 
     tutorialScheduleTimer = window.setTimeout(() => {
-        maybeQueueFullGameTutorial();
         maybeQueueMrCHint();
     }, delay);
 }
