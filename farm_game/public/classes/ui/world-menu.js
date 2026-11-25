@@ -74,20 +74,35 @@ async function showWorldPicker(mode = 'continue', after = 0) {
         ? (full ? 'All three slots are in use. Delete a world to make room for a new game.' : 'Choose an empty slot, then select your difficulty.')
         :  '';
     const panel = openWorldMenuPanel(mode, title, intro);
+    panel.classList.add('world-picker');
+    const header = document.createElement('div');
+    header.className = 'world-picker-header';
+    header.appendChild(panel.querySelector('h1'));
+    panel.prepend(header);
+    const content = document.createElement('div');
+    content.className = 'world-picker-content';
+    const introElement = panel.querySelector('.world-menu-intro');
+    if (introElement) content.appendChild(introElement);
+    panel.appendChild(content);
     const grid = document.createElement('div');
     grid.className = 'world-slot-grid';
     for (const world of worlds) {
         const card = document.createElement('article');
         card.className = 'world-slot-card' + (world.occupied ? '' : ' world-slot-empty');
         card.dataset.worldSlot = world.id;
+        const cardHeading = document.createElement('div');
+        cardHeading.className = 'world-slot-heading';
         const name = document.createElement('h2');
+        name.id = 'world-slot-title-' + world.id;
+        card.setAttribute('aria-labelledby', name.id);
         name.textContent = t('World {number}', { number: world.id });
-        card.appendChild(name);
+        cardHeading.appendChild(name);
         const status = document.createElement('p');
         status.className = 'world-slot-difficulty';
         status.textContent = world.valid ? t(['Easy', 'Medium', 'Hard', 'Custom'][world.difficulty])
             : t(world.occupied ? 'Save unavailable' : 'Empty slot');
-        card.appendChild(status);
+        cardHeading.appendChild(status);
+        card.appendChild(cardHeading);
         if (world.valid) {
             const stats = document.createElement('dl');
             stats.className = 'world-slot-stats';
@@ -97,15 +112,19 @@ async function showWorldPicker(mode = 'continue', after = 0) {
                 info.push(['Last saved', new Date(world.updatedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })]);
             }
             for (const [label, value] of info) {
+                const stat = document.createElement('div');
+                stat.className = 'world-slot-stat';
                 const term = document.createElement('dt');
                 term.textContent = t(label);
                 const detail = document.createElement('dd');
                 detail.textContent = String(value);
                 if (label === 'Location' || label === 'Last saved') {
+                    stat.classList.add('world-slot-stat-detail');
                     term.className = 'world-slot-detail-label';
                     detail.className = 'world-slot-detail-value';
                 }
-                stats.append(term, detail);
+                stat.append(term, detail);
+                stats.appendChild(stat);
             }
             card.appendChild(stats);
         } else {
@@ -120,7 +139,7 @@ async function showWorldPicker(mode = 'continue', after = 0) {
             actions.appendChild(worldMenuButton('New Game', () => startNewWorld(world.id), 'world-slot-play'));
         } else {
             if (world.valid && mode !== 'new') actions.appendChild(worldMenuButton('Continue', () => openSavedWorld(world.id), 'world-slot-play'));
-            if (mode === 'manage' && world.valid) actions.appendChild(worldMenuButton('Download Backup', () => worldSaves.download(world.id).catch(reportWorldSaveError), 'world-slot-play'));
+            if (mode === 'manage' && world.valid) actions.appendChild(worldMenuButton('Download Backup', () => worldSaves.download(world.id).catch(reportWorldSaveError), 'world-slot-play world-slot-backup'));
             if (mode !== 'continue') {
                 actions.appendChild(worldMenuButton('Delete World', async () => {
                     if (!confirm(t('Delete World {number}? Its progress will be permanently removed. Your other worlds will be kept.', { number: world.id }))) return;
@@ -132,27 +151,27 @@ async function showWorldPicker(mode = 'continue', after = 0) {
         card.appendChild(actions);
         grid.appendChild(card);
     }
-    panel.appendChild(grid);
+    content.appendChild(grid);
     if (page) {
-        const paging = document.createElement('div'); paging.className = 'world-slot-actions';
+        const paging = document.createElement('div'); paging.className = 'world-slot-actions world-picker-pagination';
         if (after) paging.appendChild(worldMenuButton('First page', () => showWorldPicker(mode), 'world-menu-back'));
         if (page.next) paging.appendChild(worldMenuButton('Next page', () => showWorldPicker(mode, page.next), 'world-menu-back'));
-        panel.appendChild(paging);
+        if (paging.childElementCount) content.appendChild(paging);
     }
     if (mode === 'manage') {
         const storage = document.createElement('p'); storage.className = 'world-menu-intro';
-        panel.appendChild(storage);
+        content.appendChild(storage);
         worldSaves.storageInfo().then(info => {
             storage.textContent = info.quota == null ? t('Storage estimate unavailable.') :
                 `${Math.ceil(info.usage / 1048576)} MB / ${Math.floor(info.quota / 1048576)} MB · ${info.persistent ? t('Persistent storage enabled') : t('Back up your worlds regularly')}`;
         });
-        panel.appendChild(worldMenuButton('Protect Local Saves', async () => {
+        content.appendChild(worldMenuButton('Protect Local Saves', async () => {
             const granted = await worldSaves.requestPersistence();
             storage.textContent = t(granted ? 'Persistent storage enabled. Download backups to keep another copy.' : 'The browser did not grant persistent storage. Download backups to keep another copy.');
         }, 'world-menu-back'));
     }
-    panel.appendChild(worldMenuButton('Back', backToWorldMainMenu, 'world-menu-back'));
-    panel.querySelector('button')?.focus({ preventScroll: true });
+    content.appendChild(worldMenuButton('Back', backToWorldMainMenu, 'world-menu-back world-picker-back'));
+    grid.querySelector('button')?.focus({ preventScroll: true });
 }
 
 function showMoreMenu() {

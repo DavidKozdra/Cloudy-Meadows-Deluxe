@@ -1484,10 +1484,15 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
 
     const nav = document.createElement('div');
     nav.className = 'tutorial-directory-tabs';
+    nav.setAttribute('role', 'tablist');
+    nav.setAttribute('aria-label', t(prompt.title));
     directory.appendChild(nav);
 
     const content = document.createElement('div');
     content.className = 'tutorial-directory-content';
+    content.id = 'tutorial-content-' + (options.variant || 'overlay');
+    content.setAttribute('role', 'tabpanel');
+    content.tabIndex = 0;
     directory.appendChild(content);
 
     const tabs = Array.isArray(prompt.tabs) ? prompt.tabs : [];
@@ -1505,6 +1510,8 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
             const isActive = button.dataset.tabId === activeTab.id;
             button.classList.toggle('active', isActive);
             button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            button.tabIndex = isActive ? 0 : -1;
+            if (isActive) content.setAttribute('aria-labelledby', button.id);
         });
 
         content.appendChild(createTutorialDirectoryHero(activeTab));
@@ -1521,6 +1528,7 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
             });
             content.appendChild(sectionsWrap);
         }
+        content.scrollTop = 0;
     };
 
     tabs.forEach(tabConfig => {
@@ -1528,6 +1536,9 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
         button.type = 'button';
         button.className = 'tutorial-directory-tab';
         button.dataset.tabId = tabConfig.id;
+        button.id = content.id + '-' + tabConfig.id;
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-controls', content.id);
 
         if (tabConfig.image) {
             const icon = document.createElement('img');
@@ -1560,6 +1571,18 @@ function createTutorialDirectoryLayout(prompt, options = {}) {
         button.addEventListener('click', () => {
             renderActiveTab(tabConfig.id);
         });
+        button.addEventListener('keydown', event => {
+            const index = tabButtons.indexOf(button);
+            let nextIndex;
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (index + 1) % tabs.length;
+            else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (index + tabs.length - 1) % tabs.length;
+            else if (event.key === 'Home') nextIndex = 0;
+            else if (event.key === 'End') nextIndex = tabs.length - 1;
+            else return;
+            event.preventDefault();
+            renderActiveTab(tabs[nextIndex].id);
+            tabButtons[nextIndex].focus();
+        });
 
         nav.appendChild(button);
         tabButtons.push(button);
@@ -1581,12 +1604,27 @@ function ensureTutorialOverlay() {
     const modal = document.createElement('div');
     modal.id = 'tutorial-modal';
     modal.className = 'tutorial-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'tutorial-title');
     overlay.appendChild(modal);
+
+    const header = document.createElement('div');
+    header.className = 'tutorial-header';
+    modal.appendChild(header);
 
     const title = document.createElement('h2');
     title.id = 'tutorial-title';
     title.className = 'tutorial-title';
-    modal.appendChild(title);
+    header.appendChild(title);
+
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'tutorial-close';
+    close.textContent = '×';
+    close.setAttribute('aria-label', t('Close'));
+    close.addEventListener('click', () => closeTutorialOverlay());
+    header.appendChild(close);
 
     const intro = document.createElement('p');
     intro.id = 'tutorial-intro';
@@ -1790,7 +1828,7 @@ function buildFullTutorialPrompt(options = {}) {
                 description: 'Runs get sloppy when players ignore hunger or burn entire days without purpose.',
                 image: 'images/items/HotDog.png',
                 alt: 'Food',
-                chips: [formatTutorialKey(Controls_Eat_button_key, 'Q'), 'Sleep advances time', 'Carry food'],
+                chips: [(typeof isMobile !== 'undefined' && isMobile) ? 'Eat' : formatTutorialKey(Controls_Eat_button_key, 'Q'), 'Sleep advances time', 'Carry food'],
                 assets: [
                     {
                         image: 'images/ui/Corn_empty.png',
@@ -2129,8 +2167,7 @@ function openQuestLogFromTutorial() {
 
 function shouldAutoShowFullTutorial() {
     const state = getTutorialState();
-    const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
-    return !mobileOrSmallScreen && !state.fullTutorialSeen && !title_screen && !lose_screen && !paused &&
+    return !state.fullTutorialSeen && !title_screen && !lose_screen && !paused &&
         !!player && !player.dead && player.talking === 0 && !!getMainQuestMrCGoal()?.done;
 }
 
@@ -2164,11 +2201,6 @@ function scheduleContextualTutorials(delay = 200) {
 }
 
 function showFullGameTutorial(options = {}) {
-    const mobileOrSmallScreen = (typeof isMobile !== 'undefined' && isMobile) || window.innerWidth <= 768;
-    if (mobileOrSmallScreen) {
-        return;
-    }
-
     queueTutorialPrompt('full-tutorial', { manual: true, dedupeKey: options.dedupeKey || ('full-tutorial-manual-' + (options.source || 'default')) });
 }
 
@@ -6042,6 +6074,15 @@ function ensurePauseMenuContainer() {
 
     const actions = document.createElement('div');
     actions.className = 'pause-actions';
+
+    if (mobileOrSmallScreen && typeof autoJoined === 'undefined') {
+        const helpButton = document.createElement('button');
+        helpButton.type = 'button';
+        helpButton.className = 'pause-button';
+        helpButton.textContent = t('How To Play');
+        helpButton.addEventListener('click', () => showFullGameTutorial({ source: 'pause-menu' }));
+        actions.appendChild(helpButton);
+    }
 
     //back button
     const backBtn = document.createElement('button');
