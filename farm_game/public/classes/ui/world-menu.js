@@ -282,15 +282,19 @@ async function cancelNewWorld() {
     showMainMenu();
 }
 
-async function finishNewWorldSave() {
-    paused = true;
+async function finishNewWorldSave(resumeAfterSave = false) {
     try {
         if (await saveAll()) {
             captureDaySnapshot(days);
             pendingNewWorld = null;
-            paused = false;
+            if (resumeAfterSave) paused = false;
+        } else {
+            paused = true;
         }
-    } catch (error) { reportWorldSaveError(error); }
+    } catch (error) {
+        paused = true;
+        reportWorldSaveError(error);
+    }
 }
 
 function showWorldMainMenu() {
@@ -394,7 +398,7 @@ function showWorldSaveStatus({ state, message }) {
         if (worldSaves.activeWorldId) {
             notice.appendChild(worldMenuButton('Download Backup', () => worldSaves.download().catch(reportWorldSaveError)));
             notice.appendChild(worldMenuButton('Retry Save', () => {
-                if (pendingNewWorld) finishNewWorldSave();
+                if (pendingNewWorld) finishNewWorldSave(true);
                 else if (!title_screen) Promise.resolve(saveAll()).catch(reportWorldSaveError);
                 else worldSaves.flush().catch(reportWorldSaveError);
             }));
